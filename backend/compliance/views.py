@@ -456,3 +456,361 @@ class ComplianceDashboardViewSet(viewsets.ViewSet):
             return {'level': 'medium', 'level_ar': 'متوسط', 'color': 'yellow'}
         else:
             return {'level': 'low', 'level_ar': 'منخفض', 'color': 'green'}
+
+
+
+class ZATCALiveVerificationViewSet(viewsets.ViewSet):
+    """
+    التحقق المباشر من ZATCA - ZATCA Live Verification API
+    
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║                  SCOPE LIMITATION NOTICE                      ║
+    ╠═══════════════════════════════════════════════════════════════╣
+    ║  This is a READ-ONLY verification service.                    ║
+    ║                                                               ║
+    ║  ✓ DOES: Verify existing invoice data                         ║
+    ║  ✓ DOES: Check VAT number format                              ║
+    ║  ✓ DOES: Validate UUID correctness                            ║
+    ║  ✓ DOES: Verify hash chain integrity                          ║
+    ║  ✓ DOES: Store results as audit evidence                      ║
+    ║                                                               ║
+    ║  ✗ DOES NOT: Generate invoices                                ║
+    ║  ✗ DOES NOT: Submit invoices to ZATCA                         ║
+    ║  ✗ DOES NOT: Sign invoices                                    ║
+    ║  ✗ DOES NOT: Modify invoice data                              ║
+    ║  ✗ DOES NOT: Act on behalf of taxpayers                       ║
+    ╚═══════════════════════════════════════════════════════════════╝
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    @action(detail=False, methods=['get'])
+    def scope_declaration(self, request):
+        """
+        إعلان النطاق - Scope Declaration
+        Returns official scope documentation for regulatory purposes
+        """
+        return Response(ZATCALiveVerificationReport.get_scope_documentation())
+    
+    @action(detail=True, methods=['get'], url_path='verify')
+    def verify_invoice(self, request, pk=None):
+        """
+        التحقق من فاتورة واحدة
+        Verify a single invoice (READ-ONLY)
+        
+        This endpoint performs post-transaction, read-only verification.
+        It does NOT submit, sign, or modify the invoice.
+        """
+        try:
+            invoice = ZATCAInvoice.objects.get(id=pk)
+        except ZATCAInvoice.DoesNotExist:
+            return Response(
+                {'error': 'الفاتورة غير موجودة', 'error_en': 'Invoice not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check organization access
+        user = request.user
+        if user.role != 'admin' and invoice.organization != user.organization:
+            return Response(
+                {'error': 'غير مصرح بالوصول', 'error_en': 'Access denied'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Prepare invoice data for verification
+        invoice_data = {
+            'id': str(invoice.id),
+            'invoice_number': invoice.invoice_number,
+            'uuid': str(invoice.uuid),
+            'invoice_type_code': invoice.invoice_type_code,
+            'invoice_subtype': invoice.invoice_subtype,
+            'issue_date': invoice.issue_date,
+            'seller_name': invoice.seller_name,
+            'seller_vat_number': invoice.seller_vat_number,
+            'buyer_name': invoice.buyer_name,
+            'buyer_vat_number': invoice.buyer_vat_number,
+            'total_excluding_vat': invoice.total_excluding_vat,
+            'total_vat': invoice.total_vat,
+            'total_including_vat': invoice.total_including_vat,
+            'currency_code': invoice.currency_code,
+            'invoice_hash': invoice.invoice_hash,
+            'previous_invoice_hash': invoice.previous_invoice_hash,
+            'qr_code': invoice.qr_code,
+        }
+        
+        # Perform READ-ONLY verification
+        report = zatca_live_verification_service.verify_invoice(invoice_data)
+        
+        # Store as audit evidence
+        verification_results = []
+        critical_errors = []
+        for r in report.results:
+            result_dict = {
+                'check_type': r.check_type,
+                'field_name': r.field_name,
+                'is_valid': r.is_valid,
+                'error_code': r.error_code,
+                'message_ar': r.message_ar,
+                'message_en': r.message_en,
+                'expected_value': r.expected_value,
+                'actual_value': r.actual_value,
+                'regulatory_article': r.regulatory_article,
+            }
+            verification_results.append(result_dict)
+            if not r.is_valid and r.check_type in ['mandatory_field', 'calculation']:
+                critical_errors.append(result_dict)
+        
+        # Create audit evidence record
+        evidence = ZATCALiveVerificationReport.objects.create(
+            invoice=invoice,
+            organization=invoice.organization,
+            verification_timestamp=report.verification_timestamp,
+            verification_type='post_transaction',
+            overall_status=report.overall_status,
+            compliance_score=report.compliance_score,
+            total_checks=report.total_checks,
+            passed_checks=report.passed_checks,
+            failed_checks=report.failed_checks,
+            warning_checks=report.warning_checks,
+            verification_results_json=verification_results,
+            hash_verification_json=report.hash_verification,
+            summary_ar=report.summary_ar,
+            summary_en=report.summary_en,
+            critical_errors_json=critical_errors if critical_errors else None,
+            verified_by=request.user,
+            scope_declaration='READ-ONLY POST-TRANSACTION VERIFICATION',
+        )
+        
+        logger.info(f"ZATCA Live Verification completed for invoice {invoice.invoice_number} - Status: {report.overall_status}")
+        
+        return Response({
+            'scope_notice': {
+                'ar': 'هذا تحقق للقراءة فقط - لا يتم إرسال أو تعديل الفاتورة',
+                'en': 'This is READ-ONLY verification - invoice is not submitted or modified',
+            },
+            'evidence_id': str(evidence.id),
+            'invoice_id': str(invoice.id),
+            'invoice_number': invoice.invoice_number,
+            'verification_timestamp': report.verification_timestamp.isoformat(),
+            'overall_status': report.overall_status,
+            'overall_status_ar': {
+                'passed': 'ناجح',
+                'warning': 'تحذير',
+                'failed': 'فشل'
+            }.get(report.overall_status, report.overall_status),
+            'compliance_score': report.compliance_score,
+            'total_checks': report.total_checks,
+            'passed_checks': report.passed_checks,
+            'failed_checks': report.failed_checks,
+            'warning_checks': report.warning_checks,
+            'verification_results': verification_results,
+            'hash_verification': report.hash_verification,
+            'summary_ar': report.summary_ar,
+            'summary_en': report.summary_en,
+            'critical_errors': critical_errors,
+        })
+    
+    @action(detail=False, methods=['post'], url_path='verify-batch')
+    def verify_batch(self, request):
+        """
+        التحقق من مجموعة فواتير
+        Verify a batch of invoices (READ-ONLY)
+        """
+        invoice_ids = request.data.get('invoice_ids', [])
+        
+        if not invoice_ids:
+            return Response(
+                {'error': 'قائمة الفواتير مطلوبة', 'error_en': 'Invoice IDs required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user = request.user
+        results = []
+        
+        for invoice_id in invoice_ids:
+            try:
+                invoice = ZATCAInvoice.objects.get(id=invoice_id)
+                
+                # Check access
+                if user.role != 'admin' and invoice.organization != user.organization:
+                    results.append({
+                        'invoice_id': invoice_id,
+                        'error': 'غير مصرح بالوصول',
+                        'error_en': 'Access denied',
+                    })
+                    continue
+                
+                # Prepare invoice data
+                invoice_data = {
+                    'id': str(invoice.id),
+                    'invoice_number': invoice.invoice_number,
+                    'uuid': str(invoice.uuid),
+                    'invoice_type_code': invoice.invoice_type_code,
+                    'invoice_subtype': invoice.invoice_subtype,
+                    'issue_date': invoice.issue_date,
+                    'seller_name': invoice.seller_name,
+                    'seller_vat_number': invoice.seller_vat_number,
+                    'buyer_name': invoice.buyer_name,
+                    'buyer_vat_number': invoice.buyer_vat_number,
+                    'total_excluding_vat': invoice.total_excluding_vat,
+                    'total_vat': invoice.total_vat,
+                    'total_including_vat': invoice.total_including_vat,
+                    'invoice_hash': invoice.invoice_hash,
+                    'previous_invoice_hash': invoice.previous_invoice_hash,
+                }
+                
+                # Verify
+                report = zatca_live_verification_service.verify_invoice(invoice_data)
+                
+                results.append({
+                    'invoice_id': str(invoice.id),
+                    'invoice_number': invoice.invoice_number,
+                    'overall_status': report.overall_status,
+                    'compliance_score': report.compliance_score,
+                    'passed_checks': report.passed_checks,
+                    'failed_checks': report.failed_checks,
+                })
+                
+            except ZATCAInvoice.DoesNotExist:
+                results.append({
+                    'invoice_id': invoice_id,
+                    'error': 'الفاتورة غير موجودة',
+                    'error_en': 'Invoice not found',
+                })
+        
+        return Response({
+            'scope_notice': {
+                'ar': 'هذا تحقق للقراءة فقط - لا يتم إرسال أو تعديل الفواتير',
+                'en': 'This is READ-ONLY verification - invoices are not submitted or modified',
+            },
+            'total_invoices': len(invoice_ids),
+            'results': results,
+        })
+    
+    @action(detail=False, methods=['post'], url_path='verify-vat-number')
+    def verify_vat_number(self, request):
+        """
+        التحقق من الرقم الضريبي
+        Verify VAT number format (READ-ONLY)
+        
+        Note: This validates format only.
+        Actual registration status requires ZATCA portal access.
+        """
+        vat_number = request.data.get('vat_number', '')
+        
+        if not vat_number:
+            return Response(
+                {'error': 'الرقم الضريبي مطلوب', 'error_en': 'VAT number required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        result = zatca_live_verification_service.verify_vat_number(vat_number)
+        
+        return Response(result)
+    
+    @action(detail=False, methods=['get'], url_path='verification-history')
+    def verification_history(self, request):
+        """
+        سجل التحققات السابقة
+        Get verification history (audit trail)
+        """
+        user = request.user
+        
+        if user.role == 'admin':
+            reports = ZATCALiveVerificationReport.objects.all()
+        elif user.organization:
+            reports = ZATCALiveVerificationReport.objects.filter(
+                organization=user.organization
+            )
+        else:
+            reports = ZATCALiveVerificationReport.objects.none()
+        
+        # Filters
+        invoice_id = request.query_params.get('invoice_id')
+        if invoice_id:
+            reports = reports.filter(invoice_id=invoice_id)
+        
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            reports = reports.filter(overall_status=status_filter)
+        
+        # Limit results
+        reports = reports[:100]
+        
+        results = []
+        for report in reports:
+            results.append({
+                'id': str(report.id),
+                'invoice_id': str(report.invoice.id),
+                'invoice_number': report.invoice.invoice_number,
+                'verification_timestamp': report.verification_timestamp.isoformat(),
+                'overall_status': report.overall_status,
+                'compliance_score': report.compliance_score,
+                'total_checks': report.total_checks,
+                'passed_checks': report.passed_checks,
+                'failed_checks': report.failed_checks,
+                'verified_by': report.verified_by.email,
+                'scope': report.scope_declaration,
+            })
+        
+        return Response({
+            'scope_notice': 'All verifications are READ-ONLY post-transaction checks',
+            'total_records': len(results),
+            'records': results,
+        })
+    
+    @action(detail=True, methods=['get'], url_path='evidence')
+    def get_evidence(self, request, pk=None):
+        """
+        الحصول على دليل التحقق
+        Get verification evidence for audit purposes
+        """
+        try:
+            evidence = ZATCALiveVerificationReport.objects.get(id=pk)
+        except ZATCALiveVerificationReport.DoesNotExist:
+            return Response(
+                {'error': 'الدليل غير موجود', 'error_en': 'Evidence not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check access
+        user = request.user
+        if user.role != 'admin' and evidence.organization != user.organization:
+            return Response(
+                {'error': 'غير مصرح بالوصول', 'error_en': 'Access denied'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return Response({
+            'evidence_id': str(evidence.id),
+            'scope_declaration': evidence.scope_declaration,
+            'invoice': {
+                'id': str(evidence.invoice.id),
+                'invoice_number': evidence.invoice.invoice_number,
+                'issue_date': str(evidence.invoice.issue_date),
+                'seller_name': evidence.invoice.seller_name,
+                'seller_vat_number': evidence.invoice.seller_vat_number,
+                'total_including_vat': str(evidence.invoice.total_including_vat),
+            },
+            'verification': {
+                'timestamp': evidence.verification_timestamp.isoformat(),
+                'type': evidence.verification_type,
+                'overall_status': evidence.overall_status,
+                'compliance_score': evidence.compliance_score,
+                'total_checks': evidence.total_checks,
+                'passed_checks': evidence.passed_checks,
+                'failed_checks': evidence.failed_checks,
+            },
+            'results': evidence.verification_results_json,
+            'hash_verification': evidence.hash_verification_json,
+            'summary_ar': evidence.summary_ar,
+            'summary_en': evidence.summary_en,
+            'critical_errors': evidence.critical_errors_json,
+            'audit_trail': {
+                'verified_by': evidence.verified_by.email,
+                'created_at': evidence.created_at.isoformat(),
+            },
+            'regulatory_note': {
+                'ar': 'هذا دليل تدقيق على التحقق للقراءة فقط. لا يمثل إرسال الفاتورة إلى هيئة الزكاة والضريبة والجمارك.',
+                'en': 'This is audit evidence of READ-ONLY verification. It does not represent invoice submission to ZATCA.',
+            },
+        })
