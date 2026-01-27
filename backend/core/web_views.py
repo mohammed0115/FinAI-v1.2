@@ -490,3 +490,135 @@ def resolve_insight_view(request, insight_id):
         messages.success(request, 'تم حل الملاحظة بنجاح')
     
     return redirect('dashboard')
+
+
+
+@login_required
+def download_pdf_report_view(request):
+    """
+    تحميل تقرير التدقيق بصيغة PDF
+    Download Arabic PDF Audit Report (READ-ONLY)
+    """
+    user = request.user
+    organization = user.organization
+    
+    if not organization:
+        messages.error(request, 'لا توجد منشأة مرتبطة بالحساب')
+        return redirect('dashboard')
+    
+    # Get date parameters
+    period_start_str = request.GET.get('period_start')
+    period_end_str = request.GET.get('period_end')
+    
+    if period_start_str:
+        try:
+            period_start = datetime.strptime(period_start_str, '%Y-%m-%d').date()
+        except ValueError:
+            period_start = (timezone.now() - timedelta(days=30)).date()
+    else:
+        period_start = (timezone.now() - timedelta(days=30)).date()
+    
+    if period_end_str:
+        try:
+            period_end = datetime.strptime(period_end_str, '%Y-%m-%d').date()
+        except ValueError:
+            period_end = timezone.now().date()
+    else:
+        period_end = timezone.now().date()
+    
+    # Gather organization data
+    organization_data = {
+        'id': str(organization.id),
+        'name': organization.name,
+        'tax_id': getattr(organization, 'tax_id', None) or '',
+    }
+    
+    # Gather compliance data
+    zatca_invoices = ZATCAInvoice.objects.filter(organization=organization)
+    zatca_valid = zatca_invoices.filter(status__in=['validated', 'cleared']).count()
+    zatca_score = int((zatca_valid / max(zatca_invoices.count(), 1)) * 100) if zatca_invoices.exists() else 100
+    
+    vat_reconciliations = VATReconciliation.objects.filter(organization=organization)
+    vat_total_score = vat_reconciliations.aggregate(total=Sum('compliance_score'))['total']
+    vat_score = int(vat_total_score / max(vat_reconciliations.count(), 1)) if vat_total_score else 100
+    
+    zakat_calcs = ZakatCalculation.objects.filter(organization=organization)
+    zakat_total_score = zakat_calcs.aggregate(total=Sum('compliance_score'))['total']
+    zakat_score = int(zakat_total_score / max(zakat_calcs.count(), 1)) if zakat_total_score else 100
+    
+    overall_score = int((zatca_score + vat_score + zakat_score) / 3)
+    
+    # VAT/Zakat summaries
+    latest_vat = vat_reconciliations.order_by('-period_end').first()
+    vat_summary = {}
+    if latest_vat:
+        vat_summary = {
+            'collected': float(latest_vat.total_output_vat or 0),
+            'paid': float(latest_vat.total_input_vat or 0),
+            'net': float(latest_vat.net_vat_due or 0),
+        }
+    
+    latest_zakat = zakat_calcs.order_by('-fiscal_year_end').first()
+    zakat_summary = {}
+    if latest_zakat:
+        zakat_summary = {
+            'base': float(latest_zakat.net_zakat_base or 0),
+            'due': float(latest_zakat.zakat_due or 0),
+        }
+    
+    compliance_data = {
+        'overall_score': overall_score,
+        'zatca_score': zatca_score,
+        'vat_score': vat_score,
+        'zakat_score': zakat_score,
+        'vat_summary': vat_summary,
+        'zakat_summary': zakat_summary,
+    }
+    
+    # Gather findings
+    findings = AuditFinding.objects.filter(organization=organization)
+    findings_data = []
+    for f in findings:
+        reg_ref = None
+        if f.regulatory_reference:
+            reg_ref = {
+                'article_number': f.regulatory_reference.article_number,
+                'title_ar': f.regulatory_reference.title_ar,
+            }
+        
+        findings_data.append({
+            'finding_number': f.finding_number,
+            'title_ar': f.title_ar,
+            'description_ar': f.description_ar,
+            'impact_ar': f.impact_ar,
+            'recommendation_ar': f.recommendation_ar,
+            'ai_explanation_ar': f.ai_explanation_ar,
+            'risk_level': f.risk_level,
+            'financial_impact': float(f.financial_impact) if f.financial_impact else 0,
+            'regulatory_reference': reg_ref,
+            'is_resolved': f.is_resolved,
+        })
+    
+    # Generate PDF
+    try:
+        pdf_bytes = arabic_pdf_generator.generate_report(
+            organization_data=organization_data,
+            compliance_data=compliance_data,
+            findings_data=findings_data,
+            period_start=period_start,
+            period_end=period_end,
+            generated_by=user.email,
+        )
+        
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        filename = f"audit_report_{organization.name.replace(' ', '_')}_{period_end.strftime('%Y%m%d')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        logger.info(f"PDF report downloaded by {user.email} for {organization.name}")
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"PDF generation error: {e}")
+        messages.error(request, f'خطأ في إنشاء التقرير: {str(e)}')
+        return redirect('arabic_report')
