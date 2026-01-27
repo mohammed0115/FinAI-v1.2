@@ -13,7 +13,7 @@ import logging
 from core.models import Organization
 from documents.models import Document
 from documents.ocr_service import document_ocr_service
-from compliance.models import OCREvidence
+from documents.models import OCREvidence
 
 logger = logging.getLogger(__name__)
 
