@@ -215,6 +215,7 @@ Build an AI-Powered Financial Audit Platform (FinAI) targeting the GCC market wi
 - `/app/test_reports/iteration_3.json` - Frontend tests (28/28 passed, 100%)
 - `/app/test_reports/iteration_4.json` - Frontend tests (10/10 passed, 100%) - Jan 27, 2026
 - `/app/test_reports/iteration_5.json` - LLM Integration tests (10/10 passed, 100%) - Jan 27, 2026
+- `/app/test_reports/iteration_6.json` - Language Toggle & ZATCA tests (11/11 passed, 100%) - Jan 27, 2026
 
 ---
 
