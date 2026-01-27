@@ -94,12 +94,42 @@ def dashboard_view(request):
     # Recent transactions (top 10)
     recent_transactions = Transaction.objects.filter(organization=organization).order_by('-transaction_date')[:10]
     
+    # Chart Data: Compliance scores for ZATCA, VAT, Zakat
+    zatca_invoices = ZATCAInvoice.objects.filter(organization=organization)
+    zatca_valid = zatca_invoices.filter(status__in=['validated', 'cleared']).count()
+    zatca_score = int((zatca_valid / max(zatca_invoices.count(), 1)) * 100) if zatca_invoices.exists() else 100
+    
+    vat_reconciliations = VATReconciliation.objects.filter(organization=organization)
+    vat_score = vat_reconciliations.aggregate(avg=Sum('compliance_score'))['avg']
+    vat_score = int(vat_score / max(vat_reconciliations.count(), 1)) if vat_score else 85
+    
+    zakat_calcs = ZakatCalculation.objects.filter(organization=organization)
+    zakat_score = zakat_calcs.aggregate(avg=Sum('compliance_score'))['avg']
+    zakat_score = int(zakat_score / max(zakat_calcs.count(), 1)) if zakat_score else 90
+    
+    chart_data = {
+        'compliance_scores': {
+            'labels': ['ZATCA', 'ض.ق.م', 'الزكاة'],
+            'values': [zatca_score, vat_score, zakat_score],
+        },
+        'findings_by_risk': {
+            'labels': ['حرج', 'مرتفع', 'متوسط', 'منخفض'],
+            'values': [
+                findings.filter(risk_level='critical').count(),
+                findings.filter(risk_level='high').count(),
+                findings.filter(risk_level='medium').count(),
+                findings.filter(risk_level='low').count(),
+            ],
+        },
+    }
+    
     context = {
         'stats': stats,
         'compliance_summary': compliance_summary,
         'recent_findings': recent_findings,
         'anomalous_transactions': anomalous_transactions,
         'recent_transactions': recent_transactions,
+        'chart_data': chart_data,
         'now': timezone.now(),
     }
     
