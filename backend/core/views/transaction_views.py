@@ -88,7 +88,7 @@ def accounts_list_view(request):
     if account_type:
         accounts = accounts.filter(account_type=account_type)
     
-    accounts = accounts.order_by('account_number')
+    accounts = accounts.order_by('account_code')
     
     # Group by type for summary
     type_summary = {}
