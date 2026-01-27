@@ -20,6 +20,7 @@ urlpatterns = [
     path('findings/', web_views.audit_findings_list_view, name='audit_findings_list'),
     path('findings/<uuid:finding_id>/', web_views.audit_finding_detail_view, name='audit_finding_detail'),
     path('findings/<uuid:finding_id>/generate-ai/', web_views.generate_ai_explanation_view, name='generate_ai_explanation'),
+    path('ai-explanation/<uuid:log_id>/review/', web_views.review_ai_explanation_view, name='review_ai_explanation'),
     
     # Transactions
     path('transactions/', web_views.transactions_view, name='transactions'),
