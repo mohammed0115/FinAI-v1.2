@@ -1,119 +1,204 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard - FinAI{% endblock %}
+{% block title %}لوحة القيادة - FinAI{% endblock %}
 
 {% block content %}
-<div class="py-10">
-    <header>
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <h1 class="text-3xl font-bold leading-tight tracking-tight text-gray-900">Dashboard</h1>
+<div class="max-w-full">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">لوحة القيادة</h1>
+            <p class="text-sm text-slate-500">نظرة عامة على حالة التدقيق والامتثال</p>
         </div>
-    </header>
-    <main>
-        <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-            <!-- Stats Cards -->
-            <div class="mt-8">
-                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                        <dt class="truncate text-sm font-medium text-gray-500">Total Documents</dt>
-                        <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ stats.total_documents }}</dd>
-                    </div>
-                    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                        <dt class="truncate text-sm font-medium text-gray-500">Pending Documents</dt>
-                        <dd class="mt-1 text-3xl font-semibold tracking-tight text-orange-600">{{ stats.pending_documents }}</dd>
-                    </div>
-                    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                        <dt class="truncate text-sm font-medium text-gray-500">Total Transactions</dt>
-                        <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900">{{ stats.total_transactions }}</dd>
-                    </div>
-                    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-                        <dt class="truncate text-sm font-medium text-gray-500">Unresolved Insights</dt>
-                        <dd class="mt-1 text-3xl font-semibold tracking-tight text-red-600">{{ stats.unresolved_insights }}</dd>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Documents -->
-            <div class="mt-8">
-                <div class="overflow-hidden bg-white shadow sm:rounded-lg">
-                    <div class="px-4 py-5 sm:px-6">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900">Recent Documents</h3>
-                    </div>
-                    <div class="border-t border-gray-200">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">File Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Date</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200 bg-white">
-                                {% for doc in recent_documents %}
-                                <tr>
-                                    <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{{ doc.file_name }}</td>
-                                    <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{{ doc.get_document_type_display }}</td>
-                                    <td class="whitespace-nowrap px-6 py-4 text-sm">
-                                        <span class="inline-flex rounded-full px-2 text-xs font-semibold leading-5 
-                                            {% if doc.status == 'completed' %}bg-green-100 text-green-800
-                                            {% elif doc.status == 'failed' %}bg-red-100 text-red-800
-                                            {% elif doc.status == 'processing' %}bg-blue-100 text-blue-800
-                                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
-                                            {{ doc.get_status_display }}
-                                        </span>
-                                    </td>
-                                    <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{{ doc.uploaded_at|date:"M d, Y" }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">No documents yet</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Unresolved Insights -->
-            {% if insights %}
-            <div class="mt-8">
-                <div class="overflow-hidden bg-white shadow sm:rounded-lg">
-                    <div class="px-4 py-5 sm:px-6">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900">Unresolved Insights</h3>
-                    </div>
-                    <div class="border-t border-gray-200">
-                        <ul role="list" class="divide-y divide-gray-200">
-                            {% for insight in insights %}
-                            <li class="px-6 py-4">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center space-x-3">
-                                        <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold
-                                            {% if insight.severity == 'critical' %}bg-red-100 text-red-800
-                                            {% elif insight.severity == 'high' %}bg-orange-100 text-orange-800
-                                            {% elif insight.severity == 'medium' %}bg-yellow-100 text-yellow-800
-                                            {% else %}bg-blue-100 text-blue-800{% endif %}">
-                                            {{ insight.get_severity_display }}
-                                        </span>
-                                        <div>
-                                            <p class="text-sm font-medium text-gray-900">{{ insight.title }}</p>
-                                            <p class="text-sm text-gray-500">{{ insight.description|truncatewords:20 }}</p>
-                                        </div>
-                                    </div>
-                                    <form method="post" action="{% url 'resolve_insight' insight.id %}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="text-sm text-indigo-600 hover:text-indigo-900">Resolve</button>
-                                    </form>
-                                </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+        <div class="text-left text-sm text-slate-500">
+            آخر تحديث: {{ now|date:"Y/m/d H:i" }}
         </div>
-    </main>
+    </div>
+
+    <!-- Quick Stats Row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
+        <div class="bg-white border border-slate-200 rounded p-3">
+            <div class="stat-label">المستندات</div>
+            <div class="stat-value">{{ stats.total_documents }}</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded p-3">
+            <div class="stat-label">المعاملات</div>
+            <div class="stat-value">{{ stats.total_transactions }}</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded p-3">
+            <div class="stat-label">الحسابات</div>
+            <div class="stat-value">{{ stats.total_accounts }}</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded p-3">
+            <div class="stat-label">نتائج التدقيق</div>
+            <div class="stat-value {% if stats.total_findings > 0 %}text-amber-600{% endif %}">{{ stats.total_findings }}</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded p-3">
+            <div class="stat-label">الشذوذات</div>
+            <div class="stat-value {% if stats.anomaly_count > 0 %}text-red-600{% endif %}">{{ stats.anomaly_count }}</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded p-3">
+            <div class="stat-label">درجة الامتثال</div>
+            <div class="stat-value {% if stats.compliance_score >= 80 %}text-green-600{% elif stats.compliance_score >= 60 %}text-amber-600{% else %}text-red-600{% endif %}">{{ stats.compliance_score }}%</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Compliance Summary -->
+        <div class="bg-white border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="section-header mb-0 border-0 pb-0">ملخص الامتثال</h2>
+            </div>
+            <div class="p-4">
+                <table class="w-full data-table">
+                    <tbody>
+                        <tr>
+                            <td class="text-slate-600">فحوصات ZATCA</td>
+                            <td class="text-left mono">{{ compliance_summary.zatca_checks }}</td>
+                            <td class="text-left">
+                                {% if compliance_summary.zatca_passed %}
+                                <span class="badge badge-success">ناجح</span>
+                                {% else %}
+                                <span class="badge badge-warning">يحتاج مراجعة</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-slate-600">تسويات ض.ق.م</td>
+                            <td class="text-left mono">{{ compliance_summary.vat_reconciliations }}</td>
+                            <td class="text-left">
+                                {% if compliance_summary.vat_variance == 0 %}
+                                <span class="badge badge-success">متوازن</span>
+                                {% else %}
+                                <span class="badge badge-warning">فرق: {{ compliance_summary.vat_variance|floatformat:2 }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-slate-600">حسابات الزكاة</td>
+                            <td class="text-left mono">{{ compliance_summary.zakat_calculations }}</td>
+                            <td class="text-left">
+                                <span class="badge badge-info">{{ compliance_summary.zakat_due|floatformat:2 }} ر.س</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="mt-4 pt-4 border-t border-slate-100">
+                    <a href="{% url 'compliance_overview' %}" class="text-sm text-slate-600 hover:text-slate-800">
+                        عرض تفاصيل الامتثال ←
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Findings -->
+        <div class="bg-white border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                <h2 class="section-header mb-0 border-0 pb-0">آخر نتائج التدقيق</h2>
+                <a href="{% url 'audit_findings_list' %}" class="text-xs text-slate-500 hover:text-slate-700">عرض الكل</a>
+            </div>
+            <div class="divide-y divide-slate-100">
+                {% for finding in recent_findings %}
+                <div class="px-4 py-3 hover:bg-slate-50">
+                    <div class="flex items-start gap-2">
+                        <span class="badge mt-0.5 {% if finding.risk_level == 'critical' %}badge-danger{% elif finding.risk_level == 'high' %}badge-warning{% elif finding.risk_level == 'medium' %}badge-info{% else %}badge-neutral{% endif %}">
+                            {% if finding.risk_level == 'critical' %}حرج{% elif finding.risk_level == 'high' %}مرتفع{% elif finding.risk_level == 'medium' %}متوسط{% else %}منخفض{% endif %}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-slate-700 truncate">{{ finding.title_ar }}</p>
+                            <p class="text-xs text-slate-500">{{ finding.finding_number }} | {{ finding.created_at|date:"Y/m/d" }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="px-4 py-8 text-center text-sm text-slate-400">
+                    لا توجد نتائج تدقيق حالياً
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Anomalous Transactions -->
+        <div class="bg-white border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                <h2 class="section-header mb-0 border-0 pb-0">المعاملات الشاذة</h2>
+                <a href="{% url 'transactions' %}?anomaly=1" class="text-xs text-slate-500 hover:text-slate-700">عرض الكل</a>
+            </div>
+            <div class="divide-y divide-slate-100">
+                {% for txn in anomalous_transactions %}
+                <div class="px-4 py-3 hover:bg-slate-50">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm text-slate-700 truncate">{{ txn.description|default:txn.reference_number }}</p>
+                            <p class="text-xs text-slate-500">{{ txn.transaction_date|date:"Y/m/d" }}</p>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-sm font-medium mono {% if txn.transaction_type == 'expense' %}text-red-600{% else %}text-green-600{% endif %}">
+                                {{ txn.amount|floatformat:2 }} {{ txn.currency }}
+                            </div>
+                            <div class="text-xs text-slate-400">{{ txn.anomaly_type }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="px-4 py-8 text-center text-sm text-slate-400">
+                    لا توجد معاملات شاذة
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions Table -->
+    <div class="mt-4 bg-white border border-slate-200 rounded">
+        <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h2 class="section-header mb-0 border-0 pb-0">آخر المعاملات</h2>
+            <a href="{% url 'transactions' %}" class="text-xs text-slate-500 hover:text-slate-700">عرض الكل</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full data-table">
+                <thead>
+                    <tr>
+                        <th class="text-right">المرجع</th>
+                        <th class="text-right">التاريخ</th>
+                        <th class="text-right">النوع</th>
+                        <th class="text-right">الوصف</th>
+                        <th class="text-left">المبلغ</th>
+                        <th class="text-left">ض.ق.م</th>
+                        <th class="text-center">الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for txn in recent_transactions %}
+                    <tr>
+                        <td class="mono text-slate-600">{{ txn.reference_number|default:"—" }}</td>
+                        <td class="mono">{{ txn.transaction_date|date:"Y/m/d" }}</td>
+                        <td>
+                            {% if txn.transaction_type == 'income' %}إيراد{% elif txn.transaction_type == 'expense' %}مصروف{% else %}{{ txn.transaction_type }}{% endif %}
+                        </td>
+                        <td class="max-w-xs truncate">{{ txn.description|default:"—" }}</td>
+                        <td class="text-left mono {% if txn.transaction_type == 'expense' %}text-red-600{% else %}text-green-600{% endif %}">
+                            {{ txn.amount|floatformat:2 }}
+                        </td>
+                        <td class="text-left mono text-slate-500">{{ txn.vat_amount|floatformat:2|default:"0.00" }}</td>
+                        <td class="text-center">
+                            {% if txn.is_anomaly %}
+                            <span class="badge badge-danger">شاذ</span>
+                            {% elif txn.is_reconciled %}
+                            <span class="badge badge-success">مُطابق</span>
+                            {% else %}
+                            <span class="badge badge-neutral">عادي</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-8 text-slate-400">لا توجد معاملات</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 {% endblock %}

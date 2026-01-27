@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}نتائج التدقيق - FinAI{% endblock %}
+
+{% block content %}
+<div class="max-w-full">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">نتائج التدقيق</h1>
+            <p class="text-sm text-slate-500">جميع الملاحظات والنتائج من عمليات التدقيق</p>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+            <span class="px-2 py-1 bg-red-100 text-red-700 rounded">حرج: {{ findings_by_risk.critical }}</span>
+            <span class="px-2 py-1 bg-amber-100 text-amber-700 rounded">مرتفع: {{ findings_by_risk.high }}</span>
+            <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded">متوسط: {{ findings_by_risk.medium }}</span>
+            <span class="px-2 py-1 bg-green-100 text-green-700 rounded">منخفض: {{ findings_by_risk.low }}</span>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white border border-slate-200 rounded p-3 mb-4">
+        <form method="get" class="flex flex-wrap items-center gap-3">
+            <select name="risk_level" class="text-sm border border-slate-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                <option value="">جميع المستويات</option>
+                <option value="critical" {% if request.GET.risk_level == 'critical' %}selected{% endif %}>حرج</option>
+                <option value="high" {% if request.GET.risk_level == 'high' %}selected{% endif %}>مرتفع</option>
+                <option value="medium" {% if request.GET.risk_level == 'medium' %}selected{% endif %}>متوسط</option>
+                <option value="low" {% if request.GET.risk_level == 'low' %}selected{% endif %}>منخفض</option>
+            </select>
+            <select name="finding_type" class="text-sm border border-slate-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                <option value="">جميع الأنواع</option>
+                <option value="compliance" {% if request.GET.finding_type == 'compliance' %}selected{% endif %}>امتثال</option>
+                <option value="accuracy" {% if request.GET.finding_type == 'accuracy' %}selected{% endif %}>دقة</option>
+                <option value="completeness" {% if request.GET.finding_type == 'completeness' %}selected{% endif %}>اكتمال</option>
+                <option value="documentation" {% if request.GET.finding_type == 'documentation' %}selected{% endif %}>توثيق</option>
+                <option value="internal_control" {% if request.GET.finding_type == 'internal_control' %}selected{% endif %}>رقابة داخلية</option>
+            </select>
+            <select name="status" class="text-sm border border-slate-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                <option value="">جميع الحالات</option>
+                <option value="unresolved" {% if request.GET.status == 'unresolved' %}selected{% endif %}>غير محلول</option>
+                <option value="resolved" {% if request.GET.status == 'resolved' %}selected{% endif %}>محلول</option>
+            </select>
+            <button type="submit" class="px-4 py-1.5 bg-slate-800 text-white text-sm rounded hover:bg-slate-700">تصفية</button>
+            <a href="{% url 'audit_findings_list' %}" class="text-sm text-slate-500 hover:text-slate-700">إعادة تعيين</a>
+        </form>
+    </div>
+
+    <!-- Findings Table -->
+    <div class="bg-white border border-slate-200 rounded">
+        <div class="overflow-x-auto">
+            <table class="w-full data-table" data-testid="findings-table">
+                <thead>
+                    <tr>
+                        <th class="text-right w-24">الرقم</th>
+                        <th class="text-center w-20">المستوى</th>
+                        <th class="text-right">العنوان</th>
+                        <th class="text-right w-24">النوع</th>
+                        <th class="text-left w-28">الأثر المالي</th>
+                        <th class="text-center w-24">الحالة</th>
+                        <th class="text-right w-24">التاريخ</th>
+                        <th class="w-16"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for finding in findings %}
+                    <tr class="{% if finding.risk_level == 'critical' %}risk-critical{% elif finding.risk_level == 'high' %}risk-high{% endif %}">
+                        <td class="mono text-slate-600">{{ finding.finding_number }}</td>
+                        <td class="text-center">
+                            <span class="badge {% if finding.risk_level == 'critical' %}badge-danger{% elif finding.risk_level == 'high' %}badge-warning{% elif finding.risk_level == 'medium' %}badge-info{% else %}badge-neutral{% endif %}">
+                                {% if finding.risk_level == 'critical' %}حرج{% elif finding.risk_level == 'high' %}مرتفع{% elif finding.risk_level == 'medium' %}متوسط{% else %}منخفض{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'audit_finding_detail' finding.id %}" class="text-slate-800 hover:text-slate-600 font-medium" data-testid="finding-link-{{ finding.finding_number }}">
+                                {{ finding.title_ar }}
+                            </a>
+                        </td>
+                        <td class="text-slate-500">
+                            {% if finding.finding_type == 'compliance' %}امتثال{% elif finding.finding_type == 'accuracy' %}دقة{% elif finding.finding_type == 'completeness' %}اكتمال{% elif finding.finding_type == 'documentation' %}توثيق{% elif finding.finding_type == 'internal_control' %}رقابة{% else %}{{ finding.finding_type }}{% endif %}
+                        </td>
+                        <td class="text-left mono">
+                            {% if finding.financial_impact %}
+                            {{ finding.financial_impact|floatformat:2 }} ر.س
+                            {% else %}
+                            <span class="text-slate-300">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if finding.is_resolved %}
+                            <span class="badge badge-success">محلول</span>
+                            {% else %}
+                            <span class="badge badge-warning">قيد المتابعة</span>
+                            {% endif %}
+                        </td>
+                        <td class="mono text-slate-500">{{ finding.created_at|date:"Y/m/d" }}</td>
+                        <td>
+                            <a href="{% url 'audit_finding_detail' finding.id %}" class="text-slate-400 hover:text-slate-600">←</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-12 text-slate-400">
+                            لا توجد نتائج تدقيق
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if findings.has_other_pages %}
+    <div class="mt-4 flex items-center justify-center gap-2">
+        {% if findings.has_previous %}
+        <a href="?page={{ findings.previous_page_number }}{% if request.GET.risk_level %}&risk_level={{ request.GET.risk_level }}{% endif %}{% if request.GET.finding_type %}&finding_type={{ request.GET.finding_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-100">السابق</a>
+        {% endif %}
+        <span class="text-sm text-slate-500">صفحة {{ findings.number }} من {{ findings.paginator.num_pages }}</span>
+        {% if findings.has_next %}
+        <a href="?page={{ findings.next_page_number }}{% if request.GET.risk_level %}&risk_level={{ request.GET.risk_level }}{% endif %}{% if request.GET.finding_type %}&finding_type={{ request.GET.finding_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-100">التالي</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

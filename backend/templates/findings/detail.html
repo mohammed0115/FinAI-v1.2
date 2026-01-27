@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ finding.finding_number }} - نتائج التدقيق{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Breadcrumb -->
+    <div class="text-sm text-slate-500 mb-4">
+        <a href="{% url 'audit_findings_list' %}" class="hover:text-slate-700">نتائج التدقيق</a>
+        <span class="mx-2">←</span>
+        <span class="text-slate-700">{{ finding.finding_number }}</span>
+    </div>
+
+    <!-- Header -->
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="p-4 border-b border-slate-200">
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="badge {% if finding.risk_level == 'critical' %}badge-danger{% elif finding.risk_level == 'high' %}badge-warning{% elif finding.risk_level == 'medium' %}badge-info{% else %}badge-neutral{% endif %}">
+                            {% if finding.risk_level == 'critical' %}حرج{% elif finding.risk_level == 'high' %}مرتفع{% elif finding.risk_level == 'medium' %}متوسط{% else %}منخفض{% endif %}
+                        </span>
+                        <span class="badge badge-neutral">
+                            {% if finding.finding_type == 'compliance' %}امتثال{% elif finding.finding_type == 'accuracy' %}دقة{% elif finding.finding_type == 'completeness' %}اكتمال{% elif finding.finding_type == 'documentation' %}توثيق{% elif finding.finding_type == 'internal_control' %}رقابة داخلية{% else %}{{ finding.finding_type }}{% endif %}
+                        </span>
+                        {% if finding.is_resolved %}
+                        <span class="badge badge-success">محلول</span>
+                        {% else %}
+                        <span class="badge badge-warning">قيد المتابعة</span>
+                        {% endif %}
+                    </div>
+                    <h1 class="text-xl font-bold text-slate-800" data-testid="finding-title">{{ finding.title_ar }}</h1>
+                    {% if finding.title_en %}
+                    <p class="text-sm text-slate-500 mt-1">{{ finding.title_en }}</p>
+                    {% endif %}
+                </div>
+                <div class="text-left text-sm">
+                    <div class="text-slate-500">{{ finding.finding_number }}</div>
+                    <div class="mono text-slate-400">{{ finding.created_at|date:"Y/m/d" }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Info -->
+        <div class="grid grid-cols-3 divide-x divide-slate-200 border-b border-slate-200">
+            <div class="p-3 text-center">
+                <div class="text-xs text-slate-500">الأثر المالي</div>
+                <div class="text-lg font-bold mono {% if finding.financial_impact %}text-red-600{% else %}text-slate-400{% endif %}">
+                    {% if finding.financial_impact %}{{ finding.financial_impact|floatformat:2 }} ر.س{% else %}—{% endif %}
+                </div>
+            </div>
+            <div class="p-3 text-center">
+                <div class="text-xs text-slate-500">درجة ثقة الذكاء الاصطناعي</div>
+                <div class="text-lg font-bold {% if finding.ai_confidence >= 80 %}text-green-600{% elif finding.ai_confidence >= 50 %}text-amber-600{% else %}text-slate-400{% endif %}">
+                    {{ finding.ai_confidence }}%
+                </div>
+            </div>
+            <div class="p-3 text-center">
+                <div class="text-xs text-slate-500">تاريخ الحل المستهدف</div>
+                <div class="text-lg font-bold mono {% if finding.target_resolution_date %}text-slate-700{% else %}text-slate-400{% endif %}">
+                    {% if finding.target_resolution_date %}{{ finding.target_resolution_date|date:"Y/m/d" }}{% else %}—{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Sections -->
+    <div class="space-y-4">
+        <!-- Description -->
+        <div class="bg-white border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="font-semibold text-slate-700">وصف الملاحظة</h2>
+            </div>
+            <div class="p-4">
+                <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap" data-testid="finding-description">{{ finding.description_ar }}</div>
+                {% if finding.description_en %}
+                <div class="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-500 leading-relaxed">{{ finding.description_en }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Impact -->
+        <div class="bg-white border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="font-semibold text-slate-700">الأثر</h2>
+            </div>
+            <div class="p-4">
+                <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{{ finding.impact_ar }}</div>
+                {% if finding.impact_en %}
+                <div class="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-500 leading-relaxed">{{ finding.impact_en }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recommendation -->
+        <div class="bg-white border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="font-semibold text-slate-700">التوصية</h2>
+            </div>
+            <div class="p-4">
+                <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{{ finding.recommendation_ar }}</div>
+                {% if finding.recommendation_en %}
+                <div class="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-500 leading-relaxed">{{ finding.recommendation_en }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- AI Explanation -->
+        {% if finding.ai_explanation_ar %}
+        <div class="bg-blue-50 border border-blue-200 rounded">
+            <div class="px-4 py-3 border-b border-blue-200">
+                <h2 class="font-semibold text-blue-800">تحليل الذكاء الاصطناعي</h2>
+            </div>
+            <div class="p-4">
+                <div class="text-sm text-blue-900 leading-relaxed whitespace-pre-wrap" data-testid="ai-explanation">{{ finding.ai_explanation_ar }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Regulatory Reference -->
+        {% if finding.regulatory_reference %}
+        <div class="bg-slate-50 border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="font-semibold text-slate-700">المرجع التنظيمي</h2>
+            </div>
+            <div class="p-4">
+                <div class="flex items-start gap-3">
+                    <span class="badge badge-info">{{ finding.regulatory_reference.article_number }}</span>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-slate-700">{{ finding.regulatory_reference.title_ar }}</p>
+                        <p class="text-sm text-slate-500 mt-2">{{ finding.regulatory_reference.description_ar }}</p>
+                        <div class="mt-2 text-xs text-slate-400">
+                            {{ finding.regulatory_reference.get_regulator_display }} | {{ finding.regulatory_reference.get_category_display }}
+                        </div>
+                        {% if finding.regulatory_reference.penalty_description_ar %}
+                        <div class="mt-3 p-3 bg-red-50 rounded text-sm text-red-700">
+                            <strong>العقوبة المحتملة:</strong> {{ finding.regulatory_reference.penalty_description_ar }}
+                            {% if finding.regulatory_reference.penalty_amount_min or finding.regulatory_reference.penalty_amount_max %}
+                            <br>
+                            <span class="mono">
+                                {% if finding.regulatory_reference.penalty_amount_min %}من {{ finding.regulatory_reference.penalty_amount_min|floatformat:0 }}{% endif %}
+                                {% if finding.regulatory_reference.penalty_amount_max %}إلى {{ finding.regulatory_reference.penalty_amount_max|floatformat:0 }}{% endif %}
+                                ر.س
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Management Response (if resolved) -->
+        {% if finding.is_resolved %}
+        <div class="bg-green-50 border border-green-200 rounded">
+            <div class="px-4 py-3 border-b border-green-200">
+                <h2 class="font-semibold text-green-800">رد الإدارة والحل</h2>
+            </div>
+            <div class="p-4 space-y-3">
+                {% if finding.management_response_ar %}
+                <div>
+                    <div class="text-xs text-green-600 mb-1">رد الإدارة</div>
+                    <div class="text-sm text-green-900">{{ finding.management_response_ar }}</div>
+                </div>
+                {% endif %}
+                {% if finding.action_plan_ar %}
+                <div>
+                    <div class="text-xs text-green-600 mb-1">خطة العمل</div>
+                    <div class="text-sm text-green-900">{{ finding.action_plan_ar }}</div>
+                </div>
+                {% endif %}
+                <div class="flex items-center justify-between text-xs text-green-600 pt-2 border-t border-green-200">
+                    <span>تم الحل بواسطة: {{ finding.resolved_by.email|default:"—" }}</span>
+                    <span class="mono">{{ finding.resolved_at|date:"Y/m/d H:i" }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Audit Trail -->
+        <div class="bg-white border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="font-semibold text-slate-700">سجل التدقيق</h2>
+            </div>
+            <div class="p-4">
+                <table class="w-full data-table">
+                    <tbody>
+                        <tr>
+                            <td class="text-slate-500 w-32">تم التحديد بواسطة</td>
+                            <td>{{ finding.identified_by.email }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-slate-500">تاريخ الإنشاء</td>
+                            <td class="mono">{{ finding.created_at|date:"Y/m/d H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-slate-500">آخر تحديث</td>
+                            <td class="mono">{{ finding.updated_at|date:"Y/m/d H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-slate-500">المنشأة</td>
+                            <td>{{ finding.organization.name }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Link -->
+    <div class="mt-6 text-center">
+        <a href="{% url 'audit_findings_list' %}" class="text-sm text-slate-500 hover:text-slate-700">→ العودة إلى قائمة نتائج التدقيق</a>
+    </div>
+</div>
+{% endblock %}

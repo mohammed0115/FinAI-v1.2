@@ -1,42 +1,81 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-gray-50">
+<html lang="ar" dir="rtl" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}FinAI - Smart Financial Auditing{% endblock %}</title>
+    <title>{% block title %}FinAI - منصة التدقيق المالي الذكي{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        * { font-family: 'IBM Plex Sans Arabic', sans-serif; }
+        
+        /* Data-dense table styling */
+        .data-table { font-size: 0.8125rem; line-height: 1.25rem; }
+        .data-table th { font-weight: 600; background-color: #f8fafc; }
+        .data-table td, .data-table th { padding: 0.5rem 0.75rem; border-bottom: 1px solid #e2e8f0; }
+        .data-table tr:hover { background-color: #f1f5f9; }
+        
+        /* Risk level colors */
+        .risk-critical { background-color: #fef2f2; color: #991b1b; }
+        .risk-high { background-color: #fff7ed; color: #9a3412; }
+        .risk-medium { background-color: #fefce8; color: #854d0e; }
+        .risk-low { background-color: #f0fdf4; color: #166534; }
+        
+        /* Status badges */
+        .badge { display: inline-flex; padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 500; border-radius: 0.25rem; }
+        .badge-success { background-color: #dcfce7; color: #166534; }
+        .badge-warning { background-color: #fef3c7; color: #92400e; }
+        .badge-danger { background-color: #fee2e2; color: #991b1b; }
+        .badge-info { background-color: #e0f2fe; color: #075985; }
+        .badge-neutral { background-color: #f1f5f9; color: #475569; }
+        
+        /* Compliance score indicator */
+        .score-ring { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.25rem; }
+        .score-excellent { background: conic-gradient(#22c55e var(--score), #e2e8f0 0); }
+        .score-good { background: conic-gradient(#84cc16 var(--score), #e2e8f0 0); }
+        .score-fair { background: conic-gradient(#eab308 var(--score), #e2e8f0 0); }
+        .score-poor { background: conic-gradient(#ef4444 var(--score), #e2e8f0 0); }
+        
+        /* Monospace for numbers */
+        .mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+        
+        /* Section headers */
+        .section-header { font-size: 0.875rem; font-weight: 600; color: #334155; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        
+        /* Compact stats */
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: #1e293b; }
+        .stat-label { font-size: 0.75rem; color: #64748b; }
     </style>
 </head>
-<body class="h-full">
+<body class="h-full bg-slate-50 text-slate-900">
     <div class="min-h-full">
         {% if user.is_authenticated %}
-        <!-- Navigation -->
-        <nav class="bg-white shadow-sm">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div class="flex h-16 justify-between">
-                    <div class="flex">
-                        <div class="flex flex-shrink-0 items-center">
-                            <h1 class="text-2xl font-bold text-indigo-600">FinAI</h1>
-                        </div>
-                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                            <a href="{% url 'dashboard' %}" class="border-indigo-500 text-gray-900 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">Dashboard</a>
-                            <a href="{% url 'documents' %}" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">Documents</a>
-                            <a href="{% url 'transactions' %}" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">Transactions</a>
-                            <a href="{% url 'reports_list' %}" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">Reports</a>
-                            <a href="{% url 'analytics_dashboard' %}" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">Analytics</a>
+        <!-- Top Navigation Bar -->
+        <nav class="bg-slate-800 text-white shadow-sm">
+            <div class="mx-auto max-w-full px-4">
+                <div class="flex h-12 items-center justify-between">
+                    <!-- Logo & Main Nav -->
+                    <div class="flex items-center gap-6">
+                        <a href="{% url 'dashboard' %}" class="flex items-center gap-2">
+                            <span class="font-bold text-lg">FinAI</span>
+                            <span class="text-xs text-slate-400">التدقيق المالي</span>
+                        </a>
+                        <div class="hidden md:flex items-center gap-1 text-sm">
+                            <a href="{% url 'dashboard' %}" class="px-3 py-1.5 rounded {% if request.resolver_match.url_name == 'dashboard' %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">لوحة القيادة</a>
+                            <a href="{% url 'compliance_overview' %}" class="px-3 py-1.5 rounded {% if 'compliance' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">الامتثال</a>
+                            <a href="{% url 'audit_findings_list' %}" class="px-3 py-1.5 rounded {% if 'findings' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">نتائج التدقيق</a>
+                            <a href="{% url 'transactions' %}" class="px-3 py-1.5 rounded {% if 'transactions' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">المعاملات</a>
+                            <a href="{% url 'accounts_list' %}" class="px-3 py-1.5 rounded {% if 'accounts' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">الحسابات</a>
+                            <a href="{% url 'arabic_report' %}" class="px-3 py-1.5 rounded {% if 'report' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">التقارير</a>
                         </div>
                     </div>
-                    <div class="hidden sm:ml-6 sm:flex sm:items-center">
-                        <div class="relative ml-3">
-                            <div class="flex items-center space-x-4">
-                                <span class="text-sm text-gray-700">{{ user.name|default:user.email }}</span>
-                                <span class="inline-flex items-center rounded-full bg-indigo-100 px-3 py-0.5 text-xs font-medium text-indigo-800">{{ user.get_role_display }}</span>
-                                <a href="{% url 'logout' %}" class="text-sm text-gray-500 hover:text-gray-700">Logout</a>
-                            </div>
+                    <!-- User Info -->
+                    <div class="flex items-center gap-4 text-sm">
+                        <div class="text-left">
+                            <div class="text-slate-300">{{ user.organization.name|default:"—" }}</div>
+                            <div class="text-xs text-slate-400">{{ user.email }}</div>
                         </div>
+                        <a href="{% url 'logout' %}" class="text-slate-400 hover:text-white text-xs">خروج</a>
                     </div>
                 </div>
             </div>
@@ -44,24 +83,26 @@
         {% endif %}
 
         <!-- Main Content -->
-        <main>
+        <main class="p-4">
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="p-3 rounded text-sm {% if message.tags == 'error' %}bg-red-100 text-red-800{% elif message.tags == 'success' %}bg-green-100 text-green-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
             {% block content %}{% endblock %}
         </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-slate-200 bg-white mt-8 py-4 text-center text-xs text-slate-500">
+            <p>FinAI - منصة التدقيق المالي الذكي | إصدار 1.0</p>
+        </footer>
     </div>
 
-    <!-- Scripts -->
-    <script>
-        // Utility functions
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 px-6 py-4 rounded-lg shadow-lg ${
-                type === 'success' ? 'bg-green-500' : 'bg-red-500'
-            } text-white z-50`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
-        }
-    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
