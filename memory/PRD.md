@@ -1,9 +1,9 @@
 # FinAI - AI-Powered Financial Audit Platform
 ## Product Requirements Document (PRD)
 
-**Version**: 3.0  
+**Version**: 4.0  
 **Last Updated**: January 27, 2026  
-**Status**: Phase 3 Complete - Django Template Frontend
+**Status**: Phase 4 Complete - ZATCA Live Verification
 
 ---
 
@@ -22,6 +22,7 @@ Build an AI-Powered Financial Audit Platform (FinAI) targeting the GCC market wi
 - **Zakat calculation and comparison**
 - **Arabic-first reporting**
 - **Server-rendered Django Template frontend (Arabic RTL)**
+- **ZATCA Live Verification (READ-ONLY)**
 
 ---
 
