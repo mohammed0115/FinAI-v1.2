@@ -811,3 +811,95 @@ What the system does NOT do:
             'regulatory_disclaimer_ar': 'هذا النظام هو نظام تدقيق ومراجعة فقط وليس نظام فوترة إلكترونية',
             'regulatory_disclaimer_en': 'This is an audit and review system only, not an e-invoicing system',
         }
+
+
+
+class AIExplanationLog(models.Model):
+    """
+    سجل الشروحات الذكية - AI Explanation Audit Log
+    
+    AUDIT TRAIL for all AI-generated explanations.
+    Maintains full traceability for compliance.
+    
+    IMPORTANT:
+    - All explanations are ADVISORY ONLY
+    - Human review is REQUIRED before any action
+    - No automatic decisions based on this output
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Link to finding
+    finding = models.ForeignKey(
+        AuditFinding, on_delete=models.CASCADE,
+        related_name='ai_explanation_logs'
+    )
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE,
+        related_name='ai_explanation_logs'
+    )
+    
+    # LLM Output
+    explanation_ar = models.TextField(help_text='Generated Arabic explanation')
+    confidence_score = models.IntegerField(default=0)
+    confidence_level = models.CharField(max_length=20, default='medium')
+    
+    # Model metadata
+    model_used = models.CharField(max_length=100)
+    provider = models.CharField(max_length=50)
+    session_id = models.CharField(max_length=100)
+    processing_time_ms = models.IntegerField(default=0)
+    
+    # Audit integrity
+    audit_hash = models.CharField(max_length=64, help_text='SHA-256 hash for integrity')
+    
+    # Compliance flags
+    is_advisory = models.BooleanField(default=True)
+    requires_human_review = models.BooleanField(default=True)
+    human_reviewed = models.BooleanField(default=False)
+    reviewed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='reviewed_ai_explanations'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(null=True, blank=True)
+    
+    # Approval status
+    APPROVAL_STATUS_CHOICES = [
+        ('pending', 'قيد المراجعة - Pending Review'),
+        ('approved', 'معتمد - Approved'),
+        ('modified', 'معدل - Modified'),
+        ('rejected', 'مرفوض - Rejected'),
+    ]
+    approval_status = models.CharField(
+        max_length=20, 
+        choices=APPROVAL_STATUS_CHOICES,
+        default='pending'
+    )
+    
+    # Audit trail
+    generated_by = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='generated_ai_explanations'
+    )
+    generated_at = models.DateTimeField(auto_now_add=True)
+    
+    # Scope declaration
+    scope_declaration = models.TextField(
+        default='ADVISORY ONLY - REQUIRES HUMAN REVIEW',
+        help_text='Documents that this is advisory output requiring human review'
+    )
+    
+    class Meta:
+        db_table = 'ai_explanation_logs'
+        indexes = [
+            models.Index(fields=['finding']),
+            models.Index(fields=['organization']),
+            models.Index(fields=['approval_status']),
+            models.Index(fields=['generated_at']),
+        ]
+        ordering = ['-generated_at']
+    
+    def __str__(self):
+        return f"AI Explanation: {self.finding.finding_number} ({self.approval_status})"
+
