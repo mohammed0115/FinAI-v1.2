@@ -114,37 +114,74 @@ Build an AI-Powered Financial Audit Platform (FinAI) targeting the GCC market wi
 
 ## 4. What's Been Implemented
 
-### January 27, 2026 - MVP Release
+### Phase 1 (January 27, 2026)
+- Account, JournalEntry, ComplianceCheck, AuditFlag models
+- 8 new API endpoints for accounts, compliance, audit flags
+- Test dataset seeding (300 transactions)
 
-#### Models Created/Enhanced
-- `Account` - Chart of Accounts with opening/current balances
-- `Transaction` - Enhanced with anomaly detection fields
-- `JournalEntry` - Double-entry bookkeeping support
-- `JournalEntryLine` - Debit/credit lines
-- `ComplianceCheck` - Compliance scoring and tracking
-- `AuditFlag` - AI-detected audit flags
+### Phase 2 (January 27, 2026)
+**New Compliance App** (`/app/backend/compliance/`):
+- **Models**: RegulatoryReference, ZATCAInvoice, ZATCAValidationResult, VATReconciliation, VATDiscrepancy, ZakatCalculation, ZakatDiscrepancy, AuditFinding
+- **Services**: ZATCAValidationService, VATReconciliationService, ZakatCalculationService, ArabicReportService
+- **API Endpoints**:
+  - `/api/compliance/dashboard/overview/`
+  - `/api/compliance/regulatory-references/`
+  - `/api/compliance/zatca-invoices/` (with validation)
+  - `/api/compliance/vat-reconciliations/` (with calculate)
+  - `/api/compliance/zakat-calculations/` (with calculate)
+  - `/api/compliance/audit-findings/` (with Arabic report)
 
-#### API Endpoints
-- `/api/documents/accounts/` - Chart of Accounts CRUD
-- `/api/documents/accounts/trial_balance/` - Trial balance report
-- `/api/documents/accounts/by_type/` - Accounts grouped by type
-- `/api/documents/transactions/summary/` - Transaction statistics
-- `/api/documents/journal-entries/` - Journal entry management
-- `/api/documents/journal-entries/{id}/post_entry/` - Post journal entries
-- `/api/documents/compliance-checks/` - Compliance check CRUD
-- `/api/documents/compliance-checks/score_summary/` - Compliance score summary
-- `/api/documents/audit-flags/` - Audit flag management
-- `/api/documents/audit-flags/dashboard/` - Audit flags dashboard
+**Test Data**:
+- 6 regulatory references (ZATCA articles)
+- 20 ZATCA invoices
+- 2 VAT reconciliations
+- 2 Zakat calculations
+- 8 audit findings with Arabic content
 
-#### Test Data
-- 3 GCC test organizations (SA, AE, KW)
-- 87 accounts (Chart of Accounts)
-- 300 transactions (45 anomalous)
-- 60 journal entries
-- 18 compliance checks
-- 60 audit flags
-- 15 AI-generated insights
-- 12 reports
+---
+
+## 5. API Summary
+
+### Authentication
+```
+POST /api/auth/token/
+POST /api/auth/token/refresh/
+```
+
+### Core
+```
+GET  /api/core/organizations/
+GET  /api/core/users/
+```
+
+### Documents
+```
+GET  /api/documents/documents/
+POST /api/documents/documents/upload/
+POST /api/documents/documents/batch_upload/
+GET  /api/documents/transactions/
+GET  /api/documents/accounts/
+GET  /api/documents/journal-entries/
+GET  /api/documents/compliance-checks/
+GET  /api/documents/audit-flags/
+```
+
+### Compliance (NEW)
+```
+GET  /api/compliance/dashboard/overview/
+GET  /api/compliance/regulatory-references/
+GET  /api/compliance/zatca-invoices/
+GET  /api/compliance/zatca-invoices/{id}/validate/
+GET  /api/compliance/zatca-invoices/compliance_summary/
+GET  /api/compliance/vat-reconciliations/
+POST /api/compliance/vat-reconciliations/calculate/
+GET  /api/compliance/vat-reconciliations/variance_report/
+GET  /api/compliance/zakat-calculations/
+POST /api/compliance/zakat-calculations/calculate/
+GET  /api/compliance/audit-findings/
+GET  /api/compliance/audit-findings/dashboard/
+GET  /api/compliance/audit-findings/generate_report_ar/
+```
 
 ---
 
