@@ -26,25 +26,25 @@ Build an AI-Powered Financial Audit Platform (FinAI) targeting the GCC market wi
 
 ## 2. User Personas
 
-### 2.1 Auditor
+### 2.1 Auditor (المدقق)
 - Reviews flagged transactions
 - Investigates anomalies
 - Resolves compliance issues
-- Generates audit reports
+- Generates Arabic audit reports
 
-### 2.2 Accountant
+### 2.2 Accountant (المحاسب)
 - Uploads and processes documents
 - Creates transactions and journal entries
 - Validates extracted data
-- Generates financial reports
+- Prepares VAT reconciliations
 
-### 2.3 Finance Manager
+### 2.3 Finance Manager (المدير المالي)
 - Monitors KPIs and trends
 - Reviews compliance scores
 - Approves reports
-- Manages organization settings
+- Oversees Zakat calculations
 
-### 2.4 Admin
+### 2.4 Admin (المشرف)
 - Manages users and organizations
 - System-wide configuration
 - Full access to all features
