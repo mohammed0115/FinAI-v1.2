@@ -1,9 +1,9 @@
 # FinAI - AI-Powered Financial Audit Platform
 ## Product Requirements Document (PRD)
 
-**Version**: 5.0  
+**Version**: 6.0  
 **Last Updated**: January 27, 2026  
-**Status**: Phase 6 Complete - Document OCR & PDF Reports
+**Status**: Phase 7 Complete - LLM Integration for AI Explanations
 
 ---
 
