@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" class="h-full">
+<html lang="{{ html_lang|default:'ar' }}" dir="{{ direction|default:'rtl' }}" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}FinAI - منصة التدقيق المالي الذكي{% endblock %}</title>
+    <title>{% block title %}FinAI - {{ t.platform_name }}{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { font-family: 'IBM Plex Sans Arabic', sans-serif; }
+        * { font-family: {% if is_english %}'Inter'{% else %}'IBM Plex Sans Arabic'{% endif %}, sans-serif; }
         
         /* Data-dense table styling */
         .data-table { font-size: 0.8125rem; line-height: 1.25rem; }
@@ -58,25 +58,35 @@
                     <div class="flex items-center gap-6">
                         <a href="{% url 'dashboard' %}" class="flex items-center gap-2">
                             <span class="font-bold text-lg">FinAI</span>
-                            <span class="text-xs text-slate-400">التدقيق المالي</span>
+                            <span class="text-xs text-slate-400">{{ t.financial_audit }}</span>
                         </a>
                         <div class="hidden md:flex items-center gap-1 text-sm">
-                            <a href="{% url 'dashboard' %}" class="px-3 py-1.5 rounded {% if request.resolver_match.url_name == 'dashboard' %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">لوحة القيادة</a>
-                            <a href="{% url 'compliance_overview' %}" class="px-3 py-1.5 rounded {% if 'compliance' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">الامتثال</a>
-                            <a href="{% url 'audit_findings_list' %}" class="px-3 py-1.5 rounded {% if 'findings' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">نتائج التدقيق</a>
-                            <a href="{% url 'transactions' %}" class="px-3 py-1.5 rounded {% if 'transactions' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">المعاملات</a>
-                            <a href="{% url 'accounts_list' %}" class="px-3 py-1.5 rounded {% if 'accounts' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">الحسابات</a>
-                            <a href="{% url 'document_upload' %}" class="px-3 py-1.5 rounded {% if 'upload' in request.path or 'ocr' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">المستندات</a>
-                            <a href="{% url 'arabic_report' %}" class="px-3 py-1.5 rounded {% if 'report' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">التقارير</a>
+                            <a href="{% url 'dashboard' %}" class="px-3 py-1.5 rounded {% if request.resolver_match.url_name == 'dashboard' %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">{{ t.nav_dashboard }}</a>
+                            <a href="{% url 'compliance_overview' %}" class="px-3 py-1.5 rounded {% if 'compliance' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">{{ t.nav_compliance }}</a>
+                            <a href="{% url 'audit_findings_list' %}" class="px-3 py-1.5 rounded {% if 'findings' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">{{ t.nav_findings }}</a>
+                            <a href="{% url 'transactions' %}" class="px-3 py-1.5 rounded {% if 'transactions' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">{{ t.nav_transactions }}</a>
+                            <a href="{% url 'accounts_list' %}" class="px-3 py-1.5 rounded {% if 'accounts' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">{{ t.nav_accounts }}</a>
+                            <a href="{% url 'document_upload' %}" class="px-3 py-1.5 rounded {% if 'upload' in request.path or 'ocr' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">{{ t.nav_documents }}</a>
+                            <a href="{% url 'arabic_report' %}" class="px-3 py-1.5 rounded {% if 'report' in request.path %}bg-slate-700{% else %}hover:bg-slate-700{% endif %}">{{ t.nav_reports }}</a>
                         </div>
                     </div>
-                    <!-- User Info -->
+                    <!-- User Info & Language Toggle -->
                     <div class="flex items-center gap-4 text-sm">
-                        <div class="text-left">
+                        <!-- Language Toggle -->
+                        <form method="post" action="{% url 'toggle_language' %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    data-testid="language-toggle-btn"
+                                    class="px-2 py-1 text-xs rounded border border-slate-600 hover:bg-slate-700 transition-colors"
+                                    title="{{ t.language }}">
+                                {% if is_arabic %}EN{% else %}عربي{% endif %}
+                            </button>
+                        </form>
+                        <div class="text-{% if is_english %}right{% else %}left{% endif %}">
                             <div class="text-slate-300">{{ user.organization.name|default:"—" }}</div>
                             <div class="text-xs text-slate-400">{{ user.email }}</div>
                         </div>
-                        <a href="{% url 'logout' %}" class="text-slate-400 hover:text-white text-xs">خروج</a>
+                        <a href="{% url 'logout' %}" class="text-slate-400 hover:text-white text-xs">{{ t.nav_logout }}</a>
                     </div>
                 </div>
             </div>
