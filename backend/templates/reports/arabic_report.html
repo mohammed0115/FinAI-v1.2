@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}التقرير العربي - FinAI{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">تقرير التدقيق المالي</h1>
+            <p class="text-sm text-slate-500">{{ organization.name }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="window.print()" class="px-4 py-2 bg-slate-800 text-white text-sm rounded hover:bg-slate-700" data-testid="print-report-btn">
+                طباعة التقرير
+            </button>
+        </div>
+    </div>
+
+    <!-- Report Content -->
+    <div class="bg-white border border-slate-200 rounded print:border-0 print:shadow-none">
+        <!-- Report Header -->
+        <div class="p-6 border-b border-slate-200 print:border-b-2 print:border-black">
+            <div class="text-center">
+                <h1 class="text-2xl font-bold text-slate-800">{{ report.report_title_ar }}</h1>
+                <p class="text-sm text-slate-500 mt-2">رقم التقرير: {{ report.report_number }}</p>
+                <p class="text-sm text-slate-500">تاريخ التقرير: {{ report.report_date|date:"Y/m/d" }}</p>
+            </div>
+        </div>
+
+        <!-- Organization Info -->
+        <div class="p-6 border-b border-slate-200">
+            <h2 class="text-lg font-semibold text-slate-700 mb-4">معلومات المنشأة</h2>
+            <table class="w-full data-table">
+                <tbody>
+                    <tr>
+                        <td class="text-slate-500 w-40">اسم المنشأة</td>
+                        <td class="font-medium">{{ report.organization_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">الرقم الضريبي</td>
+                        <td class="mono">{{ report.organization_tax_id|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">فترة التدقيق</td>
+                        <td class="mono">{{ report.period_start|date:"Y/m/d" }} - {{ report.period_end|date:"Y/m/d" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="p-6 border-b border-slate-200">
+            <h2 class="text-lg font-semibold text-slate-700 mb-4">الملخص التنفيذي</h2>
+            <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap" data-testid="executive-summary">{{ report.executive_summary_ar }}</div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="p-6 border-b border-slate-200">
+            <h2 class="text-lg font-semibold text-slate-700 mb-4">ملخص النتائج</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-slate-50 rounded p-4 text-center">
+                    <div class="text-3xl font-bold {% if report.overall_compliance_score >= 80 %}text-green-600{% elif report.overall_compliance_score >= 60 %}text-amber-600{% else %}text-red-600{% endif %}">{{ report.overall_compliance_score }}%</div>
+                    <div class="text-xs text-slate-500 mt-1">درجة الامتثال</div>
+                </div>
+                <div class="bg-slate-50 rounded p-4 text-center">
+                    <div class="text-3xl font-bold text-slate-700">{{ report.total_findings }}</div>
+                    <div class="text-xs text-slate-500 mt-1">إجمالي الملاحظات</div>
+                </div>
+                <div class="bg-slate-50 rounded p-4 text-center">
+                    <div class="text-3xl font-bold {% if report.risk_rating == 'حرج' %}text-red-600{% elif report.risk_rating == 'مرتفع' %}text-amber-600{% else %}text-slate-700{% endif %}">{{ report.risk_rating }}</div>
+                    <div class="text-xs text-slate-500 mt-1">مستوى المخاطر</div>
+                </div>
+                <div class="bg-slate-50 rounded p-4 text-center">
+                    <div class="text-xl font-bold mono text-red-600">{{ report.total_financial_impact|floatformat:2 }}</div>
+                    <div class="text-xs text-slate-500 mt-1">الأثر المالي (ر.س)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Breakdown -->
+        <div class="p-6 border-b border-slate-200">
+            <h2 class="text-lg font-semibold text-slate-700 mb-4">توزيع الملاحظات حسب المخاطر</h2>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-4 bg-red-500 rounded"></span>
+                    <span class="text-sm">حرج: {{ report.critical_findings }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-4 bg-amber-500 rounded"></span>
+                    <span class="text-sm">مرتفع: {{ report.high_risk_findings }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-4 bg-yellow-500 rounded"></span>
+                    <span class="text-sm">متوسط: {{ report.medium_risk_findings }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-4 bg-green-500 rounded"></span>
+                    <span class="text-sm">منخفض: {{ report.low_risk_findings }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Findings -->
+        <div class="p-6 border-b border-slate-200">
+            <h2 class="text-lg font-semibold text-slate-700 mb-4">تفاصيل الملاحظات</h2>
+            <div class="space-y-4">
+                {% for finding in report.findings %}
+                <div class="border border-slate-200 rounded p-4 {% if finding.risk_level == 'critical' %}border-r-4 border-r-red-500{% elif finding.risk_level == 'high' %}border-r-4 border-r-amber-500{% endif %}">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="badge {% if finding.risk_level == 'critical' %}badge-danger{% elif finding.risk_level == 'high' %}badge-warning{% elif finding.risk_level == 'medium' %}badge-info{% else %}badge-neutral{% endif %}">
+                                    {% if finding.risk_level == 'critical' %}حرج{% elif finding.risk_level == 'high' %}مرتفع{% elif finding.risk_level == 'medium' %}متوسط{% else %}منخفض{% endif %}
+                                </span>
+                                <span class="text-xs text-slate-500">{{ finding.finding_number }}</span>
+                            </div>
+                            <h3 class="font-medium text-slate-800">{{ finding.title_ar }}</h3>
+                            <p class="text-sm text-slate-600 mt-2">{{ finding.description_ar|truncatewords:50 }}</p>
+                            {% if finding.recommendation_ar %}
+                            <div class="mt-3 p-3 bg-slate-50 rounded">
+                                <div class="text-xs text-slate-500 mb-1">التوصية</div>
+                                <p class="text-sm text-slate-700">{{ finding.recommendation_ar|truncatewords:30 }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if finding.financial_impact %}
+                        <div class="text-left">
+                            <div class="text-xs text-slate-500">الأثر المالي</div>
+                            <div class="text-lg font-bold mono text-red-600">{{ finding.financial_impact|floatformat:2 }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-slate-400">
+                    لا توجد ملاحظات
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        {% if report.recommendations_ar %}
+        <div class="p-6 border-b border-slate-200">
+            <h2 class="text-lg font-semibold text-slate-700 mb-4">التوصيات العامة</h2>
+            <ul class="space-y-2">
+                {% for rec in report.recommendations_ar %}
+                <li class="flex items-start gap-2">
+                    <span class="text-slate-400 mt-1">•</span>
+                    <span class="text-sm text-slate-700">{{ rec }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Conclusion -->
+        <div class="p-6">
+            <h2 class="text-lg font-semibold text-slate-700 mb-4">الخلاصة</h2>
+            <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50 p-4 rounded" data-testid="report-conclusion">{{ report.conclusion_ar }}</div>
+        </div>
+
+        <!-- Signature Area -->
+        <div class="p-6 border-t border-slate-200 print:mt-8">
+            <div class="grid grid-cols-2 gap-8">
+                <div class="text-center">
+                    <div class="border-b border-slate-300 pb-12 mb-2"></div>
+                    <div class="text-sm text-slate-600">توقيع المدقق</div>
+                </div>
+                <div class="text-center">
+                    <div class="border-b border-slate-300 pb-12 mb-2"></div>
+                    <div class="text-sm text-slate-600">توقيع الإدارة</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Link (hide on print) -->
+    <div class="mt-6 text-center print:hidden">
+        <a href="{% url 'dashboard' %}" class="text-sm text-slate-500 hover:text-slate-700">→ العودة إلى لوحة القيادة</a>
+    </div>
+</div>
+
+<style>
+@media print {
+    body { background: white; }
+    nav, footer, .print\\:hidden { display: none !important; }
+    .print\\:border-0 { border: none !important; }
+    .print\\:shadow-none { box-shadow: none !important; }
+}
+</style>
+{% endblock %}

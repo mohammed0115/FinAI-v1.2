@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}تفاصيل المعاملة - FinAI{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <!-- Breadcrumb -->
+    <div class="text-sm text-slate-500 mb-4">
+        <a href="{% url 'transactions' %}" class="hover:text-slate-700">المعاملات</a>
+        <span class="mx-2">←</span>
+        <span class="text-slate-700">{{ transaction.reference_number|default:transaction.id|truncatechars:12 }}</span>
+    </div>
+
+    <!-- Header -->
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="p-4 border-b border-slate-200">
+            <div class="flex items-start justify-between">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="badge {% if transaction.transaction_type == 'income' %}badge-success{% elif transaction.transaction_type == 'expense' %}badge-danger{% else %}badge-neutral{% endif %}">
+                            {% if transaction.transaction_type == 'income' %}إيراد{% elif transaction.transaction_type == 'expense' %}مصروف{% elif transaction.transaction_type == 'asset' %}أصل{% elif transaction.transaction_type == 'liability' %}التزام{% else %}{{ transaction.transaction_type }}{% endif %}
+                        </span>
+                        {% if transaction.is_anomaly %}
+                        <span class="badge badge-danger">شاذ</span>
+                        {% elif transaction.is_reconciled %}
+                        <span class="badge badge-success">مُطابق</span>
+                        {% endif %}
+                    </div>
+                    <h1 class="text-xl font-bold text-slate-800" data-testid="transaction-title">{{ transaction.description|default:"معاملة مالية" }}</h1>
+                    <p class="text-sm text-slate-500 mt-1">{{ transaction.category|default:"غير مصنف" }}</p>
+                </div>
+                <div class="text-left">
+                    <div class="text-2xl font-bold mono {% if transaction.transaction_type == 'expense' %}text-red-600{% elif transaction.transaction_type == 'income' %}text-green-600{% endif %}">
+                        {{ transaction.amount|floatformat:2 }} {{ transaction.currency }}
+                    </div>
+                    <div class="text-sm text-slate-500 mono">{{ transaction.transaction_date|date:"Y/m/d" }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details -->
+        <div class="p-4">
+            <table class="w-full data-table">
+                <tbody>
+                    <tr>
+                        <td class="text-slate-500 w-32">رقم المرجع</td>
+                        <td class="mono">{{ transaction.reference_number|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">الطرف</td>
+                        <td>{{ transaction.vendor_customer|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">كود الحساب</td>
+                        <td class="mono">{{ transaction.account_code|default:"—" }}</td>
+                    </tr>
+                    {% if transaction.account %}
+                    <tr>
+                        <td class="text-slate-500">الحساب</td>
+                        <td>
+                            <a href="{% url 'account_detail' transaction.account.id %}" class="text-slate-700 hover:text-slate-900">
+                                {{ transaction.account.account_name }}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-slate-500">ضريبة القيمة المضافة</td>
+                        <td class="mono">{{ transaction.vat_amount|floatformat:2|default:"0.00" }} {{ transaction.currency }} ({{ transaction.vat_rate|floatformat:2|default:"0" }}%)</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">تاريخ المطابقة</td>
+                        <td class="mono">{{ transaction.reconciled_at|date:"Y/m/d H:i"|default:"—" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Anomaly Information -->
+    {% if transaction.is_anomaly %}
+    <div class="bg-red-50 border border-red-200 rounded mb-4">
+        <div class="px-4 py-3 border-b border-red-200">
+            <h2 class="font-semibold text-red-800">معلومات الشذوذ</h2>
+        </div>
+        <div class="p-4">
+            <div class="text-sm text-red-700">
+                <strong>نوع الشذوذ:</strong> {{ transaction.anomaly_type|default:"غير محدد" }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Related Audit Findings -->
+    {% if audit_findings %}
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <h2 class="font-semibold text-slate-700">نتائج التدقيق المرتبطة</h2>
+        </div>
+        <div class="divide-y divide-slate-100">
+            {% for finding in audit_findings %}
+            <div class="p-4 hover:bg-slate-50">
+                <a href="{% url 'audit_finding_detail' finding.id %}" class="flex items-start gap-3">
+                    <span class="badge mt-0.5 {% if finding.risk_level == 'critical' %}badge-danger{% elif finding.risk_level == 'high' %}badge-warning{% elif finding.risk_level == 'medium' %}badge-info{% else %}badge-neutral{% endif %}">
+                        {% if finding.risk_level == 'critical' %}حرج{% elif finding.risk_level == 'high' %}مرتفع{% elif finding.risk_level == 'medium' %}متوسط{% else %}منخفض{% endif %}
+                    </span>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-slate-700">{{ finding.title_ar }}</p>
+                        <p class="text-xs text-slate-500 mt-1">{{ finding.finding_number }} | {{ finding.created_at|date:"Y/m/d" }}</p>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Related Document -->
+    {% if transaction.document %}
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <h2 class="font-semibold text-slate-700">المستند المرتبط</h2>
+        </div>
+        <div class="p-4">
+            <table class="w-full data-table">
+                <tbody>
+                    <tr>
+                        <td class="text-slate-500 w-32">اسم الملف</td>
+                        <td>{{ transaction.document.file_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">النوع</td>
+                        <td>{{ transaction.document.get_document_type_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">الحالة</td>
+                        <td>
+                            <span class="badge {% if transaction.document.status == 'completed' %}badge-success{% elif transaction.document.status == 'failed' %}badge-danger{% else %}badge-neutral{% endif %}">
+                                {{ transaction.document.get_status_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">تاريخ الرفع</td>
+                        <td class="mono">{{ transaction.document.uploaded_at|date:"Y/m/d H:i" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Audit Trail -->
+    <div class="bg-white border border-slate-200 rounded">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <h2 class="font-semibold text-slate-700">سجل التدقيق</h2>
+        </div>
+        <div class="p-4">
+            <table class="w-full data-table">
+                <tbody>
+                    <tr>
+                        <td class="text-slate-500 w-32">أنشئ بواسطة</td>
+                        <td>{{ transaction.created_by.email }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">تاريخ الإنشاء</td>
+                        <td class="mono">{{ transaction.created_at|date:"Y/m/d H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">المنشأة</td>
+                        <td>{{ transaction.organization.name }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Back Link -->
+    <div class="mt-6 text-center">
+        <a href="{% url 'transactions' %}" class="text-sm text-slate-500 hover:text-slate-700">→ العودة إلى قائمة المعاملات</a>
+    </div>
+</div>
+{% endblock %}

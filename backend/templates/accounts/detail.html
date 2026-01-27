@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ account.account_code }} - {{ account.account_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Breadcrumb -->
+    <div class="text-sm text-slate-500 mb-4">
+        <a href="{% url 'accounts_list' %}" class="hover:text-slate-700">دليل الحسابات</a>
+        <span class="mx-2">←</span>
+        <span class="text-slate-700">{{ account.account_code }}</span>
+    </div>
+
+    <!-- Header -->
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="p-4 border-b border-slate-200">
+            <div class="flex items-start justify-between">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="badge {% if account.account_type == 'asset' %}badge-info{% elif account.account_type == 'liability' %}badge-danger{% elif account.account_type == 'equity' %}badge-neutral{% elif account.account_type == 'revenue' %}badge-success{% else %}badge-warning{% endif %}">
+                            {% if account.account_type == 'asset' %}أصل{% elif account.account_type == 'liability' %}التزام{% elif account.account_type == 'equity' %}حقوق ملكية{% elif account.account_type == 'revenue' %}إيراد{% else %}مصروف{% endif %}
+                        </span>
+                        {% if account.is_active %}
+                        <span class="badge badge-success">نشط</span>
+                        {% else %}
+                        <span class="badge badge-neutral">غير نشط</span>
+                        {% endif %}
+                    </div>
+                    <h1 class="text-xl font-bold text-slate-800 mono" data-testid="account-code">{{ account.account_code }}</h1>
+                    <p class="text-lg text-slate-600 mt-1">{{ account.account_name }}</p>
+                    {% if account.account_name_ar %}
+                    <p class="text-sm text-slate-500">{{ account.account_name_ar }}</p>
+                    {% endif %}
+                </div>
+                <div class="text-left">
+                    <div class="text-xs text-slate-500">الرصيد الحالي</div>
+                    <div class="text-2xl font-bold mono {% if account.current_balance < 0 %}text-red-600{% else %}text-slate-800{% endif %}">
+                        {{ account.current_balance|floatformat:2 }} {{ account.currency }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Details -->
+        <div class="p-4">
+            <table class="w-full data-table">
+                <tbody>
+                    <tr>
+                        <td class="text-slate-500 w-40">التصنيف الفرعي</td>
+                        <td>{{ account.get_account_subtype_display|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">الرصيد الافتتاحي</td>
+                        <td class="mono">{{ account.opening_balance|floatformat:2 }} {{ account.currency }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">العملة</td>
+                        <td>{{ account.currency }}</td>
+                    </tr>
+                    {% if account.parent_account %}
+                    <tr>
+                        <td class="text-slate-500">الحساب الرئيسي</td>
+                        <td>
+                            <a href="{% url 'account_detail' account.parent_account.id %}" class="text-slate-700 hover:text-slate-900">
+                                {{ account.parent_account.account_code }} - {{ account.parent_account.account_name }}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% if account.description %}
+                    <tr>
+                        <td class="text-slate-500">الوصف</td>
+                        <td>{{ account.description }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-slate-500">تاريخ الإنشاء</td>
+                        <td class="mono">{{ account.created_at|date:"Y/m/d H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">آخر تحديث</td>
+                        <td class="mono">{{ account.updated_at|date:"Y/m/d H:i" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Sub-accounts -->
+    {% if sub_accounts %}
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <h2 class="font-semibold text-slate-700">الحسابات الفرعية</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full data-table">
+                <thead>
+                    <tr>
+                        <th class="text-right">الكود</th>
+                        <th class="text-right">الاسم</th>
+                        <th class="text-left">الرصيد</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sub in sub_accounts %}
+                    <tr>
+                        <td class="mono">
+                            <a href="{% url 'account_detail' sub.id %}" class="text-slate-700 hover:text-slate-900">{{ sub.account_code }}</a>
+                        </td>
+                        <td>{{ sub.account_name }}</td>
+                        <td class="text-left mono">{{ sub.current_balance|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Transactions -->
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h2 class="font-semibold text-slate-700">آخر المعاملات على هذا الحساب</h2>
+            <span class="text-xs text-slate-500">{{ transactions_count }} معاملة</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full data-table">
+                <thead>
+                    <tr>
+                        <th class="text-right">التاريخ</th>
+                        <th class="text-right">المرجع</th>
+                        <th class="text-right">الوصف</th>
+                        <th class="text-left">المبلغ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for txn in recent_transactions %}
+                    <tr>
+                        <td class="mono">{{ txn.transaction_date|date:"Y/m/d" }}</td>
+                        <td class="mono text-slate-500">
+                            <a href="{% url 'transaction_detail' txn.id %}" class="hover:text-slate-700">{{ txn.reference_number|default:"—" }}</a>
+                        </td>
+                        <td class="max-w-xs truncate">{{ txn.description|default:"—" }}</td>
+                        <td class="text-left mono {% if txn.transaction_type == 'expense' %}text-red-600{% elif txn.transaction_type == 'income' %}text-green-600{% endif %}">
+                            {{ txn.amount|floatformat:2 }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-6 text-slate-400">لا توجد معاملات</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Back Link -->
+    <div class="mt-6 text-center">
+        <a href="{% url 'accounts_list' %}" class="text-sm text-slate-500 hover:text-slate-700">→ العودة إلى دليل الحسابات</a>
+    </div>
+</div>
+{% endblock %}
