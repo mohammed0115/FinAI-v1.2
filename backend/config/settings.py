@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'documents',
     'analytics',
     'reports',
+    'compliance',
 ]
 
 MIDDLEWARE = [
