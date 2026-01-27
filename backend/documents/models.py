@@ -389,3 +389,146 @@ class AuditFlag(models.Model):
     
     def __str__(self):
         return f"{self.flag_type} - {self.title}"
+
+
+
+class OCREvidence(models.Model):
+    """
+    OCR Evidence Record - سجل أدلة التعرف الضوئي
+    
+    AUDIT EVIDENCE: Stores OCR extraction results as immutable evidence.
+    
+    COMPLIANCE RULES:
+    - OCR output is evidence, NOT source of truth
+    - Original document is preserved separately
+    - All extractions are timestamped and hashed
+    - No editing of extracted text allowed
+    """
+    CONFIDENCE_LEVEL_CHOICES = [
+        ('high', 'مرتفعة - High'),
+        ('medium', 'متوسطة - Medium'),
+        ('low', 'منخفضة - Low'),
+        ('very_low', 'ضعيفة جداً - Very Low'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Link to original document
+    document = models.ForeignKey(
+        Document, on_delete=models.CASCADE,
+        related_name='ocr_evidence_records'
+    )
+    organization = models.ForeignKey(
+        'core.Organization', on_delete=models.CASCADE,
+        related_name='ocr_evidence'
+    )
+    
+    # Extracted text (immutable)
+    raw_text = models.TextField(
+        help_text='Full extracted text - IMMUTABLE'
+    )
+    text_ar = models.TextField(
+        null=True, blank=True,
+        help_text='Arabic text portions'
+    )
+    text_en = models.TextField(
+        null=True, blank=True,
+        help_text='English text portions'
+    )
+    
+    # OCR metadata
+    confidence_score = models.IntegerField(
+        default=0,
+        help_text='OCR confidence 0-100'
+    )
+    confidence_level = models.CharField(
+        max_length=20,
+        choices=CONFIDENCE_LEVEL_CHOICES,
+        default='low'
+    )
+    page_count = models.IntegerField(default=1)
+    word_count = models.IntegerField(default=0)
+    
+    # Processing details
+    ocr_engine = models.CharField(max_length=50, default='tesseract')
+    ocr_version = models.CharField(max_length=50, null=True, blank=True)
+    language_used = models.CharField(max_length=20, default='mixed')
+    is_handwritten = models.BooleanField(default=False)
+    processing_time_ms = models.IntegerField(default=0)
+    
+    # Structured data extraction (best-effort, not source of truth)
+    extracted_invoice_number = models.CharField(max_length=100, null=True, blank=True)
+    extracted_vat_number = models.CharField(max_length=20, null=True, blank=True)
+    extracted_total = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    extracted_tax = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    structured_data_json = models.JSONField(null=True, blank=True)
+    
+    # Evidence integrity
+    evidence_hash = models.CharField(
+        max_length=64,
+        help_text='SHA-256 hash for evidence integrity'
+    )
+    
+    # Audit trail
+    extracted_by = models.ForeignKey(
+        'core.User', on_delete=models.CASCADE,
+        related_name='ocr_extractions'
+    )
+    extracted_at = models.DateTimeField(auto_now_add=True)
+    
+    # Scope declaration
+    scope_declaration = models.TextField(
+        default='OCR EVIDENCE - READ-ONLY, NOT SOURCE OF TRUTH',
+        help_text='Documents that this is audit evidence only'
+    )
+    
+    class Meta:
+        db_table = 'ocr_evidence'
+        indexes = [
+            models.Index(fields=['document']),
+            models.Index(fields=['organization']),
+            models.Index(fields=['confidence_level']),
+            models.Index(fields=['extracted_at']),
+        ]
+        ordering = ['-extracted_at']
+    
+    def __str__(self):
+        return f"OCR Evidence: {self.document.file_name} ({self.confidence_level})"
+    
+    @classmethod
+    def get_scope_documentation(cls):
+        """Returns official scope documentation"""
+        return {
+            'system': 'FinAI Document OCR',
+            'purpose': 'Audit Evidence Extraction',
+            'scope_ar': '''
+نطاق التعرف الضوئي - أدلة التدقيق فقط:
+
+ما يقوم به النظام:
+• استخراج النص من المستندات الممسوحة ضوئياً
+• دعم اللغة العربية والإنجليزية
+• التعرف على الخط اليدوي (أفضل جهد)
+• تخزين النتائج كأدلة تدقيق
+
+ما لا يقوم به النظام:
+• لا يُعدّل النص المستخرج
+• لا يُعتبر النص المستخرج مصدراً للحقيقة المحاسبية
+• لا يُستخدم للقيود المحاسبية التلقائية
+            ''',
+            'scope_en': '''
+OCR Scope - Audit Evidence Only:
+
+What it DOES:
+• Extract text from scanned documents
+• Support Arabic and English languages
+• Recognize handwriting (best-effort)
+• Store results as audit evidence
+
+What it does NOT do:
+• Does NOT modify extracted text
+• Extracted text is NOT source of accounting truth
+• NOT used for automatic accounting entries
+            ''',
+            'disclaimer_ar': 'النص المستخرج هو دليل تدقيق فقط وليس مصدراً للحقيقة المحاسبية',
+            'disclaimer_en': 'Extracted text is audit evidence only, not source of accounting truth',
+        }
