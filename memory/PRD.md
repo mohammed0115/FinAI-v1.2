@@ -197,14 +197,13 @@ Build an AI-Powered Financial Audit Platform (FinAI) targeting the GCC market wi
 ### P2 - Medium Priority
 1. **Database Migration**: Move from SQLite to PostgreSQL for production
 2. **Dashboard Charts**: Add trend charts for income/expense over time
-3. **Multi-Language Toggle**: Add English translation option
+3. **AI Explanation Review Workflow**: Add UI for approving/rejecting AI explanations
 4. **Refactoring**: Split `web_views.py` into smaller focused files per app
-5. **AI Explanation Review Workflow**: Add UI for approving/rejecting AI explanations
 
 ### P3 - Future
 1. **Email Notifications**: Alert users of critical findings
 2. **Role-Based Access**: Granular permissions by user role
-3. **Full ZATCA API Integration**: Connect to live ZATCA API for invoice reporting/clearing
+3. **Connect to Live ZATCA Sandbox**: Upgrade from simulated responses to actual ZATCA sandbox API calls
 
 ---
 
