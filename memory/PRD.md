@@ -220,8 +220,9 @@ Build an AI-Powered Financial Audit Platform (FinAI) targeting the GCC market wi
 
 ## 10. Known Limitations
 
-### MOCKED Features
-- **AI Explanations**: The `ai_explanation_ar` field in AuditFinding model contains static seeded data, NOT live LLM-generated content. LLM integration is a P1 task pending user authorization.
+### Compliance-Safe Design
+- **AI Explanations**: All LLM-generated explanations are marked as ADVISORY ONLY and require human review before any action. Approval workflow is available.
+- **No Automatic Decisions**: AI output does not change risk scores, findings status, or any accounting data automatically.
 
 ### ZATCA Scope Limitation
 - ✓ Validates existing invoice data
