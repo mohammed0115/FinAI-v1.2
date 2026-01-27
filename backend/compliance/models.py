@@ -661,3 +661,153 @@ class AuditFinding(models.Model):
     
     def __str__(self):
         return f"{self.finding_number}: {self.title_ar}"
+
+
+
+class ZATCALiveVerificationReport(models.Model):
+    """
+    تقرير التحقق المباشر من ZATCA - ZATCA Live Verification Report
+    
+    AUDIT EVIDENCE STORAGE
+    
+    This model stores verification results as audit evidence.
+    FinAI performs READ-ONLY verification of existing invoice data.
+    
+    SCOPE LIMITATION:
+    - Does NOT generate invoices
+    - Does NOT submit to ZATCA
+    - Does NOT sign invoices
+    - Does NOT modify data
+    
+    WHAT IT DOES:
+    - Stores verification results
+    - Captures error codes and Arabic messages
+    - Links to regulatory references
+    - Provides audit trail
+    """
+    VERIFICATION_STATUS_CHOICES = [
+        ('passed', 'ناجح - Passed'),
+        ('warning', 'تحذير - Warning'),
+        ('failed', 'فشل - Failed'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Link to invoice being verified
+    invoice = models.ForeignKey(
+        ZATCAInvoice, on_delete=models.CASCADE, 
+        related_name='live_verification_reports'
+    )
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE,
+        related_name='zatca_verification_reports'
+    )
+    
+    # Verification metadata
+    verification_timestamp = models.DateTimeField()
+    verification_type = models.CharField(
+        max_length=50, 
+        default='post_transaction',
+        help_text='READ-ONLY verification type'
+    )
+    
+    # Overall results
+    overall_status = models.CharField(max_length=20, choices=VERIFICATION_STATUS_CHOICES)
+    compliance_score = models.IntegerField(default=0)  # 0-100
+    
+    # Check counts
+    total_checks = models.IntegerField(default=0)
+    passed_checks = models.IntegerField(default=0)
+    failed_checks = models.IntegerField(default=0)
+    warning_checks = models.IntegerField(default=0)
+    
+    # Detailed results (JSON)
+    verification_results_json = models.JSONField(
+        help_text='Detailed verification results'
+    )
+    hash_verification_json = models.JSONField(
+        null=True, blank=True,
+        help_text='Hash chain verification details'
+    )
+    
+    # Summaries (Arabic primary)
+    summary_ar = models.TextField(help_text='Arabic summary')
+    summary_en = models.TextField(null=True, blank=True, help_text='English summary')
+    
+    # Error tracking
+    critical_errors_json = models.JSONField(
+        null=True, blank=True,
+        help_text='Critical errors that block compliance'
+    )
+    
+    # Audit trail
+    verified_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, 
+        related_name='zatca_verifications'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Scope documentation
+    scope_declaration = models.TextField(
+        default='READ-ONLY POST-TRANSACTION VERIFICATION',
+        help_text='Documents that this is read-only verification, not invoice submission'
+    )
+    
+    class Meta:
+        db_table = 'zatca_live_verification_reports'
+        indexes = [
+            models.Index(fields=['invoice']),
+            models.Index(fields=['organization']),
+            models.Index(fields=['overall_status']),
+            models.Index(fields=['verification_timestamp']),
+        ]
+        ordering = ['-verification_timestamp']
+    
+    def __str__(self):
+        return f"تحقق {self.invoice.invoice_number} - {self.overall_status} ({self.compliance_score}%)"
+    
+    @classmethod
+    def get_scope_documentation(cls):
+        """
+        Returns official scope documentation for regulatory purposes
+        """
+        return {
+            'system_name': 'FinAI - AI-Powered Financial Audit Platform',
+            'service_type': 'READ-ONLY VERIFICATION',
+            'scope_ar': '''
+نطاق النظام - التحقق للقراءة فقط:
+
+ما يقوم به النظام:
+• التحقق من صحة بيانات الفواتير الموجودة مقابل متطلبات هيئة الزكاة والضريبة والجمارك
+• التحقق من تنسيق الرقم الضريبي
+• التحقق من صحة المعرف الفريد (UUID)
+• التحقق من سلامة سلسلة التجزئة
+• تسجيل نتائج التحقق كدليل تدقيق
+
+ما لا يقوم به النظام:
+• لا يُصدر فواتير
+• لا يُرسل فواتير إلى هيئة الزكاة والضريبة والجمارك
+• لا يوقّع الفواتير
+• لا يُعدّل بيانات الفواتير
+• لا يتصرف نيابة عن المكلفين
+            ''',
+            'scope_en': '''
+System Scope - READ-ONLY VERIFICATION:
+
+What the system DOES:
+• Validates existing invoice data against ZATCA requirements
+• Verifies VAT number format
+• Checks UUID correctness
+• Verifies hash chain integrity
+• Stores verification results as audit evidence
+
+What the system does NOT do:
+• Does NOT generate invoices
+• Does NOT submit invoices to ZATCA
+• Does NOT sign invoices
+• Does NOT modify invoice data
+• Does NOT act on behalf of taxpayers
+            ''',
+            'regulatory_disclaimer_ar': 'هذا النظام هو نظام تدقيق ومراجعة فقط وليس نظام فوترة إلكترونية',
+            'regulatory_disclaimer_en': 'This is an audit and review system only, not an e-invoicing system',
+        }
