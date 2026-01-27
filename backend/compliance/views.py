@@ -437,7 +437,7 @@ class ComplianceDashboardViewSet(viewsets.ViewSet):
             'risk_level': self._calculate_risk_level(overall_score, unresolved_critical, unresolved_high),
         })
     
-    def _calculate_risk_level(self, score: int, critical: int, high: int) -> Dict:
+    def _calculate_risk_level(self, score: int, critical: int, high: int) -> dict:
         """حساب مستوى المخاطر"""
         if critical > 0 or score < 50:
             return {'level': 'critical', 'level_ar': 'حرج', 'color': 'red'}
