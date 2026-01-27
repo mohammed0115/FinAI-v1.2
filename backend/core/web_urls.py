@@ -43,4 +43,7 @@ urlpatterns = [
     path('documents/', web_views.documents_view, name='documents'),
     path('analytics/', web_views.analytics_dashboard_view, name='analytics_dashboard'),
     path('insights/<uuid:insight_id>/resolve/', web_views.resolve_insight_view, name='resolve_insight'),
+    
+    # Organization Settings
+    path('settings/organization/', web_views.organization_settings_view, name='organization_settings'),
 ]
