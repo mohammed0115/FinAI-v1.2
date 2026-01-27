@@ -339,4 +339,13 @@
         <a href="{% url 'audit_findings_list' %}" class="text-sm text-slate-500 hover:text-slate-700">→ العودة إلى قائمة نتائج التدقيق</a>
     </div>
 </div>
+
+<script>
+function toggleModifyForm(logId) {
+    const form = document.getElementById('modify-form-' + logId);
+    if (form) {
+        form.classList.toggle('hidden');
+    }
+}
+</script>
 {% endblock %}
