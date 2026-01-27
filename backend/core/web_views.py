@@ -215,14 +215,99 @@ def audit_finding_detail_view(request, finding_id):
     
     finding = get_object_or_404(AuditFinding, id=finding_id, organization=organization)
     
+    # Get AI explanation logs for this finding
+    ai_logs = finding.ai_explanation_logs.all().order_by('-generated_at')[:5]
+    
     context = {
         'finding': finding,
+        'ai_explanation_logs': ai_logs,
     }
     
     return render(request, 'findings/detail.html', context)
 
 
 @login_required
+def generate_ai_explanation_view(request, finding_id):
+    """
+    توليد شرح ذكي لنتيجة التدقيق
+    Generate AI Explanation for Audit Finding
+    
+    COMPLIANCE:
+    - Output is ADVISORY ONLY
+    - Human review is REQUIRED
+    - Full audit trail maintained
+    """
+    import asyncio
+    from compliance.ai_explanation_service import ai_explanation_service
+    from compliance.models import AuditFinding, AIExplanationLog
+    
+    user = request.user
+    organization = user.organization
+    
+    finding = get_object_or_404(AuditFinding, id=finding_id, organization=organization)
+    
+    if request.method == 'POST':
+        try:
+            # Get regulatory reference if available
+            reg_ref = None
+            if finding.regulatory_reference:
+                reg_ref = f"{finding.regulatory_reference.article_number}: {finding.regulatory_reference.title_ar}"
+            
+            # Generate explanation asynchronously
+            result = ai_explanation_service.generate_explanation_sync(
+                finding_id=str(finding.id),
+                title_ar=finding.title_ar,
+                description_ar=finding.description_ar,
+                risk_level=finding.risk_level,
+                finding_type=finding.finding_type,
+                financial_impact=finding.financial_impact,
+                regulatory_reference=reg_ref,
+            )
+            
+            if result.get('success'):
+                # Store in audit log
+                ai_log = AIExplanationLog.objects.create(
+                    finding=finding,
+                    organization=organization,
+                    explanation_ar=result['explanation_ar'],
+                    confidence_score=result['confidence_score'],
+                    confidence_level=result['confidence_level'],
+                    model_used=result['model_used'],
+                    provider=result['provider'],
+                    session_id=result['session_id'],
+                    processing_time_ms=result['processing_time_ms'],
+                    audit_hash=result['audit_hash'],
+                    is_advisory=True,
+                    requires_human_review=True,
+                    generated_by=user,
+                )
+                
+                # Update finding with new explanation (but keep human review required)
+                finding.ai_explanation_ar = result['explanation_ar']
+                finding.ai_confidence = result['confidence_score']
+                finding.save()
+                
+                messages.success(
+                    request, 
+                    f'تم توليد الشرح الذكي بنجاح (درجة الثقة: {result["confidence_score"]}%). يرجى مراجعة الشرح قبل الاعتماد.'
+                )
+                
+                logger.info(
+                    f"AI explanation generated for finding {finding.finding_number} by {user.email}"
+                )
+            else:
+                messages.error(
+                    request, 
+                    f'فشل في توليد الشرح الذكي: {result.get("error", "خطأ غير معروف")}'
+                )
+                
+        except Exception as e:
+            logger.error(f"AI explanation generation error: {e}")
+            messages.error(request, f'خطأ في توليد الشرح الذكي: {str(e)}')
+    
+    return redirect('audit_finding_detail', finding_id=finding_id)
+
+
 def transactions_view(request):
     user = request.user
     organization = user.organization
