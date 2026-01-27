@@ -119,6 +119,28 @@ Build an AI-Powered Financial Audit Platform (FinAI) targeting the GCC market wi
   - Invoice signing
   - Acting on behalf of taxpayers
 
+### Phase 10: VAT Handling Logic (Complete - Jan 27, 2026)
+- **Organization Settings Page**: `/settings/organization/` for managing company VAT settings
+- **Country-Based Validation**:
+  - Saudi Arabia (SA): VAT number **REQUIRED**, must be 15 digits starting/ending with 3
+  - Other GCC countries: VAT number **OPTIONAL**, format validated only if provided
+- **Server-Side Validation**: 
+  - `VATValidationService` class with Arabic-first error messages
+  - Validates format, length, prefix, suffix
+- **VAT Fields Added to Organization Model**:
+  - `vat_number`: VAT registration number
+  - `vat_applicable`: Derived from country
+  - `vat_validation_status`: not_validated/valid/invalid/not_required
+  - `vat_validated_at`: Timestamp of last validation
+  - `zatca_enabled`: ZATCA verification scope
+- **ZATCA Auto-Enable**: When Saudi VAT is validated, ZATCA verification is automatically enabled
+- **Scope Notice**: Clear disclaimer that this is for audit/verification only
+- **NOT Implemented** (by design):
+  - No ERP behavior
+  - No invoice submission
+  - No tax calculation engine
+  - No effect on audit scoring
+
 ---
 
 ## 3. Architecture
