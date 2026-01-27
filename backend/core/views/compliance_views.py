@@ -55,7 +55,7 @@ def compliance_overview_view(request):
         'total': zakat_calcs.count(),
         'latest': latest_zakat,
         'zakat_due': latest_zakat.zakat_due if latest_zakat else Decimal('0'),
-        'zakat_base': latest_zakat.zakat_base if latest_zakat else Decimal('0'),
+        'zakat_base': latest_zakat.net_zakat_base if latest_zakat else Decimal('0'),
     }
     zakat_score = zakat_calcs.aggregate(avg=Sum('compliance_score'))['avg']
     zakat_score = int(zakat_score / max(zakat_calcs.count(), 1)) if zakat_score else 100
