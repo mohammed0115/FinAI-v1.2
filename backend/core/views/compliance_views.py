@@ -42,7 +42,7 @@ def compliance_overview_view(request):
     vat_summary = {
         'total': vat_reconciliations.count(),
         'total_variance': vat_reconciliations.aggregate(total=Sum('total_variance'))['total'] or Decimal('0'),
-        'total_collected': vat_reconciliations.aggregate(total=Sum('total_collected'))['total'] or Decimal('0'),
+        'total_collected': vat_reconciliations.aggregate(total=Sum('total_output_vat'))['total'] or Decimal('0'),
         'total_reported': vat_reconciliations.aggregate(total=Sum('total_reported'))['total'] or Decimal('0'),
     }
     vat_score = vat_reconciliations.aggregate(avg=Sum('compliance_score'))['avg']

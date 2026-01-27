@@ -159,7 +159,7 @@ def ocr_evidence_list_view(request):
     user = request.user
     organization = user.organization
     
-    evidence_list = OCREvidence.objects.filter(organization=organization).order_by('-created_at')
+    evidence_list = OCREvidence.objects.filter(organization=organization).order_by('-extracted_at')
     
     # Pagination
     paginator = Paginator(evidence_list, 20)
