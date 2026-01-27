@@ -261,3 +261,71 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// Compliance Scores Bar Chart
+const complianceCtx = document.getElementById('complianceChart');
+if (complianceCtx) {
+    new Chart(complianceCtx, {
+        type: 'bar',
+        data: {
+            labels: ['ZATCA', 'ض.ق.م', 'الزكاة'],
+            datasets: [{
+                data: [{{ chart_data.compliance_scores.values.0 }}, {{ chart_data.compliance_scores.values.1 }}, {{ chart_data.compliance_scores.values.2 }}],
+                backgroundColor: [
+                    {{ chart_data.compliance_scores.values.0 }} >= 80 ? '#22c55e' : '#eab308',
+                    {{ chart_data.compliance_scores.values.1 }} >= 80 ? '#22c55e' : '#eab308',
+                    {{ chart_data.compliance_scores.values.2 }} >= 80 ? '#22c55e' : '#eab308',
+                ],
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) { return value + '%'; }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Findings by Risk Doughnut Chart
+const findingsCtx = document.getElementById('findingsChart');
+if (findingsCtx) {
+    const findingsData = [{{ chart_data.findings_by_risk.values.0 }}, {{ chart_data.findings_by_risk.values.1 }}, {{ chart_data.findings_by_risk.values.2 }}, {{ chart_data.findings_by_risk.values.3 }}];
+    const hasData = findingsData.some(v => v > 0);
+    
+    new Chart(findingsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['حرج', 'مرتفع', 'متوسط', 'منخفض'],
+            datasets: [{
+                data: hasData ? findingsData : [0, 0, 0, 1],
+                backgroundColor: hasData ? ['#ef4444', '#f97316', '#eab308', '#22c55e'] : ['#e2e8f0'],
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: { display: false },
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
