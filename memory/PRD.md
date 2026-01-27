@@ -55,6 +55,27 @@ Build an AI-Powered Financial Audit Platform (FinAI) targeting the GCC market wi
 - **Arabic Audit Report**: Printable report with executive summary, findings, recommendations, conclusion
 - **Navigation**: Full Arabic navigation bar with 6 menu items
 
+### Phase 4: ZATCA Live Verification (Complete - Jan 27, 2026)
+- **READ-ONLY Verification**: Post-transaction validation of existing invoice data
+- **Scope Documentation**: Clear separation between ERP invoice generation vs. FinAI verification
+- **Verification Checks**:
+  - Mandatory fields (invoice number, UUID, dates, seller/buyer info, totals)
+  - Format validation (VAT number 3XXXXXXXXXXXXX3, UUID format, invoice number length)
+  - Calculation verification (VAT amount, totals, rate 15%)
+  - Business rules (future date check, invoice type/subtype codes)
+  - Hash chain integrity (SHA-256 hash verification)
+- **ZATCA Error Codes**: Full Arabic error messages with regulatory article references
+- **Audit Evidence Storage**: All verifications stored for regulatory audit trail
+- **VAT Number Verification**: Format-only check with regulatory disclaimer
+
+**SCOPE LIMITATION (Critical)**:
+- ✓ Validates existing invoice data
+- ✓ Stores verification results as audit evidence
+- ✗ Does NOT generate invoices
+- ✗ Does NOT submit to ZATCA
+- ✗ Does NOT sign invoices
+- ✗ Does NOT act on behalf of taxpayers
+
 ---
 
 ## 3. Architecture
@@ -67,6 +88,8 @@ Build an AI-Powered Financial Audit Platform (FinAI) targeting the GCC market wi
 ├── documents/       # Document, Transaction, Account, JournalEntry models
 ├── reports/         # Report, Insight models
 ├── compliance/      # ZATCA, VAT, Zakat, AuditFinding models
+│   ├── zatca_live_verification.py  # NEW: ZATCA Live Verification Service
+│   └── models.py                   # NEW: ZATCALiveVerificationReport model
 ├── templates/       # Django Templates (Arabic RTL)
 │   ├── base.html
 │   ├── login.html
