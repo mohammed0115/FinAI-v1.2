@@ -129,6 +129,13 @@ else:
     CORS_ALLOWED_ORIGINS = cors_origins_env.split(',')
 CORS_ALLOW_CREDENTIALS = True
 
+# CSRF Trusted Origins (for form submissions from external domain)
+CSRF_TRUSTED_ORIGINS = [
+    'https://finai-audit.preview.emergentagent.com',
+    'http://localhost:3000',
+    'http://localhost:8001',
+]
+
 # REST Framework Settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
