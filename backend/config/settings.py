@@ -131,7 +131,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 # CSRF Trusted Origins (for form submissions from external domain)
 CSRF_TRUSTED_ORIGINS = [
-    'https://finai-audit.preview.emergentagent.com',
+    'https://ocr-audit.preview.emergentagent.com',
     'http://localhost:3000',
     'http://localhost:8001',
 ]
