@@ -160,6 +160,11 @@ from .settings_views import (
 )
 
 __all__ = [
+    # REST API ViewSets
+    'UserViewSet',
+    'OrganizationViewSet',
+    'AuditLogViewSet',
+    'ConfigurationViewSet',
     # Auth
     'login_view',
     'logout_view',
