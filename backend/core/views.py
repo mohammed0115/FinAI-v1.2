@@ -26,16 +26,16 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class OrganizationViewSet(viewsets.ModelViewSet):
-    queryset = Organization.objects.all()
+    queryset = Organization.objects.all().order_by('name')
     serializer_class = OrganizationSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         user = self.request.user
         if user.role == 'admin':
-            return Organization.objects.all()
+            return Organization.objects.all().order_by('name')
         elif user.organization:
-            return Organization.objects.filter(id=user.organization.id)
+            return Organization.objects.filter(id=user.organization.id).order_by('name')
         return Organization.objects.none()
     
     @action(detail=True, methods=['get'])
