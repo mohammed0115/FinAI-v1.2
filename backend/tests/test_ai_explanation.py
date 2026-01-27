@@ -16,13 +16,12 @@ FINDING_ID = "e8c2dee9-2d4b-41d3-be03-914217cd0bdd"
 
 
 class TestAIExplanationFeature:
-    """Test AI Explanation generation and audit trail"""
+    """Test AI Explanation generation and audit trail via HTTP requests"""
     
     @pytest.fixture(autouse=True)
     def setup(self):
         """Setup session with authentication"""
         self.session = requests.Session()
-        self.session.headers.update({"Content-Type": "application/x-www-form-urlencoded"})
         
     def get_csrf_token(self, url):
         """Get CSRF token from page"""
@@ -38,7 +37,7 @@ class TestAIExplanationFeature:
     
     def login(self):
         """Login and return authenticated session"""
-        login_url = f"{BASE_URL}/api/login/"
+        login_url = f"{BASE_URL}/login/"
         csrf_token, _ = self.get_csrf_token(login_url)
         
         login_data = {
@@ -50,6 +49,7 @@ class TestAIExplanationFeature:
         response = self.session.post(
             login_url,
             data=login_data,
+            headers={"Referer": login_url},
             allow_redirects=True
         )
         return response
@@ -66,7 +66,7 @@ class TestAIExplanationFeature:
         """Test that finding detail page loads with AI explanation section"""
         self.login()
         
-        finding_url = f"{BASE_URL}/api/findings/{FINDING_ID}/"
+        finding_url = f"{BASE_URL}/findings/{FINDING_ID}/"
         response = self.session.get(finding_url)
         
         assert response.status_code == 200, f"Finding page failed with status {response.status_code}"
@@ -79,7 +79,7 @@ class TestAIExplanationFeature:
         """Test that Generate AI Explanation button exists"""
         self.login()
         
-        finding_url = f"{BASE_URL}/api/findings/{FINDING_ID}/"
+        finding_url = f"{BASE_URL}/findings/{FINDING_ID}/"
         response = self.session.get(finding_url)
         
         assert response.status_code == 200
@@ -93,7 +93,7 @@ class TestAIExplanationFeature:
         """Test that AI explanation content is displayed"""
         self.login()
         
-        finding_url = f"{BASE_URL}/api/findings/{FINDING_ID}/"
+        finding_url = f"{BASE_URL}/findings/{FINDING_ID}/"
         response = self.session.get(finding_url)
         
         assert response.status_code == 200
@@ -106,7 +106,7 @@ class TestAIExplanationFeature:
         """Test that human review disclaimer is displayed"""
         self.login()
         
-        finding_url = f"{BASE_URL}/api/findings/{FINDING_ID}/"
+        finding_url = f"{BASE_URL}/findings/{FINDING_ID}/"
         response = self.session.get(finding_url)
         
         assert response.status_code == 200
@@ -119,7 +119,7 @@ class TestAIExplanationFeature:
         """Test that confidence score is displayed"""
         self.login()
         
-        finding_url = f"{BASE_URL}/api/findings/{FINDING_ID}/"
+        finding_url = f"{BASE_URL}/findings/{FINDING_ID}/"
         response = self.session.get(finding_url)
         
         assert response.status_code == 200
@@ -134,7 +134,7 @@ class TestAIExplanationFeature:
         """Test that AI explanation log history section exists"""
         self.login()
         
-        finding_url = f"{BASE_URL}/api/findings/{FINDING_ID}/"
+        finding_url = f"{BASE_URL}/findings/{FINDING_ID}/"
         response = self.session.get(finding_url)
         
         assert response.status_code == 200
@@ -151,20 +151,14 @@ class TestAIExplanationDatabase:
         """Test that AIExplanationLog record exists in database"""
         import subprocess
         result = subprocess.run(
-            ["python", "manage.py", "shell", "-c", f"""
-from compliance.models import AuditFinding, AIExplanationLog
-finding = AuditFinding.objects.filter(id='{FINDING_ID}').first()
-if finding:
-    logs = AIExplanationLog.objects.filter(finding=finding)
-    print(f'LOG_COUNT:{logs.count()}')
-    for log in logs:
-        print(f'APPROVAL_STATUS:{log.approval_status}')
-        print(f'REQUIRES_HUMAN_REVIEW:{log.requires_human_review}')
-        print(f'MODEL_USED:{log.model_used}')
-        print(f'CONFIDENCE:{log.confidence_score}')
-else:
-    print('FINDING_NOT_FOUND')
-"""],
+            ["python", "manage.py", "shell", "-c", 
+             f"from compliance.models import AuditFinding, AIExplanationLog; "
+             f"finding = AuditFinding.objects.filter(id='{FINDING_ID}').first(); "
+             f"logs = AIExplanationLog.objects.filter(finding=finding) if finding else []; "
+             f"print(f'LOG_COUNT:{{logs.count() if hasattr(logs, \"count\") else 0}}'); "
+             f"[print(f'APPROVAL_STATUS:{{log.approval_status}}') for log in logs]; "
+             f"[print(f'REQUIRES_HUMAN_REVIEW:{{log.requires_human_review}}') for log in logs]"
+            ],
             cwd="/app/backend",
             capture_output=True,
             text=True
@@ -172,30 +166,25 @@ else:
         
         output = result.stdout
         assert "LOG_COUNT:1" in output or "LOG_COUNT:2" in output, f"No AI explanation logs found. Output: {output}"
-        assert "APPROVAL_STATUS:pending" in output, "Approval status should be pending"
-        assert "REQUIRES_HUMAN_REVIEW:True" in output, "requires_human_review should be True"
+        assert "APPROVAL_STATUS:pending" in output, f"Approval status should be pending. Output: {output}"
+        assert "REQUIRES_HUMAN_REVIEW:True" in output, f"requires_human_review should be True. Output: {output}"
         print("✓ AIExplanationLog record exists with correct status")
     
     def test_09_finding_ai_explanation_updated(self):
         """Test that finding's ai_explanation_ar field is updated"""
         import subprocess
         result = subprocess.run(
-            ["python", "manage.py", "shell", "-c", f"""
-from compliance.models import AuditFinding
-finding = AuditFinding.objects.filter(id='{FINDING_ID}').first()
-if finding:
-    has_explanation = bool(finding.ai_explanation_ar)
-    print(f'HAS_EXPLANATION:{has_explanation}')
-    print(f'AI_CONFIDENCE:{finding.ai_confidence}')
-    if finding.ai_explanation_ar:
-        # Check if it's in Arabic (contains Arabic characters)
-        import re
-        arabic_pattern = re.compile(r'[\u0600-\u06FF]')
-        is_arabic = bool(arabic_pattern.search(finding.ai_explanation_ar))
-        print(f'IS_ARABIC:{is_arabic}')
-else:
-    print('FINDING_NOT_FOUND')
-"""],
+            ["python", "manage.py", "shell", "-c", 
+             f"import re; "
+             f"from compliance.models import AuditFinding; "
+             f"finding = AuditFinding.objects.filter(id='{FINDING_ID}').first(); "
+             f"has_explanation = bool(finding.ai_explanation_ar) if finding else False; "
+             f"print(f'HAS_EXPLANATION:{{has_explanation}}'); "
+             f"print(f'AI_CONFIDENCE:{{finding.ai_confidence if finding else 0}}'); "
+             f"arabic_pattern = re.compile(r'[\\u0600-\\u06FF]'); "
+             f"is_arabic = bool(arabic_pattern.search(finding.ai_explanation_ar)) if finding and finding.ai_explanation_ar else False; "
+             f"print(f'IS_ARABIC:{{is_arabic}}')"
+            ],
             cwd="/app/backend",
             capture_output=True,
             text=True
@@ -203,20 +192,19 @@ else:
         
         output = result.stdout
         assert "HAS_EXPLANATION:True" in output, f"Finding should have AI explanation. Output: {output}"
-        assert "IS_ARABIC:True" in output, "AI explanation should be in Arabic"
+        assert "IS_ARABIC:True" in output, f"AI explanation should be in Arabic. Output: {output}"
         print("✓ Finding's ai_explanation_ar field is updated with Arabic content")
     
     def test_10_model_used_is_gemini(self):
         """Test that the model used is Gemini 3 Flash"""
         import subprocess
         result = subprocess.run(
-            ["python", "manage.py", "shell", "-c", f"""
-from compliance.models import AIExplanationLog
-logs = AIExplanationLog.objects.filter(finding_id='{FINDING_ID}')
-for log in logs:
-    print(f'MODEL:{log.model_used}')
-    print(f'PROVIDER:{log.provider}')
-"""],
+            ["python", "manage.py", "shell", "-c", 
+             f"from compliance.models import AIExplanationLog; "
+             f"logs = AIExplanationLog.objects.filter(finding_id='{FINDING_ID}'); "
+             f"[print(f'MODEL:{{log.model_used}}') for log in logs]; "
+             f"[print(f'PROVIDER:{{log.provider}}') for log in logs]"
+            ],
             cwd="/app/backend",
             capture_output=True,
             text=True
