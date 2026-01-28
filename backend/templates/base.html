@@ -326,8 +326,8 @@
 <body class="h-full bg-main-bg">
     {% if user.is_authenticated %}
     <div class="flex h-full">
-        <!-- Premium Glassmorphism Sidebar -->
-        <aside class="glass-sidebar w-[280px] flex flex-col fixed h-full z-40 {% if is_english %}left-0{% else %}right-0{% endif %}">
+        <!-- Premium Glassmorphism Sidebar - RTL-safe using inset-inline-start -->
+        <aside class="glass-sidebar w-[280px] flex flex-col fixed h-full z-40 inset-inline-start-0">
             <!-- Logo -->
             <div class="p-5 border-b border-white/5">
                 <a href="{% url 'dashboard' %}" class="flex items-center gap-3">
