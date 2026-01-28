@@ -131,7 +131,11 @@ else:
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF Trusted Origins (for form submissions from external domain)
+# CSRF Trusted Origins - read from environment for deployment flexibility
+csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in csrf_origins.split(',') if origin.strip()
+] if csrf_origins else [
     'https://finai-audit-1.preview.emergentagent.com',
     'http://localhost:3000',
     'http://localhost:8001',
