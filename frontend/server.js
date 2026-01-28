@@ -1,35 +1,27 @@
-const http = require('http');
-const httpProxy = require('http-proxy');
+const express = require('express');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
-// Create proxy with increased limits
-const proxy = httpProxy.createProxyServer({
-    timeout: 60000,
-    proxyTimeout: 60000,
-});
+const app = express();
 
-const server = http.createServer((req, res) => {
-    // Log incoming requests
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-    proxy.web(req, res, { target: 'http://127.0.0.1:8001' });
-});
+// Enable trust proxy for proper forwarding
+app.set('trust proxy', true);
 
-server.on('upgrade', (req, socket, head) => {
-    proxy.ws(req, socket, head, { target: 'http://127.0.0.1:8001' });
-});
-
-proxy.on('error', (err, req, res) => {
-    console.error('Proxy error:', err);
-    if (res.writeHead) {
-        res.writeHead(502, { 'Content-Type': 'text/plain' });
-        res.end('Bad Gateway');
+// Proxy all requests to Django backend
+app.use('/', createProxyMiddleware({
+    target: 'http://127.0.0.1:8001',
+    changeOrigin: false,
+    ws: true,
+    xfwd: true,
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} -> ${proxyRes.statusCode}`);
+    },
+    onError: (err, req, res) => {
+        console.error('Proxy error:', err.message);
+        res.status(502).send('Proxy Error');
     }
-});
-
-proxy.on('proxyRes', (proxyRes, req, res) => {
-    console.log(`${new Date().toISOString()} - Response: ${proxyRes.statusCode} for ${req.url}`);
-});
+}));
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Proxy server running on port ${PORT}, forwarding to 8001`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Express proxy server running on port ${PORT}`);
 });
