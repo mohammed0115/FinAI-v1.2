@@ -1,4 +1,11 @@
 {
+  "name": "finai-frontend-proxy",
+  "version": "1.0.0",
+  "description": "Proxy server for FinAI Django backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
     "http-proxy": "^1.18.1"
   }
