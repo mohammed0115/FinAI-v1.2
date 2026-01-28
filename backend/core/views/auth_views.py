@@ -73,8 +73,7 @@ def register_view(request):
                 user = User.objects.create_user(
                     email=email,
                     password=password,
-                    first_name=full_name.split()[0] if full_name else '',
-                    last_name=' '.join(full_name.split()[1:]) if len(full_name.split()) > 1 else '',
+                    name=full_name,
                     organization=org,
                     role='admin',
                 )
