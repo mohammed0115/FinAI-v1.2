@@ -170,6 +170,7 @@ __all__ = [
     # Auth
     'login_view',
     'logout_view',
+    'register_view',
     # Dashboard
     'dashboard_view',
     # Compliance
