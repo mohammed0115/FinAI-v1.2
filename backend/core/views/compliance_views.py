@@ -48,8 +48,9 @@ def compliance_overview_view(request):
     # Audit Findings
     total_findings = AuditFinding.objects.filter(organization=organization).count()
     unresolved_findings = AuditFinding.objects.filter(
-        organization=organization
-    ).exclude(status__in=['resolved', 'closed']).count()
+        organization=organization,
+        is_resolved=False
+    ).count()
     
     # Overall score
     overall_score = int((zatca_score + vat_score + zakat_score) / 3)
