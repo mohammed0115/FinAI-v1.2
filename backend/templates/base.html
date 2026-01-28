@@ -508,11 +508,11 @@
                         </button>
                         
                         <!-- User Menu -->
-                        <div class="flex items-center gap-3 {% if is_english %}border-r{% else %}border-l{% endif %} border-slate-200 {% if is_english %}pr-4{% else %}pl-4{% endif %}">
+                        <div class="flex items-center gap-3 border-s border-slate-200 ps-4">
                             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
                                 {{ user.get_full_name|default:user.email|slice:":1"|upper }}
                             </div>
-                            <div class="text-{% if is_english %}left{% else %}right{% endif %}">
+                            <div class="text-start">
                                 <div class="text-sm font-semibold text-slate-800">{{ user.get_full_name|default:user.email }}</div>
                                 <div class="text-[11px] text-slate-400">{{ user.role|default:'مدقق' }}</div>
                             </div>
