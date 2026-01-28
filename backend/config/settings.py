@@ -179,11 +179,13 @@ LOGOUT_REDIRECT_URL = '/login/'
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB (GCC requirement)
 ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff']
 
-# CSRF Cookie settings for proxy environments
+# Cookie settings for proxy environments
+# Use 'None' for SameSite to allow cross-site requests with Secure cookies
 CSRF_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_SECURE = True
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'None'
 
 # Trust X-Forwarded headers from proxy
 USE_X_FORWARDED_HOST = True
