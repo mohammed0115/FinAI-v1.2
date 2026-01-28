@@ -1,454 +1,888 @@
 <analysis>**original_problem_statement:**
-The user requested the development of FinAI – AI-Powered Financial Audit Platform. The project has progressed through several phases, starting with a Django backend for accounting and compliance, a server-rendered Django Template frontend, ZATCA live verification (read-only), PDF reporting, document ingestion with OCR, and live LLM integration for AI-powered explanations.
+The user initially requested the development of FinAI – AI-Powered Financial Audit Platform. The project has evolved through multiple phases, including backend development, OCR, AI integration, and advanced document uploading.
 
-The most recent user request authorized three P2-level tasks:
-1.  **Dashboard Charts:** Add simple, server-rendered charts for executive visibility (e.g., compliance score trends).
-2.  **AI Explanation Review Workflow UI:** Build a UI for auditors to approve, modify, or reject AI-generated explanations, completing the human-in-the-loop audit cycle.
-3.  **Refactor :** Improve code maintainability by splitting the monolithic  file into smaller, feature-focused view files.
+The most recent user request is to redesign the server-rendered Django Template frontend to align with a professional Business Intelligence (BI) dashboard design. This involves creating a new base layout with a sidebar, componentizing elements like KPI cards, and restructuring the main dashboard, analytics, and report pages.
 
 **PRODUCT REQUIREMENTS:**
-- **System Nature:** A read-only audit and compliance verification platform. It is NOT an ERP or operational accounting system.
+- **System Nature:** A read-only audit and compliance verification platform.
 - **User Interface:** Arabic-first (RTL) design using server-rendered Django Templates.
-- **Core Features (Completed & Verified):**
-    - Auditor Dashboard with compliance stats.
-    - ZATCA Live Verification (simulated, verification-only).
-    - Arabic PDF Audit Report generation.
-    - Document Ingestion (PDF/Image) with Tesseract OCR.
-    - Live LLM Integration (Gemini 3 Flash via Emergent LLM Key) for AI-generated finding explanations.
-    - Multi-language UI toggle (AR/EN).
-    - Company settings with country-specific VAT validation logic (KSA).
-- **Current Scope (P2 - In Progress):** Dashboard Charts, AI Review Workflow UI, and  refactor.
+- **Core Features (Completed):**
+    - Auditor Dashboard & Compliance Stats.
+    - ZATCA Live Verification (Simulated).
+    - Arabic PDF Audit Report Generation.
+    - Advanced Document Ingestion: Single, multi-file, and ZIP batch uploads.
+    - Live LLM Integration (Gemini 3 Flash).
+    - Multi-language UI toggle.
+    - Company settings with country-specific VAT validation.
+- **Current Scope (P0 - In Progress):** Implement a major UI redesign of the Django templates for a professional BI look and feel.
 
 **User's preferred language**: English. The application's user interface and reports **MUST** be Arabic-first (RTL). The next agent should respond in English.
 
 **what currently exists?**
-A feature-rich Django application with a server-rendered frontend. All core features, including OCR document upload and live LLM integration, were completed and tested. The agent began work on the authorized P2 tasks, writing the necessary code for dashboard charts and an AI review workflow. It then started a major refactor of  into a new  package. This refactoring has destabilized the application, which now fails to start.
+A fully functional and feature-complete Django application. All backend functionalities, including enterprise-grade document uploads (single, multi, zip), OCR processing, AI explanations, and PDF reporting, have been implemented and rigorously tested. The application was stable and passed a full QA verification.
+
+The agent just began implementing a major frontend redesign, overwriting existing templates (, , etc.) and creating new component templates (). This has introduced server-side template rendering errors, making several pages inaccessible. A Node.js proxy has also been set up in  to correctly route traffic from the preview URL to the Django backend.
 
 **Last working item**:
-- **Last item agent was working:** Refactoring the monolithic  file into a modular package at . The agent had created the new directory structure and files, updated the URL configuration, but the application crashed upon restart.
-    - **Status:** BLOCKED
-    - **Agent Testing Done:** N
-    - **Which testing method agent to use?** Backend testing. The application is not starting. The agent needs to diagnose the root cause using supervisor logs.
-    - **User Testing Done:** N
+- **Last item agent was working:** Implementing a complete UI overhaul based on a BI dashboard design. The agent created new templates for components, the base layout, dashboard, analytics, and report pages. Upon testing, these new templates caused  on multiple pages. The agent was about to investigate the backend logs to diagnose the template errors.
+    - **Status:** IN PROGRESS
+    - **Agent Testing Done:** Y (and it failed)
+    - **Which testing method agent to use?** Manual testing by navigating to the affected pages and checking backend logs (==> /var/log/supervisor/backend.err.log <==
+  File "/app/backend/documents/ocr_service.py", line 414, in <module>
+    document_ocr_service = DocumentOCRService()
+                           ^^^^^^^^^^^^^^^^^^^^
+  File "/app/backend/documents/ocr_service.py", line 67, in __init__
+    self._verify_tesseract()
+  File "/app/backend/documents/ocr_service.py", line 76, in _verify_tesseract
+    raise RuntimeError("Tesseract OCR is not installed or not accessible")
+RuntimeError: Tesseract OCR is not installed or not accessible
 
-**All Pending/In progress Issue list**:
-- **Issue 1:  Application Fails to Start After View Refactoring (Priority: P0)**
-    - **Description:** After the agent refactored  into a  package, the Django application fails on startup with the error . This is a critical regression that has brought the entire application down. The error is likely a side-effect of the refactor causing an import-time issue or an environment instability.
-    - **Attempted fixes:** The agent identified the  from the logs and noted that Tesseract needed to be reinstalled.
-    - **Next debug checklist:**
-        1.  Check the backend supervisor logs for the full Python traceback to pinpoint the exact import that triggers the error: ==> /var/log/supervisor/backend.err.log <==
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/root/.venv/lib/python3.11/site-packages/asgiref/sync.py", line 555, in thread_handler
     raise exc_info[1]
-  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/base.py", line 253, in _get_response_async
-    response = await wrapped_callback(
-               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 42, in inner
+    response = await get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/utils/deprecation.py", line 150, in __acall__
+    response = response or await self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 44, in inner
+    response = await sync_to_async(
+               ^^^^^^^^^^^^^^^^^^^^
   File "/root/.venv/lib/python3.11/site-packages/asgiref/sync.py", line 504, in __call__
     ret = await asyncio.shield(exec_coro)
           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
     result = self.fn(*self.args, **self.kwargs)
              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.venv/lib/python3.11/site-packages/asgiref/sync.py", line 559, in thread_handler
+  File "/root/.venv/lib/python3.11/site-packages/asgiref/sync.py", line 557, in thread_handler
     return func(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.venv/lib/python3.11/site-packages/django/contrib/auth/decorators.py", line 23, in _wrapper_view
-    return view_func(request, *args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/app/backend/core/web_views.py", line 946, in zatca_verification_view
-    ZATCALiveVerificationReport.objects.create(
-  File "/root/.venv/lib/python3.11/site-packages/django/db/models/manager.py", line 87, in manager_method
-    return getattr(self.get_queryset(), name)(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.venv/lib/python3.11/site-packages/django/db/models/query.py", line 675, in create
-    obj = self.model(**kwargs)
-          ^^^^^^^^^^^^^^^^^^^^
-  File "/root/.venv/lib/python3.11/site-packages/django/db/models/base.py", line 567, in __init__
-    raise TypeError(
-TypeError: ZATCALiveVerificationReport() got unexpected keyword arguments: 'invoice_uuid', 'raw_response_json'
-WARNING:  WatchFiles detected changes in 'compliance/models.py'. Reloading...
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 140, in response_for_exception
+    response = handle_uncaught_exception(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 184, in handle_uncaught_exception
+    callback = resolver.resolve_error_handler(500)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/resolvers.py", line 749, in resolve_error_handler
+    callback = getattr(self.urlconf_module, "handler%s" % view_type, None)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/resolvers.py", line 728, in urlconf_module
+    return import_module(self.urlconf_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/config/urls.py", line 20, in <module>
+    path('api/core/', include('core.urls')),
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/conf.py", line 38, in include
+    urlconf_module = import_module(urlconf_module)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/core/urls.py", line 3, in <module>
+    from .views import UserViewSet, OrganizationViewSet, AuditLogViewSet, ConfigurationViewSet
+  File "/app/backend/core/views/__init__.py", line 140, in <module>
+    from .document_views import (
+  File "/app/backend/core/views/document_views.py", line 23, in <module>
+    from documents.ocr_service import document_ocr_service
+  File "/app/backend/documents/ocr_service.py", line 414, in <module>
+    document_ocr_service = DocumentOCRService()
+                           ^^^^^^^^^^^^^^^^^^^^
+  File "/app/backend/documents/ocr_service.py", line 67, in __init__
+    self._verify_tesseract()
+  File "/app/backend/documents/ocr_service.py", line 76, in _verify_tesseract
+    raise RuntimeError("Tesseract OCR is not installed or not accessible")
+RuntimeError: Tesseract OCR is not installed or not accessible
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/protocols/http/h11_impl.py", line 408, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/asgi.py", line 170, in __call__
+    await self.handle(scope, receive, send)
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/asgi.py", line 209, in handle
+    task.result()
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/asgi.py", line 192, in process_request
+    response = await self.run_get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/asgi.py", line 237, in run_get_response
+    response = await self.get_response_async(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/base.py", line 162, in get_response_async
+    response = await self._middleware_chain(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 44, in inner
+    response = await sync_to_async(
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/asgiref/sync.py", line 504, in __call__
+    ret = await asyncio.shield(exec_coro)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/asgiref/sync.py", line 557, in thread_handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 140, in response_for_exception
+    response = handle_uncaught_exception(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 184, in handle_uncaught_exception
+    callback = resolver.resolve_error_handler(500)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/resolvers.py", line 749, in resolve_error_handler
+    callback = getattr(self.urlconf_module, "handler%s" % view_type, None)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/resolvers.py", line 728, in urlconf_module
+    return import_module(self.urlconf_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/config/urls.py", line 20, in <module>
+    path('api/core/', include('core.urls')),
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/conf.py", line 38, in include
+    urlconf_module = import_module(urlconf_module)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/core/urls.py", line 3, in <module>
+    from .views import UserViewSet, OrganizationViewSet, AuditLogViewSet, ConfigurationViewSet
+  File "/app/backend/core/views/__init__.py", line 140, in <module>
+    from .document_views import (
+  File "/app/backend/core/views/document_views.py", line 23, in <module>
+    from documents.ocr_service import document_ocr_service
+  File "/app/backend/documents/ocr_service.py", line 414, in <module>
+    document_ocr_service = DocumentOCRService()
+                           ^^^^^^^^^^^^^^^^^^^^
+  File "/app/backend/documents/ocr_service.py", line 67, in __init__
+    self._verify_tesseract()
+  File "/app/backend/documents/ocr_service.py", line 76, in _verify_tesseract
+    raise RuntimeError("Tesseract OCR is not installed or not accessible")
+RuntimeError: Tesseract OCR is not installed or not accessible
 INFO:     Shutting down
-INFO:     Finished server process [1293]
-INFO:     Started server process [1733]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'compliance/migrations/0004_add_zatca_verification_log.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [1733]
-WARNING:  WatchFiles detected changes in 'compliance/migrations/0004_add_zatca_verification_log.py'. Reloading...
-INFO:     Started server process [1739]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/web_views.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [1739]
-INFO:     Started server process [1791]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/models.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [1791]
-INFO:     Started server process [3443]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/vat_validation_service.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [3443]
-INFO:     Started server process [3459]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/migrations/0002_add_vat_fields.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [3459]
-WARNING:  WatchFiles detected changes in 'core/migrations/0002_add_vat_fields.py'. Reloading...
-INFO:     Started server process [3484]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/web_views.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [3484]
-INFO:     Started server process [3630]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/web_urls.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [3630]
-INFO:     Started server process [3665]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-INFO:     Shutting down
-INFO:     Finished server process [3665]
-INFO:     Stopping reloader process [690]
+INFO:     Finished server process [83]
+INFO:     Stopping reloader process [47]
 INFO:     Will watch for changes in these directories: ['/app/backend']
 INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [3816] using WatchFiles
-INFO:     Started server process [3818]
+INFO:     Started reloader process [892] using WatchFiles
+INFO:     Started server process [894]
 INFO:     Waiting for application startup.
 INFO:     ASGI 'lifespan' protocol appears unsupported.
 INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/web_views.py'. Reloading...
 INFO:     Shutting down
-INFO:     Finished server process [3818]
-INFO:     Started server process [5099]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/web_views.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [5099]
-INFO:     Started server process [5652]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/web_urls.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [5652]
-INFO:     Started server process [6025]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/views/auth_views.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [6025]
-INFO:     Started server process [6092]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/views/__init__.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [6092]
-INFO:     Started server process [6131]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/views/dashboard_views.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [6131]
-INFO:     Started server process [6147]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/views/compliance_views.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [6147]
-INFO:     Started server process [6182]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/views/finding_views.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [6182]
-INFO:     Started server process [6217]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/views/document_views.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [6217]
-INFO:     Started server process [6252]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/views/transaction_views.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [6252]
-INFO:     Started server process [6287]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/views/report_views.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [6287]
-INFO:     Started server process [6322]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/views/settings_views.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [6322]
-INFO:     Started server process [6357]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/views/__init__.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [6357]
-INFO:     Started server process [6392]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'core/web_urls.py'. Reloading...
-INFO:     Shutting down
-INFO:     Finished server process [6392]
-INFO:     Started server process [6455]
+INFO:     Finished server process [894]
+INFO:     Stopping reloader process [892]
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [1638] using WatchFiles
+INFO:     Started server process [1640]
 INFO:     Waiting for application startup.
 INFO:     ASGI 'lifespan' protocol appears unsupported.
 INFO:     Application startup complete.
 INFO:     Will watch for changes in these directories: ['/app/backend']
 INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [42] using WatchFiles
-INFO:     Started server process [71]
+INFO:     Started reloader process [51] using WatchFiles
+INFO:     Started server process [84]
 INFO:     Waiting for application startup.
 INFO:     ASGI 'lifespan' protocol appears unsupported.
 INFO:     Application startup complete.
 
 ==> /var/log/supervisor/backend.out.log <==
-INFO:     10.64.129.7:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.7:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.138.62:0 - "GET /findings/ HTTP/1.1" 200 OK
-INFO:     10.64.131.7:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.135.173:0 - "GET / HTTP/1.1" 302 Found
-INFO:     10.64.136.226:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
-INFO:     10.64.131.206:0 - "GET /?x_request_source=preview HTTP/1.1" 302 Found
-INFO:     10.64.131.203:0 - "GET /login/?next=/%3Fx_request_source%3Dpreview HTTP/1.1" 200 OK
-INFO:     10.64.138.62:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.131.7:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.203:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "GET /findings/ HTTP/1.1" 200 OK
-INFO:     10.64.129.13:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.135.173:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.206:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.205:0 - "GET /findings/129302b7-355a-42b2-8e55-c9b854a5b66b/ HTTP/1.1" 404 Not Found
-INFO:     10.64.129.13:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.129.13:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.135.173:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.129.7:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.129.9:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "POST /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/generate-ai/ HTTP/1.1" 302 Found
-INFO:     10.64.129.9:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.131.206:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.34:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.7:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.131.206:55206 - "GET /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.129.7:55924 - "POST /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.34:56508 - "GET /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.34:56508 - "POST /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.7:39086 - "GET /api/findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.202:56348 - "GET /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.202:56348 - "POST /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.206:55206 - "GET /api/findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 404 Not Found
-INFO:     10.64.129.9:32984 - "GET /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.129.9:32984 - "POST /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.129.7:55924 - "GET /api/findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.204:33678 - "GET /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.129.13:50044 - "POST /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.135.173:59086 - "GET /api/findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.206:55206 - "GET /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.206:55206 - "POST /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.203:48104 - "GET /api/findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.34:56508 - "GET /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.7:39086 - "POST /api/login/ HTTP/1.1" 404 Not Found
-INFO:     10.64.138.62:50818 - "GET /api/findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 404 Not Found
-INFO:     10.64.131.34:0 - "HEAD /login/ HTTP/1.1" 200 OK
-INFO:     10.64.131.203:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.203:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.129.7:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.129.13:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.136.245:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.129.7:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.129.10:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.129.9:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.135.173:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.129.10:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.129.13:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.131.203:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.203:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.203:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.135.173:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.129.13:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.135.173:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.131.205:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.129.13:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.206:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.131.203:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.136.226:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.136.245:0 - "GET /findings/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.129.7:0 - "POST /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/generate-ai/ HTTP/1.1" 302 Found
-INFO:     10.64.136.245:0 - "GET /findings/e8c2dee9-2d4b-41d3-be03-914217cd0bdd/ HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "GET / HTTP/1.1" 302 Found
-INFO:     10.64.136.245:0 - "GET / HTTP/1.1" 302 Found
-INFO:     10.64.129.7:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
-INFO:     10.64.136.245:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.136.245:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.203:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.131.206:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.206:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "POST /toggle-language/ HTTP/1.1" 500 Internal Server Error
-INFO:     10.64.135.173:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.129.9:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.203:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.204:0 - "POST /toggle-language/ HTTP/1.1" 302 Found
-INFO:     10.64.129.7:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.129.13:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.136.245:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.138.62:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.7:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.131.204:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.131.205:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.129.7:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.129.9:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "POST /compliance/zatca-verify/ HTTP/1.1" 500 Internal Server Error
-INFO:     10.64.136.245:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.203:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.205:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "POST /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.131.7:0 - "GET / HTTP/1.1" 302 Found
-INFO:     10.64.129.7:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
-INFO:     10.64.131.205:0 - "GET / HTTP/1.1" 302 Found
-INFO:     10.64.131.205:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "POST /login/?next=/ HTTP/1.1" 302 Found
-INFO:     10.64.131.202:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.136.245:0 - "GET / HTTP/1.1" 302 Found
-INFO:     10.64.129.9:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "POST /login/?next=/ HTTP/1.1" 302 Found
-INFO:     10.64.131.206:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.203:0 - "POST /toggle-language/ HTTP/1.1" 302 Found
-INFO:     10.64.131.205:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.129.13:0 - "GET / HTTP/1.1" 302 Found
-INFO:     10.64.135.173:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "POST /login/?next=/ HTTP/1.1" 302 Found
-INFO:     10.64.131.34:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.135.173:0 - "GET /compliance/ HTTP/1.1" 200 OK
-INFO:     10.64.129.9:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 302 Found
-INFO:     10.64.136.226:0 - "GET /login/?next=/compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.131.34:0 - "POST /login/?next=/compliance/zatca-verify/ HTTP/1.1" 302 Found
-INFO:     10.64.138.62:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.129.13:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 302 Found
-INFO:     10.64.129.9:0 - "GET /login/?next=/compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "POST /login/?next=/compliance/zatca-verify/ HTTP/1.1" 302 Found
-INFO:     10.64.129.7:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.205:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.131.204:0 - "POST /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.136.245:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 302 Found
-INFO:     10.64.129.13:0 - "GET /login/?next=/compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.138.62:0 - "POST /login/?next=/compliance/zatca-verify/ HTTP/1.1" 302 Found
-INFO:     10.64.138.62:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.138.62:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.135.173:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 302 Found
-INFO:     10.64.135.173:0 - "GET /login/?next=/compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.131.204:0 - "POST /login/?next=/compliance/zatca-verify/ HTTP/1.1" 302 Found
-INFO:     10.64.131.204:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.203:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.131.205:0 - "POST /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.136.245:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 302 Found
-INFO:     10.64.131.203:0 - "GET /login/?next=/compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.131.206:0 - "POST /login/?next=/compliance/zatca-verify/ HTTP/1.1" 302 Found
-INFO:     10.64.131.206:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.131.206:0 - "POST /toggle-language/ HTTP/1.1" 302 Found
-INFO:     10.64.131.203:0 - "GET /compliance/zatca-verify/ HTTP/1.1" 200 OK
-INFO:     10.64.129.9:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.205:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.206:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.204:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.206:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.129.7:0 - "POST /settings/organization/ HTTP/1.1" 302 Found
-INFO:     10.64.131.206:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.131.204:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.131.204:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.129.9:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.129.7:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.131.205:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.206:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.131.206:0 - "POST /settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.135.173:0 - "GET /login/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "POST /login/ HTTP/1.1" 302 Found
-INFO:     10.64.135.173:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.136.226:0 - "GET /settings/organization/ HTTP/1.1" 302 Found
-INFO:     10.64.129.10:0 - "GET /login/?next=/settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.138.62:0 - "POST /login/?next=/settings/organization/ HTTP/1.1" 302 Found
-INFO:     10.64.131.34:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.131.34:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.131.7:0 - "POST /settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.138.62:0 - "POST /settings/organization/ HTTP/1.1" 302 Found
-INFO:     10.64.131.34:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.131.202:0 - "GET /settings/organization/ HTTP/1.1" 302 Found
-INFO:     10.64.131.203:0 - "GET /login/?next=/settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.129.10:0 - "POST /login/?next=/settings/organization/ HTTP/1.1" 302 Found
-INFO:     10.64.129.10:0 - "GET / HTTP/1.1" 200 OK
-INFO:     10.64.135.173:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
-INFO:     10.64.136.245:0 - "POST /settings/organization/ HTTP/1.1" 302 Found
-INFO:     10.64.136.226:0 - "GET /settings/organization/ HTTP/1.1" 200 OK.
-        2.  Verify if Tesseract is still installed and in the system's PATH: .
-        3.  If it is missing, reinstall it and its Arabic language pack: Hit:1 http://deb.debian.org/debian bookworm InRelease
+INFO:     127.0.0.1:56394 - "POST /documents/upload/ HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:49782 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49786 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:49786 - "POST /documents/upload/ HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:47708 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47714 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:47718 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47732 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:49540 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49550 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:49558 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49560 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49562 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49568 - "GET /transactions/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49584 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49594 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49600 - "GET /ocr/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49616 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49626 - "GET /settings/organization/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49638 - "GET /compliance/zatca-verify/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49644 - "GET /analytics/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49652 - "GET /reports/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49658 - "GET /report/pdf/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49666 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46258 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46262 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:46274 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46282 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:46282 - "POST /ocr/311a45d2-cdef-45f8-9e25-5f18f443fd89/ HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:52702 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32916 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32784 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32796 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32800 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45928 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45944 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:45950 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45962 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45972 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45980 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45984 - "GET /ocr/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45988 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34668 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38602 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38604 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:38606 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55926 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55928 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:57752 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35968 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53232 - "GET /api/health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53246 - "GET / HTTP/1.1" 302 Found
+INFO:     127.0.0.1:34452 - "GET /health HTTP/1.1" 200 OK
+INFO:     35.191.108.98:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     35.191.105.57:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     35.191.134.49:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.103.35:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.110.106:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.110.105:0 - "POST / HTTP/1.1" 403 Forbidden
+INFO:     35.191.90.65:0 - "GET / HTTP/1.1" 302 Found
+INFO:     35.191.90.70:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
+INFO:     35.191.90.64:0 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     35.191.89.180:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.20.130:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.20.128:0 - "POST / HTTP/1.1" 403 Forbidden
+INFO:     35.191.104.241:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.135.26:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.135.26:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.134.217:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.90.72:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.21.52:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.126.185:0 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     35.191.20.115:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.126.181:0 - "GET /ocr/ HTTP/1.1" 200 OK
+INFO:     35.191.107.147:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.131.19:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.131.50:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.131.48:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.135.115:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "POST /login/?next=/ HTTP/1.1" 302 Found
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     35.191.131.25:0 - "GET /ocr/a9de5c9b-8524-4241-bcdd-b94d555c4382/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /accounts/?type=&search=%D8%A7%D9%84%D9%86%D9%82%D8%AF%D9%8A%D8%A9+%D9%81%D9%8A+%D8%A7%D9%84%D8%A8%D9%86%D9%83 HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "POST /toggle-language/ HTTP/1.1" 302 Found
+INFO:     35.191.131.26:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "POST /toggle-language/ HTTP/1.1" 302 Found
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.105.56:0 - "GET / HTTP/1.1" 302 Found
+INFO:     35.191.105.57:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
+INFO:     35.191.108.97:0 - "GET / HTTP/1.1" 302 Found
+INFO:     35.191.108.97:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
+INFO:     35.191.134.37:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.134.36:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.126.146:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.131.82:0 - "GET /documents/upload/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.131.80:0 - "GET /documents/upload/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.131.80:0 - "GET /documents/upload/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.131.80:0 - "GET /documents/upload/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.131.82:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.89.57:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.24:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.24:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.93.227:0 - "GET /?x_request_source=preview HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.90.67:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.93.225:0 - "GET /?x_request_source=preview HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.90.69:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.134.253:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:41352 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47064 - "GET /health HTTP/1.1" 200 OK
+INFO:     35.191.131.59:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     35.191.130.120:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.108.48:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.108.50:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.135.58:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.135.216:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.135.216:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.135.220:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.135.216:0 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     35.191.135.220:0 - "GET /ocr/dad8f6be-1869-460c-b9f8-2d4ceb52cc0d/ HTTP/1.1" 200 OK
+INFO:     35.191.126.144:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.126.144:0 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     35.191.126.144:0 - "GET /ocr/0ed326bf-52c3-4bd1-a817-28a65e0f1da6/ HTTP/1.1" 200 OK
+INFO:     35.191.136.35:0 - "GET /ocr/ HTTP/1.1" 200 OK
+INFO:     35.191.136.35:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.136.34:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.136.33:0 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     35.191.136.35:0 - "GET /ocr/0afa6129-d3d9-4675-a948-89bc89935fc1/ HTTP/1.1" 200 OK
+INFO:     35.191.108.19:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.108.17:0 - "GET /transactions/ HTTP/1.1" 200 OK
+INFO:     35.191.108.19:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.108.17:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.126.246:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.105.14:0 - "POST /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.105.14:0 - "POST /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.21.16:0 - "POST /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.129.201:0 - "POST /settings/organization/ HTTP/1.1" 302 Found
+INFO:     35.191.129.200:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.107.4:0 - "GET /transactions/ HTTP/1.1" 200 OK
+INFO:     35.191.19.21:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.105.25:0 - "GET / HTTP/1.1" 302 Found
+INFO:     35.191.89.178:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.20.144:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.20.145:0 - "GET /report/pdf/ HTTP/1.1" 200 OK
+INFO:     35.191.108.114:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.108.114:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.108.114:0 - "GET /accounts/?type=&search= HTTP/1.1" 200 OK
+INFO:     35.191.108.114:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.108.116:0 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     35.191.104.252:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.21.64:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.21.65:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.21.64:0 - "GET /transactions/ HTTP/1.1" 200 OK
+INFO:     35.191.134.225:0 - "GET /transactions/?type=income&anomaly=&date_from=&date_to= HTTP/1.1" 200 OK
+INFO:     35.191.134.225:0 - "GET /transactions/?type=income&anomaly=&date_from=&date_to= HTTP/1.1" 200 OK
+INFO:     35.191.134.225:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.134.226:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.134.224:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.134.226:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51908 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50766 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:50776 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50778 - "GET /analytics/ HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50784 - "GET /reports/ HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50792 - "GET /compliance/ HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50806 - "GET /findings/ HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50818 - "GET /documents/upload/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.90.42:0 - "GET /compliance/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.90.43:0 - "GET /compliance/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.104.245:0 - "GET /compliance/ HTTP/1.1" 500 Internal Server Error) to identify and fix the  or  errors.
+    - **User Testing Done:** N
+
+**All Pending/In progress Issue list**:
+- **Issue 1:  Application UI is Broken Due to Template Redesign (Priority: P0)**
+    - **Description:** After overwriting the existing Django templates with a new BI-style design, key pages like the dashboard (), analytics (), and document upload () are returning . The backend itself is healthy, but it cannot render the new templates.
+    - **Attempted fixes:** The agent created the new templates and restarted the server. It has not yet attempted to debug the errors.
+    - **Next debug checklist:**
+        1.  Check the backend logs for the full Python traceback: ==> /var/log/supervisor/backend.err.log <==
+  File "/app/backend/documents/ocr_service.py", line 414, in <module>
+    document_ocr_service = DocumentOCRService()
+                           ^^^^^^^^^^^^^^^^^^^^
+  File "/app/backend/documents/ocr_service.py", line 67, in __init__
+    self._verify_tesseract()
+  File "/app/backend/documents/ocr_service.py", line 76, in _verify_tesseract
+    raise RuntimeError("Tesseract OCR is not installed or not accessible")
+RuntimeError: Tesseract OCR is not installed or not accessible
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/root/.venv/lib/python3.11/site-packages/asgiref/sync.py", line 555, in thread_handler
+    raise exc_info[1]
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 42, in inner
+    response = await get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/utils/deprecation.py", line 150, in __acall__
+    response = response or await self.get_response(request)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 44, in inner
+    response = await sync_to_async(
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/asgiref/sync.py", line 504, in __call__
+    ret = await asyncio.shield(exec_coro)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/asgiref/sync.py", line 557, in thread_handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 140, in response_for_exception
+    response = handle_uncaught_exception(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 184, in handle_uncaught_exception
+    callback = resolver.resolve_error_handler(500)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/resolvers.py", line 749, in resolve_error_handler
+    callback = getattr(self.urlconf_module, "handler%s" % view_type, None)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/resolvers.py", line 728, in urlconf_module
+    return import_module(self.urlconf_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/config/urls.py", line 20, in <module>
+    path('api/core/', include('core.urls')),
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/conf.py", line 38, in include
+    urlconf_module = import_module(urlconf_module)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/core/urls.py", line 3, in <module>
+    from .views import UserViewSet, OrganizationViewSet, AuditLogViewSet, ConfigurationViewSet
+  File "/app/backend/core/views/__init__.py", line 140, in <module>
+    from .document_views import (
+  File "/app/backend/core/views/document_views.py", line 23, in <module>
+    from documents.ocr_service import document_ocr_service
+  File "/app/backend/documents/ocr_service.py", line 414, in <module>
+    document_ocr_service = DocumentOCRService()
+                           ^^^^^^^^^^^^^^^^^^^^
+  File "/app/backend/documents/ocr_service.py", line 67, in __init__
+    self._verify_tesseract()
+  File "/app/backend/documents/ocr_service.py", line 76, in _verify_tesseract
+    raise RuntimeError("Tesseract OCR is not installed or not accessible")
+RuntimeError: Tesseract OCR is not installed or not accessible
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/protocols/http/h11_impl.py", line 408, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/asgi.py", line 170, in __call__
+    await self.handle(scope, receive, send)
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/asgi.py", line 209, in handle
+    task.result()
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/asgi.py", line 192, in process_request
+    response = await self.run_get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/asgi.py", line 237, in run_get_response
+    response = await self.get_response_async(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/base.py", line 162, in get_response_async
+    response = await self._middleware_chain(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 44, in inner
+    response = await sync_to_async(
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/asgiref/sync.py", line 504, in __call__
+    ret = await asyncio.shield(exec_coro)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/asgiref/sync.py", line 557, in thread_handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 140, in response_for_exception
+    response = handle_uncaught_exception(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 184, in handle_uncaught_exception
+    callback = resolver.resolve_error_handler(500)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/resolvers.py", line 749, in resolve_error_handler
+    callback = getattr(self.urlconf_module, "handler%s" % view_type, None)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/resolvers.py", line 728, in urlconf_module
+    return import_module(self.urlconf_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/config/urls.py", line 20, in <module>
+    path('api/core/', include('core.urls')),
+                      ^^^^^^^^^^^^^^^^^^^^
+  File "/root/.venv/lib/python3.11/site-packages/django/urls/conf.py", line 38, in include
+    urlconf_module = import_module(urlconf_module)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/app/backend/core/urls.py", line 3, in <module>
+    from .views import UserViewSet, OrganizationViewSet, AuditLogViewSet, ConfigurationViewSet
+  File "/app/backend/core/views/__init__.py", line 140, in <module>
+    from .document_views import (
+  File "/app/backend/core/views/document_views.py", line 23, in <module>
+    from documents.ocr_service import document_ocr_service
+  File "/app/backend/documents/ocr_service.py", line 414, in <module>
+    document_ocr_service = DocumentOCRService()
+                           ^^^^^^^^^^^^^^^^^^^^
+  File "/app/backend/documents/ocr_service.py", line 67, in __init__
+    self._verify_tesseract()
+  File "/app/backend/documents/ocr_service.py", line 76, in _verify_tesseract
+    raise RuntimeError("Tesseract OCR is not installed or not accessible")
+RuntimeError: Tesseract OCR is not installed or not accessible
+INFO:     Shutting down
+INFO:     Finished server process [83]
+INFO:     Stopping reloader process [47]
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [892] using WatchFiles
+INFO:     Started server process [894]
+INFO:     Waiting for application startup.
+INFO:     ASGI 'lifespan' protocol appears unsupported.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Finished server process [894]
+INFO:     Stopping reloader process [892]
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [1638] using WatchFiles
+INFO:     Started server process [1640]
+INFO:     Waiting for application startup.
+INFO:     ASGI 'lifespan' protocol appears unsupported.
+INFO:     Application startup complete.
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [51] using WatchFiles
+INFO:     Started server process [84]
+INFO:     Waiting for application startup.
+INFO:     ASGI 'lifespan' protocol appears unsupported.
+INFO:     Application startup complete.
+
+==> /var/log/supervisor/backend.out.log <==
+INFO:     127.0.0.1:56394 - "POST /documents/upload/ HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:49782 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49786 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:49786 - "POST /documents/upload/ HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:47708 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47714 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:47718 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47732 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:49540 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49550 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:49558 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49560 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49562 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49568 - "GET /transactions/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49584 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49594 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49600 - "GET /ocr/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49616 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49626 - "GET /settings/organization/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49638 - "GET /compliance/zatca-verify/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49644 - "GET /analytics/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49652 - "GET /reports/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49658 - "GET /report/pdf/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49666 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46258 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46262 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:46274 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46282 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:46282 - "POST /ocr/311a45d2-cdef-45f8-9e25-5f18f443fd89/ HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:52702 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32916 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32784 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32796 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32800 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45928 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45944 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:45950 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45962 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45972 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45980 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45984 - "GET /ocr/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45988 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34668 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38602 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38604 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:38606 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55926 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55928 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:57752 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35968 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53232 - "GET /api/health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53246 - "GET / HTTP/1.1" 302 Found
+INFO:     127.0.0.1:34452 - "GET /health HTTP/1.1" 200 OK
+INFO:     35.191.108.98:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     35.191.105.57:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     35.191.134.49:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.103.35:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.110.106:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.110.105:0 - "POST / HTTP/1.1" 403 Forbidden
+INFO:     35.191.90.65:0 - "GET / HTTP/1.1" 302 Found
+INFO:     35.191.90.70:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
+INFO:     35.191.90.64:0 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     35.191.89.180:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.20.130:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.20.128:0 - "POST / HTTP/1.1" 403 Forbidden
+INFO:     35.191.104.241:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.135.26:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.135.26:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.134.217:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.90.72:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.21.52:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.126.185:0 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     35.191.20.115:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.126.181:0 - "GET /ocr/ HTTP/1.1" 200 OK
+INFO:     35.191.107.147:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.131.19:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.131.50:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.131.48:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.135.115:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "POST /login/?next=/ HTTP/1.1" 302 Found
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     35.191.131.25:0 - "GET /ocr/a9de5c9b-8524-4241-bcdd-b94d555c4382/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /accounts/?type=&search=%D8%A7%D9%84%D9%86%D9%82%D8%AF%D9%8A%D8%A9+%D9%81%D9%8A+%D8%A7%D9%84%D8%A8%D9%86%D9%83 HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "POST /toggle-language/ HTTP/1.1" 302 Found
+INFO:     35.191.131.26:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "POST /toggle-language/ HTTP/1.1" 302 Found
+INFO:     35.191.131.24:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.131.26:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.131.24:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.131.25:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.105.56:0 - "GET / HTTP/1.1" 302 Found
+INFO:     35.191.105.57:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
+INFO:     35.191.108.97:0 - "GET / HTTP/1.1" 302 Found
+INFO:     35.191.108.97:0 - "GET /login/?next=/ HTTP/1.1" 200 OK
+INFO:     35.191.134.37:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.134.36:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.126.146:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.131.82:0 - "GET /documents/upload/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.131.80:0 - "GET /documents/upload/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.131.80:0 - "GET /documents/upload/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.131.80:0 - "GET /documents/upload/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.131.82:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.89.57:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.24:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.24:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.93.227:0 - "GET /?x_request_source=preview HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.90.67:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.53.25:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.93.225:0 - "GET /?x_request_source=preview HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.90.69:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.134.253:0 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:41352 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47064 - "GET /health HTTP/1.1" 200 OK
+INFO:     35.191.131.59:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     35.191.130.120:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.108.48:0 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     35.191.108.50:0 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     35.191.135.58:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.135.216:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.135.216:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.135.220:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.135.216:0 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     35.191.135.220:0 - "GET /ocr/dad8f6be-1869-460c-b9f8-2d4ceb52cc0d/ HTTP/1.1" 200 OK
+INFO:     35.191.126.144:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.126.144:0 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     35.191.126.144:0 - "GET /ocr/0ed326bf-52c3-4bd1-a817-28a65e0f1da6/ HTTP/1.1" 200 OK
+INFO:     35.191.136.35:0 - "GET /ocr/ HTTP/1.1" 200 OK
+INFO:     35.191.136.35:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.136.34:0 - "GET /documents/upload/ HTTP/1.1" 200 OK
+INFO:     35.191.136.33:0 - "POST /documents/upload/ HTTP/1.1" 302 Found
+INFO:     35.191.136.35:0 - "GET /ocr/0afa6129-d3d9-4675-a948-89bc89935fc1/ HTTP/1.1" 200 OK
+INFO:     35.191.108.19:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.108.17:0 - "GET /transactions/ HTTP/1.1" 200 OK
+INFO:     35.191.108.19:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.108.17:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.126.246:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.105.14:0 - "POST /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.105.14:0 - "POST /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.21.16:0 - "POST /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.129.201:0 - "POST /settings/organization/ HTTP/1.1" 302 Found
+INFO:     35.191.129.200:0 - "GET /settings/organization/ HTTP/1.1" 200 OK
+INFO:     35.191.107.4:0 - "GET /transactions/ HTTP/1.1" 200 OK
+INFO:     35.191.19.21:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.105.25:0 - "GET / HTTP/1.1" 302 Found
+INFO:     35.191.89.178:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.20.144:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.20.145:0 - "GET /report/pdf/ HTTP/1.1" 200 OK
+INFO:     35.191.108.114:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.108.114:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.108.114:0 - "GET /accounts/?type=&search= HTTP/1.1" 200 OK
+INFO:     35.191.108.114:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.108.116:0 - "GET /findings/ HTTP/1.1" 200 OK
+INFO:     35.191.104.252:0 - "GET / HTTP/1.1" 200 OK
+INFO:     35.191.21.64:0 - "GET /report/arabic/ HTTP/1.1" 200 OK
+INFO:     35.191.21.65:0 - "GET /accounts/ HTTP/1.1" 200 OK
+INFO:     35.191.21.64:0 - "GET /transactions/ HTTP/1.1" 200 OK
+INFO:     35.191.134.225:0 - "GET /transactions/?type=income&anomaly=&date_from=&date_to= HTTP/1.1" 200 OK
+INFO:     35.191.134.225:0 - "GET /transactions/?type=income&anomaly=&date_from=&date_to= HTTP/1.1" 200 OK
+INFO:     35.191.134.225:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.134.226:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.134.224:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     35.191.134.226:0 - "GET /compliance/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51908 - "GET /login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50766 - "POST /login/ HTTP/1.1" 302 Found
+INFO:     127.0.0.1:50776 - "GET / HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50778 - "GET /analytics/ HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50784 - "GET /reports/ HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50792 - "GET /compliance/ HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50806 - "GET /findings/ HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50818 - "GET /documents/upload/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.90.42:0 - "GET /compliance/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.90.43:0 - "GET /compliance/ HTTP/1.1" 500 Internal Server Error
+INFO:     35.191.104.245:0 - "GET /compliance/ HTTP/1.1" 500 Internal Server Error.
+        2.  Identify the specific template causing the error (e.g., , ).
+        3.  Look for issues like incorrect  or  paths, missing context variables referenced in the new templates, or Django template syntax errors.
+        4.  View the problematic templates (, , etc.) and the corresponding views to ensure the context data matches the template's expectations.
+        5.  Fix the errors iteratively, restarting the backend after each significant change to check for progress.
+    - **Why fix this issue and what will be achieved with the fix?** This is a critical blocker for the UI. The application is functionally useless without a working frontend. Fixing this will complete the user-requested UI redesign.
+    - **Status:** IN PROGRESS
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** Frontend (visual verification with screenshot tool).
+    - **Blocked on other issue:** None. This is the primary blocker.
+
+**In progress Task List**:
+- **Task 1:  Complete and Verify the UI Redesign (Priority: P0)**
+    - **Description:** Finalize the implementation of the new BI-style dashboard UI.
+    - **Where to resume:** Resume from debugging the  errors caused by the new templates. After fixing the rendering errors, verify that all pages load correctly and that the data from the backend context is displayed properly in the new components (KPI cards, charts, tables).
+    - **What will be achieved with this?** A modern, professional, and more intuitive user interface for the FinAI platform, aligning with the user's latest request.
+    - **Status:** IN PROGRESS
+    - **Should Test frontend/backend/both after fix?** Frontend.
+    - **Blocked on something:** Blocked on **Issue 1**.
+
+**Upcoming and Future Tasks**
+- None specified. The current priority is to complete the UI redesign.
+
+**Completed work in this session**
+- **Critical Failure Resolution:** Fixed a series of cascading startup blockers (, ) caused by a previous incomplete refactoring, restoring the application from a non-functional state.
+- **Full QA Verification:** Performed multiple end-to-end QA cycles, moving the application status from  to .
+- **P2 Bug Fixes:** Resolved 500 errors on secondary pages (, ) and fixed a language toggle CSRF issue.
+- **Enterprise Upload Feature:** Implemented a robust document upload system supporting single-file, multi-file (100+), and ZIP batch uploads with full audit trails.
+- **Deployment Preparation:** Fixed preview URL routing by implementing a Node.js proxy in  and corrected Django's  settings, making the app fully accessible via the external URL.
+- **Environment Stability:** Handled environment resets by reinstalling Tesseract OCR to ensure OCR functionality remained active.
+
+**Earlier issues found/mentioned but not fixed**
+- **Issue 1: CSRF error on redirect after file upload:** During testing, the agent noticed a  error on the page redirect *after* a successful file upload. The upload and backend processing were successful, so this was deemed a non-blocking artifact of the -based testing method. It could be revisited as a low-priority UX polish.
+
+**Known issue recurrence from previous fork**
+- **Tesseract OCR Installation:** The Tesseract package is not persistent across new sessions/forks. It must be reinstalled (Hit:1 http://deb.debian.org/debian bookworm InRelease
 Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
-Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
-Get:4 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 InRelease [3005 B]
+Get:3 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 InRelease [3005 B]
+Get:4 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
 Get:5 https://deb.nodesource.com/node_20.x nodistro InRelease [12.1 kB]
-Get:6 http://deb.debian.org/debian-security bookworm-security/main arm64 Packages [288 kB]
-Get:7 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0/multiverse arm64 Packages [100 kB]
-Get:8 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0/multiverse amd64 Packages [102 kB]
-Fetched 609 kB in 1s (720 kB/s)
+Get:6 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0/multiverse amd64 Packages [102 kB]
+Get:7 http://deb.debian.org/debian-security bookworm-security/main arm64 Packages [288 kB]
+Get:8 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0/multiverse arm64 Packages [100 kB]
+Fetched 609 kB in 1s (987 kB/s)
 Reading package lists...
 Reading package lists...
 Building dependency tree...
@@ -478,7 +912,7 @@ Get:9 http://deb.debian.org/debian bookworm/main arm64 tesseract-ocr-eng all 1:4
 Get:10 http://deb.debian.org/debian bookworm/main arm64 tesseract-ocr-osd all 1:4.1.0-2 [2992 kB]
 Get:11 http://deb.debian.org/debian bookworm/main arm64 tesseract-ocr arm64 5.3.0-2 [363 kB]
 Get:12 http://deb.debian.org/debian bookworm/main arm64 tesseract-ocr-ara all 1:4.1.0-2 [647 kB]
-Fetched 8416 kB in 0s (46.1 MB/s)
+Fetched 8416 kB in 0s (38.5 MB/s)
 Selecting previously unselected package libarchive13:arm64.
 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 38194 files and directories currently installed.)
 Preparing to unpack .../00-libarchive13_3.6.2-1+deb12u3_arm64.deb ...
@@ -528,128 +962,90 @@ Setting up libpangocairo-1.0-0:arm64 (1.50.12+ds-1) ...
 Setting up liblept5:arm64 (1.82.0-3+b3) ...
 Setting up libtesseract5:arm64 (5.3.0-2) ...
 Setting up tesseract-ocr (5.3.0-2) ...
-Processing triggers for libc-bin (2.36-9+deb12u13) ....
-        4.  Review the new view files in  and the main  to check for circular dependencies or import orders that might cause the  to initialize incorrectly.
-        5.  Restart the backend service and re-check logs: backend: stopped
-backend: started.
-    - **Why fix this issue and what will be achieved with the fix?** This is a critical blocker. The application is unusable. Fixing this will restore functionality and allow the agent to complete and verify the P2 tasks.
-    - **Status:** IN PROGRESS
-    - **Is recurring issue?** Y
-    - **Should Test frontend/backend/both after fix?** Both. A full regression test using the testing agent is required after this major refactor is stabilized.
-    - **Blocked on other issue:** None. This is the primary blocker.
-
-**In progress Task List**:
-- **Task 1:  Complete and Verify P2 Tasks (Priority: P1)**
-    - **Description:** This task covers the three user-authorized P2 items. The code has been written, but none of it has been tested due to the startup crash.
-    - **Where to resume:** First, resolve the P0 startup issue. Once the application is running, proceed to test the following features:
-        1.  **Dashboard Charts:** Navigate to the dashboard and verify that two new charts (Compliance Score Trend, Compliance Area Summary) are rendering correctly with Arabic labels.
-        2.  **AI Explanation Review Workflow:** Navigate to an audit finding detail page. Verify the new UI for approving, modifying, or rejecting an AI explanation. Test each action and confirm the changes are logged and reflected correctly.
-        3.  **View Refactor:** After confirming the above features work, ensure all existing application URLs and functionalities are still operational. Perform a full regression test. Finally, delete the old  file.
-    - **What will be achieved with this?** A more maintainable codebase, enhanced dashboard visibility, and a complete human-in-the-loop audit workflow for AI explanations.
-    - **Status:** IN PROGRESS
-    - **Should Test frontend/backend/both after fix?** Both
-    - **Blocked on something:** Blocked on **Issue 1: Application Fails to Start After View Refactoring**.
-
-**Upcoming and Future Tasks**
-- **Future Tasks (Deferred by User):**
-    - **P2: Database Migration to PostgreSQL:** Currently on hold.
-    - **P2: Dashboard chart expansion:** Any charts beyond the initial two are deferred.
-    - **P2: AI Explanation review workflow UI:** Work on this is in-progress.
-
-**Completed work in this session**
-- **P0 Blocker Fixed:** Resolved initial server error on .
-- **P1 Task - PDF Reports Verified:** Confirmed Arabic PDF download is functional.
-- **P1 Task - OCR Flow Completed:** Implemented and tested the end-to-end document upload and OCR processing flow.
-- **P1 Task - LLM Integration:** Successfully integrated Gemini 3 Flash to provide live, dynamic AI explanations for audit findings, including an audit trail.
-- **Multi-language Toggle:** Implemented a UI toggle for Arabic/English languages.
-- **ZATCA API Integration (Simulated):** Built a verification-only page for ZATCA checks, adhering to the project's read-only scope.
-- **VAT Handling Logic:** Added server-side VAT number validation for organizations based in Saudi Arabia.
-
-**Earlier issues found/mentioned but not fixed**
-- None.
-
-**Known issue recurrence from previous fork**
-- The Tesseract OCR installation has proven to be unstable in this environment. It was installed and working earlier in the session but failed after a code refactoring and restart. This is a recurring issue within this session that the next agent must be aware of.
+Processing triggers for libc-bin (2.36-9+deb12u13) ...) if the environment is reset.
+- **Frontend Proxy:** The Node.js proxy server in  is required for the preview URL to work but is not part of the core Django application. It must be re-installed (yarn add v1.22.22
+[1/4] Resolving packages...
+[2/4] Fetching packages...
+[3/4] Linking dependencies...
+[4/4] Building fresh packages...
+success Saved lockfile.
+success Saved 4 new dependencies.
+info Direct dependencies
+└─ http-proxy@1.18.1
+info All dependencies
+├─ eventemitter3@4.0.7
+├─ follow-redirects@1.15.11
+├─ http-proxy@1.18.1
+└─ requires-port@1.0.0
+Done in 0.41s.) and started (frontend: stopped
+frontend: started) in a new session.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend:** Django
-- **Frontend:** Server-Side Rendered (SSR) using Django Templates, Chart.js (via CDN)
+- **Backend:** Django (Monolithic Architecture)
+- **Frontend:** Server-Side Rendered (SSR) Django Templates, Chart.js.
+- **Proxy:** A simple Node.js  server running on port 3000 to forward requests to the Django backend on port 8001, making the preview URL work.
 - **Database:** SQLite
-- **PDF Generation:** ReportLab, , 
-- **OCR:** Tesseract,  (Currently causing a startup error)
-- **LLM Integration:**  library for Gemini 3 Flash.
-- **Internationalization (i18n):** Simple language toggle via Django sessions and context processors.
-- **Code Structure:** View logic is being refactored from a single file into a modular  package.
+- **OCR:** Tesseract ()
+- **LLM Integration:**  for Gemini 3 Flash.
+- **File Handling:** ZIP file extraction ( library), batch processing.
 
 **key DB schema**
-- : Added , , , , .
-- : 
-- : 
-- : 
+- : Stores metadata for uploaded files, including  ('single', 'multi', 'batch_zip'),  ('pending', 'completed', 'failed').
+- : Stores extracted text from OCR.
 
 **changes in tech stack**
-- **LLM:**  library was added and used for Gemini API calls.
-- **Frontend Charting:**  was introduced via a CDN for dashboard visualizations.
+- A  proxy was introduced in the  directory as a workaround for the platform's routing infrastructure. This is not a core application dependency but is crucial for previewing.
 
 **All files of reference**
-- Refactored view files in .
-- : Updated to import from .
-- : The file being refactored, which is the likely source of instability.
-- : Updated with Chart.js implementation.
-- : Updated with the AI Explanation review UI.
-- : The last successful test report before the application crashed.
-
-**Areas that need refactoring**:
-- The refactoring of  is the immediate task. It is incomplete and has broken the application. It must be stabilized and completed.
-
-**key api endpoints**
-- : New page for company VAT settings.
-- : New page for ZATCA checks.
-- : New endpoint for submitting an AI explanation review.
-- : New endpoint for language switching.
+- : The newly created base template with a sidebar layout. **(Likely source of errors)**
+- : The redesigned main dashboard. **(Likely source of errors)**
+- : The new analytics page template.
+- : The new reports page template.
+- : New component for KPI display.
+- : Directory containing all the view logic that provides context to the templates.
+- : The Node.js proxy server.
 
 **Critical Info for New Agent**
-- **IMMEDIATE BLOCKER:** The application is DOWN. A refactoring of  caused a  related to Tesseract OCR at startup. You cannot proceed with any other task until this is fixed.
-- **P2 TASKS IN-FLIGHT:** Code for all three P2 tasks (Dashboard Charts, AI Review UI, View Refactor) has been implemented but is untested. Your first job after fixing the crash is to systematically test and verify these new features.
-- **TESSERACT INSTABILITY:** The Tesseract installation has proven to be volatile. It was working before the refactor. Be prepared to reinstall it (Reading package lists...
-Building dependency tree...
-Reading state information...
-tesseract-ocr is already the newest version (5.3.0-2).
-tesseract-ocr-ara is already the newest version (1:4.1.0-2).
-0 upgraded, 0 newly installed, 0 to remove and 10 not upgraded.) as a first step in your debugging process.
-- **REFACTOR STATE:** The agent created new view files under  and updated . The original  still exists and is the likely source of the import-time conflict.
+- **UI IS BROKEN:** Your immediate task is to fix the  errors caused by the new UI templates. The backend is stable and feature-complete; the problem is purely in the Django template rendering layer.
+- **ENVIRONMENT SETUP:** In a new session, you MUST reinstall Tesseract and restart the Node.js proxy in  for the application to be fully functional and accessible via the preview URL.
+- **DEBUGGING TEMPLATES:** Focus on the backend logs () to find the specific template syntax or context errors. The issue is not in the backend logic, but in how the new templates are trying to render the data.
 
 **documents and test reports created in this job**
-- 
+-  (Final status: PASS)
 - 
 
 **Last 10 User Messages and any pending HUMAN messages**
-- The user authorized three specific P2 tasks: Dashboard Charts, AI Explanation Review Workflow UI, and refactoring .
-- The user set strict rules to preserve the system's read-only nature and existing functionality.
-- There are no other pending user requests. The current authorization is to complete the in-progress P2 tasks.
+1.  **User:** Authorized fixing P2 UI issues ( and  500 errors).
+2.  **Agent:** Fixed the P2 issues by creating placeholder templates.
+3.  **User:** Requested a major feature: enterprise-grade document upload (single, multi, ZIP).
+4.  **Agent:** Successfully implemented and tested the complete upload feature.
+5.  **User:** Requested to deploy the application.
+6.  **Agent:** Fixed deployment blockers (, ).
+7.  **User:** Requested a deployment smoke test.
+8.  **Agent:** Performed a successful smoke test and confirmed readiness.
+9.  **User:** Reported an error (520 on preview URL).
+10. **User:** Requested a major UI redesign based on a BI dashboard design, providing specific template structure requirements.
 
 **Project Health Check:**
-- **Broken:** The entire application is non-functional due to a startup  triggered by the code refactoring.
-- **Mocked:** ZATCA API integration remains a simulation, as per user instructions. Live ZATCA integration is **not authorized**.
+- **Broken:** The frontend UI rendering is broken due to template errors. Multiple pages are inaccessible.
+- **Mocked:** ZATCA API integration remains a simulation, as per user instructions.
 
 **3rd Party Integrations**
 - **Emergent LLM Key:** Used with  for the  model.
-- **Tesseract / pytesseract:** Used for OCR. **(Currently causing a system crash)**.
-- **ReportLab / python-bidi / arabic-reshaper:** Used for generating Arabic PDFs.
-- **Chart.js:** Used via CDN for dashboard charts.
+- **Tesseract / pytesseract:** Used for OCR. Requires manual installation in new environments.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES. The last successful test run is documented in .
+- **Testing agent used after significant changes:** NO (for the latest UI change). Manual testing was performed and failed.
 - **Troubleshoot agent used after agent stuck in loop:** NO
-- **Test files created:** , , , .
-- **Known regressions:** Tesseract OCR functionality has regressed, preventing the application from starting.
+- **Test files created:** None in this session.
+- **Known regressions:** The entire UI is non-functional due to the new templates.
 
 **Credentials to test flow:**
 - **Email:** 
 - **Password:** 
 
 **What agent forgot to execute**
-- The agent failed to complete the refactoring of  in a stable, incremental way. The big bang approach of creating all new files and changing the URL configuration at once led to a critical application failure without a clear, isolated cause.</analysis>
+- The agent did not fully debug the template errors it introduced with the UI redesign. It implemented the new files and immediately ran into  errors, which is where the session ended. The next step is to complete that debugging process.</analysis>

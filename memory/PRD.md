@@ -189,7 +189,7 @@ Build an AI-Powered Financial Audit Platform (FinAI) targeting the GCC market wi
 
 ### Proxy Configuration
 - Nginx on port 3000 proxies to Django on port 8001
-- External URL: https://finai-audit-1.preview.emergentagent.com
+- External URL: https://audit-pulse-5.preview.emergentagent.com
 
 ---
 
