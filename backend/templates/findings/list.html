@@ -4,9 +4,11 @@
 
 {% block extra_css %}
 <style>
-    /* Risk row indicators */
-    .risk-critical { border-right: 3px solid #ef4444; }
-    .risk-high { border-right: 3px solid #f59e0b; }
+    /* Risk row indicators - RTL safe */
+    [dir="rtl"] .risk-critical { border-right: 3px solid #ef4444; }
+    [dir="rtl"] .risk-high { border-right: 3px solid #f59e0b; }
+    [dir="ltr"] .risk-critical { border-left: 3px solid #ef4444; }
+    [dir="ltr"] .risk-high { border-left: 3px solid #f59e0b; }
     
     /* Filter controls */
     .filter-select {
@@ -27,6 +29,21 @@
         font-size: 0.75rem;
         font-weight: 500;
         border-radius: 0.375rem;
+    }
+    
+    /* Fixed table layout */
+    .findings-table {
+        table-layout: auto;
+        width: 100%;
+    }
+    .findings-table th,
+    .findings-table td {
+        padding: 0.875rem 0.75rem;
+        white-space: nowrap;
+    }
+    .findings-table .col-title {
+        white-space: normal;
+        min-width: 280px;
     }
 </style>
 {% endblock %}
