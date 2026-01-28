@@ -177,3 +177,13 @@ LOGOUT_REDIRECT_URL = '/login/'
 # File Upload Settings
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB (GCC requirement)
 ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff']
+
+# CSRF Cookie settings for proxy environments
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+# Trust X-Forwarded headers from proxy
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
