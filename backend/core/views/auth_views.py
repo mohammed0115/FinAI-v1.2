@@ -50,7 +50,7 @@ def register_view(request):
             messages.error(request, 'البريد الإلكتروني مسجل مسبقاً')
             return render(request, 'login.html')
         
-        if Organization.objects.filter(tax_registration_number=tax_number).exists():
+        if Organization.objects.filter(vat_number=tax_number).exists():
             messages.error(request, 'الرقم الضريبي مسجل مسبقاً')
             return render(request, 'login.html')
         
@@ -60,9 +60,8 @@ def register_view(request):
                 org = Organization.objects.create(
                     name=company_name,
                     name_ar=company_name,
-                    tax_registration_number=tax_number,
+                    vat_number=tax_number,
                     country='SA',
-                    currency='SAR',
                 )
                 
                 # Save logo if provided
