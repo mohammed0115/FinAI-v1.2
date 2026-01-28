@@ -10,7 +10,7 @@ load_dotenv()
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-finai-dev-key-change-in-production')
 
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+DEBUG = True
 
 # Allow all hosts - this is managed by Kubernetes ingress in production
 ALLOWED_HOSTS = ['*']
