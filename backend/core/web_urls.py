@@ -58,6 +58,7 @@ urlpatterns = [
     
     # Document OCR
     path('documents/upload/', document_upload_view, name='document_upload'),
+    path('documents/process-pending/', process_pending_documents, name='process_pending_documents'),
     path('ocr/', ocr_evidence_list_view, name='ocr_evidence_list'),
     path('ocr/<uuid:evidence_id>/', ocr_evidence_detail_view, name='ocr_evidence_detail'),
     
