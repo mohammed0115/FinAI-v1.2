@@ -7,14 +7,38 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from django.shortcuts import render
 from decimal import Decimal
 import logging
 
 from .services import hard_rules_service
 from .gate import hard_rules_gate
+from .engine import hard_rules_engine
 
 logger = logging.getLogger(__name__)
 
+
+# ==============================================================================
+# WEB DASHBOARD VIEW
+# ==============================================================================
+
+def dashboard_view(request):
+    """
+    Hard Rules Dashboard - لوحة القواعد الصارمة
+    Web interface for Hard Rules Engine status and monitoring
+    """
+    context = {
+        'governance_status': hard_rules_service.get_governance_status(),
+        'enforcement_summary': hard_rules_service.get_rule_enforcement_summary(),
+        'engine_status': hard_rules_engine.get_engine_status(),
+        'recent_evaluations': hard_rules_service.get_recent_evaluations(limit=10),
+    }
+    return render(request, 'hard_rules/dashboard.html', context)
+
+
+# ==============================================================================
+# REST API VIEWS
+# ==============================================================================
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
