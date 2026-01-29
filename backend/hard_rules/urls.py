@@ -7,6 +7,9 @@ from . import views
 app_name = 'hard_rules'
 
 urlpatterns = [
+    # Web Dashboard
+    path('dashboard/', views.dashboard_view, name='dashboard'),
+    
     # Governance Status
     path('governance/status/', views.get_governance_status, name='governance-status'),
     path('governance/rules/', views.get_rule_enforcement_summary, name='rule-enforcement'),
