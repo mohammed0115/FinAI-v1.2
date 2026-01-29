@@ -230,7 +230,7 @@ class HardRulesEngineAPITester:
         """Test POST /api/hard-rules/validate/invoice/ - PASS case"""
         print("\n📄✅ Testing Invoice Validation (PASS case)...")
         
-        # Valid invoice data
+        # Valid invoice data with proper user role
         valid_invoice = {
             "invoice_data": {
                 "invoice_number": "INV-2025-001",
@@ -251,7 +251,8 @@ class HardRulesEngineAPITester:
                 "invoice_type_code": "388"
             },
             "country": "SA",
-            "organization_id": "test-org"
+            "organization_id": "test-org",
+            "user_role": "accountant"  # Use role with create permission
         }
         
         response = self.make_request('POST', '/api/hard-rules/validate/invoice/', valid_invoice)
