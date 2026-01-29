@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block title %}Hard Rules Dashboard - محرك القواعد الصارمة{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800" data-testid="hard-rules-title">
+                محرك القواعد الصارمة
+                <span class="text-sm font-normal text-slate-500">Hard Rules Engine</span>
+            </h1>
+            <p class="text-sm text-slate-500">التحقق من القواعد الحاكمة قبل أي تحليل ذكاء اصطناعي</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium
+                {% if governance_status.system_status == 'OPERATIONAL' %}
+                bg-emerald-100 text-emerald-700
+                {% else %}
+                bg-red-100 text-red-700
+                {% endif %}"
+                data-testid="system-status-badge">
+                {% if governance_status.system_status == 'OPERATIONAL' %}
+                <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                النظام تشغيلي
+                {% else %}
+                <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                محظور
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- AI Gate Status -->
+    <div class="bg-gradient-to-r {% if governance_status.system_status == 'OPERATIONAL' %}from-emerald-500 to-teal-500{% else %}from-red-500 to-rose-500{% endif %} rounded-xl p-6 text-white" data-testid="ai-gate-status-card">
+        <div class="flex items-start justify-between">
+            <div>
+                <h2 class="text-lg font-semibold mb-2">بوابة تنفيذ الذكاء الاصطناعي</h2>
+                <p class="text-white/90 text-sm">{{ governance_status.message }}</p>
+                <p class="text-white/70 text-xs mt-1" dir="rtl">{{ governance_status.message_ar }}</p>
+            </div>
+            <div class="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
+                {% if governance_status.system_status == 'OPERATIONAL' %}
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+                {% else %}
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                </svg>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white/10 rounded-lg p-3">
+                <div class="text-2xl font-bold">{{ enforcement_summary.enforcement_summary.total_rules|default:20 }}</div>
+                <div class="text-xs text-white/80">إجمالي القواعد</div>
+            </div>
+            <div class="bg-white/10 rounded-lg p-3">
+                <div class="text-2xl font-bold">{{ enforcement_summary.categories|length|default:6 }}</div>
+                <div class="text-xs text-white/80">الفئات</div>
+            </div>
+            <div class="bg-white/10 rounded-lg p-3">
+                <div class="text-2xl font-bold">{{ governance_status.gate_active|yesno:"✓,✗" }}</div>
+                <div class="text-xs text-white/80">البوابة نشطة</div>
+            </div>
+            <div class="bg-white/10 rounded-lg p-3">
+                <div class="text-2xl font-bold">{{ governance_status.ai_blocked_by_default|yesno:"✓,✗" }}</div>
+                <div class="text-xs text-white/80">AI محظور افتراضياً</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rule Categories -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="rule-categories-grid">
+        {% for category_name, category in enforcement_summary.categories.items %}
+        <div class="bg-white rounded-xl border border-slate-200/60 p-5" data-testid="category-{{ category_name }}">
+            <div class="flex items-start justify-between mb-3">
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-700 capitalize">{{ category_name|title }}</h3>
+                    <p class="text-xs text-slate-400">{{ category.rules|length }} قواعد</p>
+                </div>
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center
+                    {% if category_name == 'accounting' %}bg-blue-50{% endif %}
+                    {% if category_name == 'invoice' %}bg-purple-50{% endif %}
+                    {% if category_name == 'vat' %}bg-amber-50{% endif %}
+                    {% if category_name == 'compliance' %}bg-emerald-50{% endif %}
+                    {% if category_name == 'ocr' %}bg-cyan-50{% endif %}
+                    {% if category_name == 'security' %}bg-red-50{% endif %}">
+                    {% if category_name == 'accounting' %}
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    {% endif %}
+                    {% if category_name == 'invoice' %}
+                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    {% endif %}
+                    {% if category_name == 'vat' %}
+                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    {% endif %}
+                    {% if category_name == 'compliance' %}
+                    <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    {% endif %}
+                    {% if category_name == 'ocr' %}
+                    <svg class="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    {% endif %}
+                    {% if category_name == 'security' %}
+                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="text-xs text-slate-500 mb-3">{{ category.description_ar }}</p>
+            <div class="flex flex-wrap gap-1">
+                {% for rule in category.rules %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
+                    {{ rule }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- All Rules Reference -->
+    <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden" data-testid="rules-reference-table">
+        <div class="px-5 py-4 border-b border-slate-100">
+            <h3 class="text-sm font-semibold text-slate-700">جميع القواعد المنفذة</h3>
+            <p class="text-xs text-slate-400">All Enforced Hard Rules (Deterministic, Non-AI)</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-slate-500">رمز القاعدة</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-slate-500">الوصف</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-slate-500">الحالة</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for rule in engine_status.rules_enforced %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-blue-50 text-blue-700">
+                                {{ rule|slice:":7" }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-slate-600">{{ rule|slice:"9:" }}</td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-600">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Evaluations -->
+    <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden" data-testid="recent-evaluations-section">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-semibold text-slate-700">آخر التقييمات</h3>
+                <p class="text-xs text-slate-400">Recent Hard Rules Evaluations</p>
+            </div>
+            <button onclick="location.reload()" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                تحديث
+            </button>
+        </div>
+        <div class="divide-y divide-slate-100">
+            {% for eval in recent_evaluations %}
+            <div class="px-5 py-3.5 hover:bg-slate-50" data-testid="evaluation-{{ eval.id }}">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase
+                            {% if eval.status == 'PASS' %}bg-emerald-100 text-emerald-700
+                            {% elif eval.status == 'FAIL' %}bg-red-100 text-red-700
+                            {% elif eval.status == 'BLOCKED' %}bg-orange-100 text-orange-700
+                            {% else %}bg-amber-100 text-amber-700{% endif %}">
+                            {{ eval.status }}
+                        </span>
+                        <div>
+                            <p class="text-sm font-medium text-slate-700">{{ eval.type|title }}</p>
+                            <p class="text-xs text-slate-400">{{ eval.evaluated_at }}</p>
+                        </div>
+                    </div>
+                    <div class="text-left">
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-emerald-600">✓ {{ eval.summary.passed }}</span>
+                            <span class="text-red-600">✗ {{ eval.summary.failed }}</span>
+                            <span class="text-slate-400">/ {{ eval.summary.total }}</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            {% if eval.eligible_for_ai %}
+                            <span class="text-emerald-600">AI Eligible</span>
+                            {% else %}
+                            <span class="text-red-600">AI Blocked</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="px-5 py-12 text-center">
+                <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="text-sm text-slate-400">لا توجد تقييمات بعد</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
