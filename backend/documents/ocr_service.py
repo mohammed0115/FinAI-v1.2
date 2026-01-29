@@ -64,16 +64,21 @@ class DocumentOCRService:
     """
     
     def __init__(self):
-        self._verify_tesseract()
+        self._tesseract_available = self._verify_tesseract()
     
-    def _verify_tesseract(self):
+    def _verify_tesseract(self) -> bool:
         """Verify tesseract is installed and available"""
         try:
             version = pytesseract.get_tesseract_version()
             logger.info(f"Tesseract OCR initialized: version {version}")
+            return True
         except Exception as e:
-            logger.error(f"Tesseract not available: {e}")
-            raise RuntimeError("Tesseract OCR is not installed or not accessible")
+            logger.warning(f"Tesseract not available: {e}. OCR features will be disabled.")
+            return False
+    
+    def is_available(self) -> bool:
+        """Check if OCR service is available"""
+        return self._tesseract_available
     
     def process_document(
         self,
