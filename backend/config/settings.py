@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'analytics',
     'reports',
     'compliance',
+    'hard_rules',  # Hard Rules Engine
 ]
 
 MIDDLEWARE = [
