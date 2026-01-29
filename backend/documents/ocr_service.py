@@ -99,6 +99,18 @@ class DocumentOCRService:
         Returns:
             Dict with extracted text, confidence, and metadata
         """
+        # Check if tesseract is available
+        if not self._tesseract_available:
+            return {
+                'text': '',
+                'text_ar': '',
+                'text_en': '',
+                'confidence': 0,
+                'error': 'Tesseract OCR is not installed',
+                'ocr_engine': 'tesseract',
+                'available': False,
+            }
+        
         extraction_start = timezone.now()
         
         # Determine tesseract language
