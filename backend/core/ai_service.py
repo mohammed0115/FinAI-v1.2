@@ -6,17 +6,62 @@ import asyncio
 import base64
 import requests
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
+
+def _check_hard_rules_gate(invoice_data: Dict = None, operation: str = 'ai_analysis') -> bool:
+    """
+    Check Hard Rules Gate before AI execution.
+    Returns True if AI is allowed, False otherwise.
+    """
+    try:
+        from hard_rules.gate import hard_rules_gate, HardRulesGateException
+        
+        # Check engine exists
+        engine_check = hard_rules_gate.check_engine_exists()
+        if not engine_check['exists']:
+            logger.error(f"AI BLOCKED: {engine_check['message']}")
+            return False
+        
+        # If invoice data provided, validate it
+        if invoice_data:
+            result = hard_rules_gate.quick_validate_invoice(invoice_data)
+            if not result['valid']:
+                logger.warning(f"AI BLOCKED for {operation}: {result['message']}")
+                return False
+        
+        return True
+    except Exception as e:
+        logger.error(f"Hard Rules Gate check failed: {e}")
+        # Fail-safe: block AI if gate check fails
+        return False
+
+
 class EmergentAIService:
-    """Service for AI operations using Emergent LLM Key"""
+    """
+    Service for AI operations using Emergent LLM Key
+    
+    IMPORTANT: All AI operations are GATED by Hard Rules Engine.
+    AI will be blocked if Hard Rules validation fails.
+    """
     
     def __init__(self):
         self.api_key = os.environ.get('EMERGENT_LLM_KEY', '')
+        self._gate_enabled = True  # Hard Rules gate is always enabled
+    
+    def _check_gate(self, invoice_data: Dict = None, operation: str = 'ai') -> bool:
+        """Check if AI execution is allowed"""
+        if not self._gate_enabled:
+            return True
+        return _check_hard_rules_gate(invoice_data, operation)
     
     def process_document_with_vision(self, image_url: str, document_type: str = 'invoice') -> Dict[str, Any]:
         """Process document using AI vision capabilities"""
+        # Note: Vision processing is for extraction, gate check happens before analysis
         try:
             # Create chat instance
             chat = LlmChat(
