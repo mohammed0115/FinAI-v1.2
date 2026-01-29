@@ -287,11 +287,31 @@ class HardRulesService:
         """
         Save evaluation to database
         """
+        # Validate UUIDs - only use if valid
+        valid_org_id = None
+        valid_user_id = None
+        
+        if organization_id:
+            try:
+                import uuid
+                uuid.UUID(organization_id)
+                valid_org_id = organization_id
+            except (ValueError, TypeError):
+                pass
+        
+        if user_id:
+            try:
+                import uuid
+                uuid.UUID(user_id)
+                valid_user_id = user_id
+            except (ValueError, TypeError):
+                pass
+        
         with transaction.atomic():
             # Create main evaluation record
             evaluation = HardRulesEvaluation.objects.create(
-                organization_id=organization_id if organization_id else None,
-                user_id=user_id if user_id else None,
+                organization_id=valid_org_id,
+                user_id=valid_user_id,
                 evaluation_type=evaluation_type,
                 entity_type=entity_type,
                 entity_id=entity_id,
