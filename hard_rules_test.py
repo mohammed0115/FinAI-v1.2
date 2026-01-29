@@ -486,7 +486,7 @@ class HardRulesEngineAPITester:
         # Check for key dashboard elements
         html_content = response.text
         required_elements = [
-            'Hard Rules Engine',
+            'Hard Rules Dashboard',  # From title
             'محرك القواعد الصارمة',
             'system-status-badge',
             'ai-gate-status-card'
