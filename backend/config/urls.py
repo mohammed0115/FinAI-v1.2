@@ -35,6 +35,7 @@ urlpatterns = [
     path('api/analytics/', include('analytics.urls')),
     path('api/reports/', include('reports.urls')),
     path('api/compliance/', include('compliance.urls')),
+    path('api/hard-rules/', include('hard_rules.urls')),  # Hard Rules Engine API
     
     # Web views
     path('', include('core.web_urls')),
