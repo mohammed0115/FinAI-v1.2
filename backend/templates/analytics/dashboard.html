@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ t.analytics|default:'التحليلات' }} - FinAI{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">{{ t.analytics|default:'التحليلات المالية' }}</h1>
+            <p class="text-sm text-slate-500">{{ t.analytics_subtitle|default:'رؤى وتحليلات الامتثال المالي' }}</p>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Total Income -->
+        <div class="bg-white rounded-xl border border-slate-200/60 p-5">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 mb-1">{{ t.total_income|default:'إجمالي الإيرادات' }}</p>
+                    <p class="text-2xl font-bold text-emerald-600 mono">{{ income|floatformat:2|default:"0.00" }}</p>
+                    <p class="text-xs text-slate-400 mt-1">{{ t.for_period|default:'للفترة المالية' }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Total Expenses -->
+        <div class="bg-white rounded-xl border border-slate-200/60 p-5">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 mb-1">{{ t.total_expenses|default:'إجمالي المصروفات' }}</p>
+                    <p class="text-2xl font-bold text-red-600 mono">{{ expenses|floatformat:2|default:"0.00" }}</p>
+                    <p class="text-xs text-slate-400 mt-1">{{ t.for_period|default:'للفترة المالية' }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Net Position -->
+        <div class="bg-white rounded-xl border border-slate-200/60 p-5">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 mb-1">{{ t.net_position|default:'صافي المركز' }}</p>
+                    <p class="text-2xl font-bold {% if net >= 0 %}text-emerald-600{% else %}text-red-600{% endif %} mono">{{ net|floatformat:2|default:"0.00" }}</p>
+                    <p class="text-xs text-slate-400 mt-1">{{ t.advisory_only|default:'للاطلاع فقط' }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI Insights Section -->
+    <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-slate-700">{{ t.ai_insights|default:'رؤى الذكاء الاصطناعي' }}</h3>
+                <p class="text-xs text-slate-400">{{ t.ai_advisory|default:'ملاحظات استشارية تتطلب مراجعة بشرية' }}</p>
+            </div>
+        </div>
+        <div class="p-5">
+            {% if insights %}
+            <div class="space-y-3">
+                {% for insight in insights %}
+                <div class="flex items-start gap-4 p-4 rounded-lg {% if insight.is_resolved %}bg-emerald-50 border border-emerald-100{% else %}bg-amber-50 border border-amber-100{% endif %}">
+                    <div class="flex-shrink-0 mt-0.5">
+                        {% if insight.is_resolved %}
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        {% else %}
+                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium {% if insight.is_resolved %}text-emerald-800{% else %}text-amber-800{% endif %}">{{ insight.title }}</p>
+                        <p class="text-sm {% if insight.is_resolved %}text-emerald-700{% else %}text-amber-700{% endif %} mt-1">{{ insight.description }}</p>
+                        <p class="text-xs {% if insight.is_resolved %}text-emerald-500{% else %}text-amber-500{% endif %} mt-2">{{ insight.created_at|date:"Y/m/d H:i" }}</p>
+                    </div>
+                    <div>
+                        {% if insight.is_resolved %}
+                        <span class="badge badge-success">{{ t.resolved|default:'تم الحل' }}</span>
+                        {% else %}
+                        <span class="badge badge-warning">{{ t.needs_review|default:'يحتاج مراجعة' }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                <p class="mt-3 text-sm text-slate-400">{{ t.no_insights|default:'لا توجد رؤى متاحة حالياً' }}</p>
+                <p class="text-xs text-slate-300 mt-1">{{ t.insights_will_appear|default:'ستظهر الرؤى عند توفر بيانات كافية' }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Scope Notice -->
+    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+                <p class="text-sm font-medium text-blue-800">{{ t.scope_notice|default:'ملاحظة النطاق' }}</p>
+                <p class="text-sm text-blue-700 mt-1">{{ t.scope_desc|default:'هذه التحليلات للاطلاع والتدقيق فقط. لا تُعد مصدراً للحقيقة المحاسبية أو توصيات استثمارية.' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

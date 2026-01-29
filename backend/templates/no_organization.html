@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}لا توجد منشأة - FinAI{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[60vh]">
+    <div class="text-center">
+        <div class="text-6xl mb-4">🏢</div>
+        <h1 class="text-xl font-bold text-slate-800 mb-2">لا توجد منشأة مرتبطة</h1>
+        <p class="text-slate-500 mb-6">حسابك غير مرتبط بأي منشأة حالياً.<br>يرجى التواصل مع المسؤول لربط حسابك بمنشأة.</p>
+        <a href="{% url 'logout' %}" class="px-4 py-2 bg-slate-800 text-white text-sm rounded hover:bg-slate-700">تسجيل الخروج</a>
+    </div>
+</div>
+{% endblock %}

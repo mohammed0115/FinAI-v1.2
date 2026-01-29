@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+{% block title %}نظرة عامة على الامتثال - FinAI{% endblock %}
+
+{% block content %}
+<div class="max-w-full">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">نظرة عامة على الامتثال</h1>
+            <p class="text-sm text-slate-500">{{ organization.name }} | تقييم شامل للامتثال التنظيمي</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-center px-4 py-2 bg-white border border-slate-200 rounded">
+                <div class="text-2xl font-bold {% if overall_score >= 80 %}text-green-600{% elif overall_score >= 60 %}text-amber-600{% else %}text-red-600{% endif %}">{{ overall_score }}%</div>
+                <div class="text-xs text-slate-500">الدرجة الإجمالية</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Score Breakdown -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+        <div class="bg-white border border-slate-200 rounded p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm text-slate-500">ZATCA الفوترة الإلكترونية</div>
+                    <div class="text-2xl font-bold mt-1 {% if zatca_score >= 80 %}text-green-600{% elif zatca_score >= 60 %}text-amber-600{% else %}text-red-600{% endif %}">{{ zatca_score }}%</div>
+                </div>
+                <div class="w-12 h-12 rounded-full flex items-center justify-center {% if zatca_score >= 80 %}bg-green-100{% elif zatca_score >= 60 %}bg-amber-100{% else %}bg-red-100{% endif %}">
+                    <span class="text-lg">📋</span>
+                </div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500">{{ zatca_invoices_count }} فاتورة تم فحصها</div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm text-slate-500">ضريبة القيمة المضافة</div>
+                    <div class="text-2xl font-bold mt-1 {% if vat_score >= 80 %}text-green-600{% elif vat_score >= 60 %}text-amber-600{% else %}text-red-600{% endif %}">{{ vat_score }}%</div>
+                </div>
+                <div class="w-12 h-12 rounded-full flex items-center justify-center {% if vat_score >= 80 %}bg-green-100{% elif vat_score >= 60 %}bg-amber-100{% else %}bg-red-100{% endif %}">
+                    <span class="text-lg">💰</span>
+                </div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500">{{ vat_reconciliations_count }} تسوية</div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm text-slate-500">الزكاة</div>
+                    <div class="text-2xl font-bold mt-1 {% if zakat_score >= 80 %}text-green-600{% elif zakat_score >= 60 %}text-amber-600{% else %}text-red-600{% endif %}">{{ zakat_score }}%</div>
+                </div>
+                <div class="w-12 h-12 rounded-full flex items-center justify-center {% if zakat_score >= 80 %}bg-green-100{% elif zakat_score >= 60 %}bg-amber-100{% else %}bg-red-100{% endif %}">
+                    <span class="text-lg">🕌</span>
+                </div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500">{{ zakat_due|floatformat:2 }} ر.س مستحقة</div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm text-slate-500">نتائج التدقيق</div>
+                    <div class="text-2xl font-bold mt-1 {% if unresolved_findings == 0 %}text-green-600{% elif unresolved_findings < 5 %}text-amber-600{% else %}text-red-600{% endif %}">{{ unresolved_findings }}</div>
+                </div>
+                <div class="w-12 h-12 rounded-full flex items-center justify-center {% if unresolved_findings == 0 %}bg-green-100{% elif unresolved_findings < 5 %}bg-amber-100{% else %}bg-red-100{% endif %}">
+                    <span class="text-lg">⚠️</span>
+                </div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500">غير محلولة من {{ total_findings }}</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- ZATCA Invoices Status -->
+        <div class="bg-white border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="section-header mb-0 border-0 pb-0">حالة فواتير ZATCA</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full data-table">
+                    <thead>
+                        <tr>
+                            <th class="text-right">رقم الفاتورة</th>
+                            <th class="text-right">التاريخ</th>
+                            <th class="text-right">المشتري</th>
+                            <th class="text-left">المبلغ</th>
+                            <th class="text-center">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in zatca_invoices %}
+                        <tr>
+                            <td class="mono">{{ invoice.invoice_number }}</td>
+                            <td class="mono">{{ invoice.issue_date|date:"Y/m/d" }}</td>
+                            <td class="max-w-xs truncate">{{ invoice.buyer_name }}</td>
+                            <td class="text-left mono">{{ invoice.total_including_vat|floatformat:2 }} {{ invoice.currency_code }}</td>
+                            <td class="text-center">
+                                {% if invoice.status == 'cleared' %}
+                                <span class="badge badge-success">معتمدة</span>
+                                {% elif invoice.status == 'validated' %}
+                                <span class="badge badge-info">تم التحقق</span>
+                                {% elif invoice.status == 'rejected' %}
+                                <span class="badge badge-danger">مرفوضة</span>
+                                {% else %}
+                                <span class="badge badge-neutral">{{ invoice.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-6 text-slate-400">لا توجد فواتير ZATCA</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- VAT Reconciliation Summary -->
+        <div class="bg-white border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="section-header mb-0 border-0 pb-0">تسويات ضريبة القيمة المضافة</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full data-table">
+                    <thead>
+                        <tr>
+                            <th class="text-right">الفترة</th>
+                            <th class="text-left">ض.ق.م المحصلة</th>
+                            <th class="text-left">ض.ق.م المدفوعة</th>
+                            <th class="text-left">صافي</th>
+                            <th class="text-center">الدرجة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for recon in vat_reconciliations %}
+                        <tr>
+                            <td class="mono text-slate-600">{{ recon.period_start|date:"Y/m" }} - {{ recon.period_end|date:"Y/m" }}</td>
+                            <td class="text-left mono text-green-600">{{ recon.total_output_vat|floatformat:2 }}</td>
+                            <td class="text-left mono text-red-600">{{ recon.total_input_vat|floatformat:2 }}</td>
+                            <td class="text-left mono font-medium">{{ recon.net_vat_due|floatformat:2 }}</td>
+                            <td class="text-center">
+                                <span class="badge {% if recon.compliance_score >= 80 %}badge-success{% elif recon.compliance_score >= 60 %}badge-warning{% else %}badge-danger{% endif %}">
+                                    {{ recon.compliance_score }}%
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-6 text-slate-400">لا توجد تسويات</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Zakat Calculation -->
+        <div class="bg-white border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="section-header mb-0 border-0 pb-0">حساب الزكاة</h2>
+            </div>
+            {% if latest_zakat %}
+            <div class="p-4">
+                <table class="w-full data-table">
+                    <tbody>
+                        <tr>
+                            <td class="text-slate-600">السنة المالية</td>
+                            <td class="text-left mono">{{ latest_zakat.fiscal_year_start|date:"Y/m/d" }} - {{ latest_zakat.fiscal_year_end|date:"Y/m/d" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-slate-600">إجمالي حقوق الملكية</td>
+                            <td class="text-left mono">{{ latest_zakat.total_equity|floatformat:2 }} ر.س</td>
+                        </tr>
+                        <tr>
+                            <td class="text-slate-600">الوعاء الزكوي الصافي</td>
+                            <td class="text-left mono">{{ latest_zakat.net_zakat_base|floatformat:2 }} ر.س</td>
+                        </tr>
+                        <tr>
+                            <td class="text-slate-600">نسبة الزكاة</td>
+                            <td class="text-left mono">{{ latest_zakat.zakat_rate|floatformat:4 }} (2.5%)</td>
+                        </tr>
+                        <tr class="bg-slate-50">
+                            <td class="text-slate-800 font-semibold">الزكاة المستحقة</td>
+                            <td class="text-left mono font-bold text-lg">{{ latest_zakat.zakat_due|floatformat:2 }} ر.س</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="mt-4 flex items-center justify-between text-sm">
+                    <span class="text-slate-500">الحالة: 
+                        <span class="badge {% if latest_zakat.status == 'submitted' %}badge-success{% elif latest_zakat.status == 'reviewed' %}badge-info{% else %}badge-neutral{% endif %}">
+                            {% if latest_zakat.status == 'draft' %}مسودة{% elif latest_zakat.status == 'calculated' %}تم الحساب{% elif latest_zakat.status == 'reviewed' %}تمت المراجعة{% elif latest_zakat.status == 'submitted' %}تم التقديم{% else %}{{ latest_zakat.status }}{% endif %}
+                        </span>
+                    </span>
+                    <span class="text-slate-400">درجة الامتثال: {{ latest_zakat.compliance_score }}%</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="p-8 text-center text-slate-400">
+                لا يوجد حساب زكاة
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Regulatory References -->
+        <div class="bg-white border border-slate-200 rounded">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="section-header mb-0 border-0 pb-0">المراجع التنظيمية ذات الصلة</h2>
+            </div>
+            <div class="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                {% for ref in regulatory_references %}
+                <div class="px-4 py-3">
+                    <div class="flex items-start gap-2">
+                        <span class="badge badge-info mt-0.5">{{ ref.article_number }}</span>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-slate-700">{{ ref.title_ar }}</p>
+                            <p class="text-xs text-slate-500 mt-1 line-clamp-2">{{ ref.description_ar|truncatewords:30 }}</p>
+                            <div class="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                                <span>{{ ref.get_regulator_display }}</span>
+                                <span>•</span>
+                                <span>{{ ref.get_category_display }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="p-8 text-center text-slate-400">
+                    لا توجد مراجع تنظيمية
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

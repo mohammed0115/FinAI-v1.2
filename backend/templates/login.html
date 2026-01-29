@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinAI - تسجيل الدخول</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; }
+        .mono { font-family: 'IBM Plex Mono', monospace; }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #f5f3ff 100%);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .progress-gradient-blue {
+            background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+        }
+        .progress-gradient-green {
+            background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
+        }
+        .progress-gradient-purple {
+            background: linear-gradient(90deg, #a855f7 0%, #c084fc 100%);
+        }
+        .progress-gradient-yellow {
+            background: linear-gradient(90deg, #eab308 0%, #facc15 100%);
+        }
+        
+        .card-shadow {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+        
+        .btn-gradient {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        }
+        .btn-gradient:hover {
+            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+        }
+        
+        .feature-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .input-field {
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-field:focus {
+            border-color: #0891b2;
+            box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+        }
+        
+        .logo-upload {
+            border: 2px dashed #d1d5db;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+        .logo-upload:hover {
+            border-color: #0891b2;
+            background-color: #f0fdfa;
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg">
+    <div class="min-h-screen flex">
+        <!-- Left Side - Branding & Features -->
+        <div class="hidden lg:flex lg:w-1/2 flex-col p-8 relative overflow-hidden">
+            <!-- Language Toggle -->
+            <div class="absolute top-6 left-6">
+                <button class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-800 flex items-center gap-1">
+                    EN
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Logo -->
+            <div class="flex items-center gap-3 mb-12">
+                <div class="w-14 h-14 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg relative">
+                    <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="6" y="6" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                        <rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="12" y1="3" x2="12" y2="6" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="12" y1="18" x2="12" y2="21" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="3" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="18" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="6" y1="9" x2="3" y2="9" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="6" y1="15" x2="3" y2="15" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="21" y1="9" x2="18" y2="9" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="21" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    <div class="absolute -top-1 -left-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-slate-800 italic">FinAI</div>
+                    <div class="text-sm text-slate-500">منصة مالية ذكية</div>
+                </div>
+            </div>
+            
+            <!-- Main Heading -->
+            <div class="mb-12">
+                <h1 class="text-4xl font-bold text-slate-800 leading-tight mb-2">
+                    <span class="gradient-text">منصة الدقيق المالي الذكية</span>
+                </h1>
+                <p class="text-slate-600 mt-6 leading-relaxed">
+                    معالجة المستندات المدعومة بالذكاء الاصطناعي، والأتمتة
+                    التنظيمية، ورؤى مالية فورية مصممة خصيصاً لأعمال دول
+                    مجلس التعاون الخليجي.
+                </p>
+            </div>
+            
+            <!-- Stats Section -->
+            <div class="bg-white rounded-2xl p-6 card-shadow mb-8">
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Active Users -->
+                    <div class="border-l border-slate-100 pl-4">
+                        <div class="text-3xl font-bold text-slate-800 mono">+500</div>
+                        <div class="text-sm text-slate-500">مستخدم نشط</div>
+                    </div>
+                    
+                    <!-- AI Processing -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-500">قوة معالجة AI</span>
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            </svg>
+                        </div>
+                        <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full progress-gradient-blue rounded-full" style="width: 85%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Uptime -->
+                    <div class="border-l border-slate-100 pl-4">
+                        <div class="text-3xl font-bold text-slate-800 mono">99.9%</div>
+                        <div class="text-sm text-slate-500">وقت التشغيل</div>
+                    </div>
+                    
+                    <!-- Automation -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-500">الأتمتة</span>
+                            <span class="text-xs font-semibold text-slate-700">97%</span>
+                        </div>
+                        <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full progress-gradient-green rounded-full" style="width: 97%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Security Score -->
+                <div class="mt-4 pt-4 border-t border-slate-100">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs text-slate-500">درجة الأمان</span>
+                        <span class="text-xs font-semibold text-emerald-600">ممتاز</span>
+                    </div>
+                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full progress-gradient-purple rounded-full" style="width: 92%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Feature Cards -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="feature-card bg-white rounded-xl p-4 card-shadow text-center">
+                    <div class="w-12 h-12 mx-auto mb-3 bg-blue-50 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div class="font-semibold text-slate-800 text-sm">تحليلات AI</div>
+                    <div class="text-xs text-slate-500">رؤى تنبؤية</div>
+                </div>
+                
+                <div class="feature-card bg-white rounded-xl p-4 card-shadow text-center">
+                    <div class="w-12 h-12 mx-auto mb-3 bg-purple-50 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                    </div>
+                    <div class="font-semibold text-slate-800 text-sm">متوافق مع الخليج</div>
+                    <div class="text-xs text-slate-500">ZATCA & الزكاة</div>
+                </div>
+                
+                <div class="feature-card bg-white rounded-xl p-4 card-shadow text-center">
+                    <div class="w-12 h-12 mx-auto mb-3 bg-amber-50 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                        </svg>
+                    </div>
+                    <div class="font-semibold text-slate-800 text-sm">OCR/HDR</div>
+                    <div class="text-xs text-slate-500">استخراج ذكي</div>
+                </div>
+                
+                <div class="feature-card bg-white rounded-xl p-4 card-shadow text-center">
+                    <div class="w-12 h-12 mx-auto mb-3 bg-emerald-50 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+                        </svg>
+                    </div>
+                    <div class="font-semibold text-slate-800 text-sm">متعدد اللغات</div>
+                    <div class="text-xs text-slate-500">العربية والإنجليزية</div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="mt-auto pt-8 text-center text-xs text-slate-400">
+                © FinAI 2026. مدعوم بالذكاء الاصطناعي للتميز المالي في دول الخليج.
+            </div>
+        </div>
+        
+        <!-- Right Side - Login/Register Form -->
+        <div class="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 bg-white">
+            <div class="w-full max-w-md">
+                <!-- Tab Switcher -->
+                <div class="flex bg-slate-100 rounded-xl p-1 mb-8" id="tabSwitcher">
+                    <button onclick="showTab('login')" id="loginTab" class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all bg-white text-slate-800 shadow-sm">
+                        تسجيل الدخول
+                    </button>
+                    <button onclick="showTab('register')" id="registerTab" class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all text-slate-500 hover:text-slate-700">
+                        إنشاء حساب
+                    </button>
+                </div>
+                
+                <!-- Login Form -->
+                <div id="loginForm">
+                    <div class="text-center mb-8">
+                        <h2 class="text-2xl font-bold text-slate-800 mb-2">مرحباً بعودتك</h2>
+                        <p class="text-slate-500 text-sm">تسجيل الدخول للوصول إلى لوحة التحكم المالية</p>
+                    </div>
+                    
+                    {% if messages %}
+                    <div class="mb-6">
+                        {% for message in messages %}
+                        <div class="px-4 py-3 rounded-xl text-sm flex items-center gap-3
+                            {% if message.tags == 'error' %}bg-red-50 text-red-600 border border-red-200{% else %}bg-emerald-50 text-emerald-600 border border-emerald-200{% endif %}">
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {% if message.tags == 'error' %}
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                {% else %}
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                {% endif %}
+                            </svg>
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" action="{% url 'login' %}" class="space-y-5">
+                        {% csrf_token %}
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">عنوان البريد الإلكتروني</label>
+                            <input type="email" name="email" required
+                                   class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm outline-none"
+                                   placeholder="admin@company.sa">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">كلمة المرور</label>
+                            <div class="relative">
+                                <input type="password" name="password" id="loginPassword" required
+                                       class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm outline-none"
+                                       placeholder="••••••••">
+                                <button type="button" onclick="togglePassword('loginPassword')" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="remember" class="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
+                                <span class="text-sm text-slate-600">تذكرني</span>
+                            </label>
+                            <a href="#" class="text-sm text-cyan-600 hover:text-cyan-700 font-medium">نسيت كلمة المرور؟</a>
+                        </div>
+                        
+                        <button type="submit" class="btn-gradient w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all">
+                            <span>تسجيل الدخول</span>
+                            <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                            </svg>
+                        </button>
+                    </form>
+                    
+                    <!-- Demo Credentials -->
+                    <div class="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <div class="text-xs text-slate-500 text-center mb-2">بيانات الدخول التجريبية</div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500">البريد:</span>
+                            <code class="text-slate-700 font-medium">admin@finai.com</code>
+                        </div>
+                        <div class="flex justify-between text-xs mt-1">
+                            <span class="text-slate-500">كلمة المرور:</span>
+                            <code class="text-slate-700 font-medium">adminpassword</code>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Register Form -->
+                <div id="registerForm" class="hidden">
+                    <div class="text-center mb-8">
+                        <h2 class="text-2xl font-bold text-slate-800 mb-2">إنشاء حساب جديد</h2>
+                        <p class="text-slate-500 text-sm">سجل شركتك للوصول إلى منصة التدقيق المالي</p>
+                    </div>
+                    
+                    <form method="post" action="{% url 'register' %}" enctype="multipart/form-data" class="space-y-5">
+                        {% csrf_token %}
+                        
+                        <!-- Company Logo Upload -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">شعار الشركة</label>
+                            <div class="logo-upload rounded-xl p-6 text-center cursor-pointer" onclick="document.getElementById('companyLogo').click()">
+                                <input type="file" id="companyLogo" name="company_logo" accept="image/*" class="hidden" onchange="previewLogo(this)">
+                                <div id="logoPreview" class="hidden mb-3">
+                                    <img id="logoImg" src="" alt="Logo Preview" class="w-20 h-20 object-contain mx-auto rounded-xl">
+                                </div>
+                                <div id="logoPlaceholder">
+                                    <svg class="w-12 h-12 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    <div class="text-sm text-slate-500">اضغط لرفع الشعار</div>
+                                    <div class="text-xs text-slate-400 mt-1">PNG, JPG حتى 2MB</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Company Name -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">اسم الشركة</label>
+                            <input type="text" name="company_name" required
+                                   class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm outline-none"
+                                   placeholder="شركة المثال للتجارة">
+                        </div>
+                        
+                        <!-- Tax Number -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">الرقم الضريبي</label>
+                            <input type="text" name="tax_number" required
+                                   class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm outline-none mono"
+                                   placeholder="300000000000003">
+                        </div>
+                        
+                        <!-- Admin Name -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">اسم المسؤول</label>
+                            <input type="text" name="full_name" required
+                                   class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm outline-none"
+                                   placeholder="محمد أحمد">
+                        </div>
+                        
+                        <!-- Email -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">البريد الإلكتروني</label>
+                            <input type="email" name="email" required
+                                   class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm outline-none"
+                                   placeholder="admin@company.sa">
+                        </div>
+                        
+                        <!-- Password -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">كلمة المرور</label>
+                            <div class="relative">
+                                <input type="password" name="password" id="registerPassword" required
+                                       class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm outline-none"
+                                       placeholder="••••••••">
+                                <button type="button" onclick="togglePassword('registerPassword')" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Confirm Password -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">تأكيد كلمة المرور</label>
+                            <input type="password" name="password_confirm" required
+                                   class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm outline-none"
+                                   placeholder="••••••••">
+                        </div>
+                        
+                        <!-- Terms -->
+                        <div class="flex items-start gap-2">
+                            <input type="checkbox" name="terms" required class="w-4 h-4 mt-0.5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
+                            <span class="text-sm text-slate-600">
+                                أوافق على 
+                                <a href="#" class="text-cyan-600 hover:text-cyan-700">الشروط والأحكام</a>
+                                و
+                                <a href="#" class="text-cyan-600 hover:text-cyan-700">سياسة الخصوصية</a>
+                            </span>
+                        </div>
+                        
+                        <button type="submit" class="btn-gradient w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all">
+                            <span>إنشاء الحساب</span>
+                            <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Footer -->
+                <div class="mt-8 text-center text-xs text-slate-400">
+                    © FinAI 2026. جميع الحقوق محفوظة.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function showTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const loginTab = document.getElementById('loginTab');
+            const registerTab = document.getElementById('registerTab');
+            
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                loginTab.classList.add('bg-white', 'text-slate-800', 'shadow-sm');
+                loginTab.classList.remove('text-slate-500');
+                registerTab.classList.remove('bg-white', 'text-slate-800', 'shadow-sm');
+                registerTab.classList.add('text-slate-500');
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                registerTab.classList.add('bg-white', 'text-slate-800', 'shadow-sm');
+                registerTab.classList.remove('text-slate-500');
+                loginTab.classList.remove('bg-white', 'text-slate-800', 'shadow-sm');
+                loginTab.classList.add('text-slate-500');
+            }
+        }
+        
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+        
+        function previewLogo(input) {
+            const preview = document.getElementById('logoPreview');
+            const placeholder = document.getElementById('logoPlaceholder');
+            const img = document.getElementById('logoImg');
+            
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                    preview.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}دليل OCR - {{ evidence.document.file_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Breadcrumb -->
+    <div class="text-sm text-slate-500 mb-4">
+        <a href="{% url 'ocr_evidence_list' %}" class="hover:text-slate-700">أدلة التعرف الضوئي</a>
+        <span class="mx-2">←</span>
+        <span class="text-slate-700">{{ evidence.document.file_name|truncatechars:20 }}</span>
+    </div>
+
+    <!-- Scope Warning -->
+    <div class="bg-amber-50 border border-amber-200 rounded p-4 mb-4">
+        <h3 class="font-semibold text-amber-800 mb-1">تنبيه - نطاق الاستخدام</h3>
+        <p class="text-sm text-amber-700">
+            {{ scope_docs.disclaimer_ar }}
+        </p>
+    </div>
+
+    <!-- Header -->
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="p-4 border-b border-slate-200">
+            <div class="flex items-start justify-between">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="badge {% if evidence.confidence_level == 'high' %}badge-success{% elif evidence.confidence_level == 'medium' %}badge-warning{% elif evidence.confidence_level == 'low' %}badge-danger{% else %}badge-neutral{% endif %}">
+                            ثقة: {{ evidence.confidence_score }}%
+                        </span>
+                        {% if evidence.is_handwritten %}
+                        <span class="badge badge-info">خط يدوي</span>
+                        {% endif %}
+                    </div>
+                    <h1 class="text-xl font-bold text-slate-800" data-testid="document-name">{{ evidence.document.file_name }}</h1>
+                    <p class="text-sm text-slate-500 mt-1">{{ evidence.document.get_document_type_display }}</p>
+                </div>
+                <div class="text-left text-sm">
+                    <div class="text-slate-500">{{ evidence.page_count }} صفحة</div>
+                    <div class="text-slate-400 mono">{{ evidence.word_count }} كلمة</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metadata -->
+        <div class="p-4">
+            <table class="w-full data-table">
+                <tbody>
+                    <tr>
+                        <td class="text-slate-500 w-40">معرف الدليل</td>
+                        <td class="mono text-xs">{{ evidence.id }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">بصمة السلامة</td>
+                        <td class="mono text-xs">{{ evidence.evidence_hash }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">محرك OCR</td>
+                        <td>{{ evidence.ocr_engine }} {{ evidence.ocr_version }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">اللغة</td>
+                        <td>{% if evidence.language_used == 'ar' %}عربي{% elif evidence.language_used == 'en' %}إنجليزي{% else %}عربي + إنجليزي{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">وقت المعالجة</td>
+                        <td class="mono">{{ evidence.processing_time_ms }} مللي ثانية</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">تاريخ الاستخراج</td>
+                        <td class="mono">{{ evidence.extracted_at|date:"Y/m/d H:i:s" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-slate-500">استُخرج بواسطة</td>
+                        <td>{{ evidence.extracted_by.email }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Extracted Structured Data (if any) -->
+    {% if evidence.extracted_invoice_number or evidence.extracted_vat_number or evidence.extracted_total %}
+    <div class="bg-slate-50 border border-slate-200 rounded mb-4">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <h2 class="font-semibold text-slate-700">بيانات مستخرجة (تقديرية)</h2>
+            <p class="text-xs text-slate-500">هذه البيانات للاسترشاد فقط وليست مصدراً للحقيقة</p>
+        </div>
+        <div class="p-4">
+            <table class="w-full data-table">
+                <tbody>
+                    {% if evidence.extracted_invoice_number %}
+                    <tr>
+                        <td class="text-slate-500 w-40">رقم الفاتورة</td>
+                        <td class="mono">{{ evidence.extracted_invoice_number }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if evidence.extracted_vat_number %}
+                    <tr>
+                        <td class="text-slate-500">الرقم الضريبي</td>
+                        <td class="mono">{{ evidence.extracted_vat_number }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if evidence.extracted_total %}
+                    <tr>
+                        <td class="text-slate-500">المبلغ الإجمالي</td>
+                        <td class="mono">{{ evidence.extracted_total|floatformat:2 }} ر.س</td>
+                    </tr>
+                    {% endif %}
+                    {% if evidence.extracted_tax %}
+                    <tr>
+                        <td class="text-slate-500">الضريبة</td>
+                        <td class="mono">{{ evidence.extracted_tax|floatformat:2 }} ر.س</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Extracted Arabic Text -->
+    {% if evidence.text_ar %}
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <h2 class="font-semibold text-slate-700">النص العربي المستخرج</h2>
+        </div>
+        <div class="p-4">
+            <div class="bg-slate-50 rounded p-4 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto" data-testid="extracted-arabic-text">{{ evidence.text_ar }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Extracted English Text -->
+    {% if evidence.text_en %}
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <h2 class="font-semibold text-slate-700">النص الإنجليزي المستخرج</h2>
+        </div>
+        <div class="p-4">
+            <div class="bg-slate-50 rounded p-4 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto" dir="ltr" data-testid="extracted-english-text">{{ evidence.text_en }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Full Raw Text -->
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <h2 class="font-semibold text-slate-700">النص الكامل المستخرج</h2>
+        </div>
+        <div class="p-4">
+            <div class="bg-slate-50 rounded p-4 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto font-mono text-xs" data-testid="raw-extracted-text">{{ evidence.raw_text|default:"لا يوجد نص مستخرج" }}</div>
+        </div>
+    </div>
+
+    <!-- Audit Evidence Declaration -->
+    <div class="bg-blue-50 border border-blue-200 rounded mb-4">
+        <div class="px-4 py-3 border-b border-blue-200">
+            <h2 class="font-semibold text-blue-800">إعلان دليل التدقيق</h2>
+        </div>
+        <div class="p-4">
+            <p class="text-sm text-blue-700 mb-2"><strong>النطاق:</strong> {{ evidence.scope_declaration }}</p>
+            <p class="text-sm text-blue-700">{{ scope_docs.scope_ar|linebreaksbr }}</p>
+        </div>
+    </div>
+
+    <!-- Back Link -->
+    <div class="mt-6 text-center">
+        <a href="{% url 'ocr_evidence_list' %}" class="text-sm text-slate-500 hover:text-slate-700">→ العودة إلى قائمة أدلة OCR</a>
+    </div>
+</div>
+{% endblock %}

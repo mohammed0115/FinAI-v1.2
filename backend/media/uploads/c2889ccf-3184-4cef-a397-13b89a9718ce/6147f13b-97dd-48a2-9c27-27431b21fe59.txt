@@ -1,0 +1,4 @@
+Invoice #94
+Date: 2026-01-28
+Amount: 2485 SAR
+VAT: 333 SAR

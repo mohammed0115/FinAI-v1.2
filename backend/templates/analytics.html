@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Analytics - FinAI{% endblock %}
+
+{% block content %}
+<div class="py-10">
+    <header>
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-bold leading-tight tracking-tight text-gray-900">Analytics Dashboard</h1>
+        </div>
+    </header>
+    <main>
+        <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <!-- Financial Summary -->
+            <div class="mt-8">
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                        <dt class="truncate text-sm font-medium text-gray-500">Total Income (30 days)</dt>
+                        <dd class="mt-1 text-3xl font-semibold tracking-tight text-green-600">{{ total_income|floatformat:2 }} SAR</dd>
+                    </div>
+                    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                        <dt class="truncate text-sm font-medium text-gray-500">Total Expenses (30 days)</dt>
+                        <dd class="mt-1 text-3xl font-semibold tracking-tight text-red-600">{{ total_expenses|floatformat:2 }} SAR</dd>
+                    </div>
+                    <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
+                        <dt class="truncate text-sm font-medium text-gray-500">Net Profit (30 days)</dt>
+                        <dd class="mt-1 text-3xl font-semibold tracking-tight {% if net_profit >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                            {{ net_profit|floatformat:2 }} SAR
+                        </dd>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Insights -->
+            <div class="mt-8">
+                <div class="overflow-hidden bg-white shadow sm:rounded-lg">
+                    <div class="px-4 py-5 sm:px-6">
+                        <h3 class="text-lg font-medium leading-6 text-gray-900">AI-Powered Insights</h3>
+                        <p class="mt-1 text-sm text-gray-500">Automated analysis and recommendations</p>
+                    </div>
+                    <div class="border-t border-gray-200 px-4 py-5 sm:p-6">
+                        <div class="space-y-4">
+                            {% for insight in insights %}
+                            <div class="rounded-lg border border-gray-200 p-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold
+                                            {% if insight.severity == 'critical' %}bg-red-100 text-red-800
+                                            {% elif insight.severity == 'high' %}bg-orange-100 text-orange-800
+                                            {% elif insight.severity == 'medium' %}bg-yellow-100 text-yellow-800
+                                            {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                            {{ insight.get_severity_display }}
+                                        </span>
+                                        <span class="text-xs text-gray-500">{{ insight.get_insight_type_display }}</span>
+                                    </div>
+                                </div>
+                                <h4 class="mt-2 text-sm font-medium text-gray-900">{{ insight.title }}</h4>
+                                <p class="mt-1 text-sm text-gray-600">{{ insight.description }}</p>
+                            </div>
+                            {% empty %}
+                            <p class="text-sm text-gray-500">No insights available. System is analyzing your data...</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="mt-8">
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <button onclick="generateForecast()" 
+                        class="flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-6 text-white shadow-sm hover:bg-indigo-500">
+                        <span class="text-lg font-medium">Generate Cash Flow Forecast</span>
+                    </button>
+                    <button onclick="detectAnomalies()" 
+                        class="flex items-center justify-center rounded-lg bg-purple-600 px-4 py-6 text-white shadow-sm hover:bg-purple-500">
+                        <span class="text-lg font-medium">Detect Anomalies</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function generateForecast() {
+    showNotification('Generating forecast...');
+    try {
+        const response = await fetch('/api/analytics/forecast/', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                organization_id: '{{ user.organization.id }}',
+                periods: 6
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Forecast:', data);
+            showNotification('Forecast generated successfully');
+        }
+    } catch (error) {
+        showNotification('Failed to generate forecast', 'error');
+    }
+}
+
+async function detectAnomalies() {
+    showNotification('Detecting anomalies...');
+    try {
+        const response = await fetch('/api/analytics/detect-anomalies/', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                organization_id: '{{ user.organization.id }}'
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Anomalies:', data);
+            showNotification(`Found ${data.anomalies.length} anomalies`);
+            setTimeout(() => location.reload(), 2000);
+        }
+    } catch (error) {
+        showNotification('Failed to detect anomalies', 'error');
+    }
+}
+</script>
+{% endblock %}
