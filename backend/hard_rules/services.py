@@ -358,9 +358,29 @@ class HardRulesService:
         """
         Log AI gate decision
         """
+        # Validate UUIDs
+        valid_org_id = None
+        valid_user_id = None
+        
+        if organization_id:
+            try:
+                import uuid
+                uuid.UUID(organization_id)
+                valid_org_id = organization_id
+            except (ValueError, TypeError):
+                pass
+        
+        if user_id:
+            try:
+                import uuid
+                uuid.UUID(user_id)
+                valid_user_id = user_id
+            except (ValueError, TypeError):
+                pass
+        
         AIExecutionGateLog.objects.create(
-            organization_id=organization_id if organization_id else None,
-            user_id=user_id if user_id else None,
+            organization_id=valid_org_id,
+            user_id=valid_user_id,
             decision=decision,
             ai_function_name=ai_function_name,
             evaluation=evaluation,
