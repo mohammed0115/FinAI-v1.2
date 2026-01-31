@@ -149,7 +149,8 @@ csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 #     "http://72.62.239.220"
 # ]
 CSRF_TRUSTED_ORIGINS = [
-    "http://72.62.239.220",
+    "http://tadgeeg.com",
+    "http://www.tadgeeg.com",
 ]
 
 
