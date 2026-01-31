@@ -14,10 +14,10 @@ DEBUG = False
 
 ALLOWED_HOSTS = [
     '72.62.239.220',
-    # "127.0.0.1",
-    "tadgeeg.com",
-    "www.tadgeeg.com",
-    # 'localhost',
+    "127.0.0.1",
+    # "tadgeeg.com",
+    # "www.tadgeeg.com",
+    'localhost',
 ]
 
 INSTALLED_APPS = [
