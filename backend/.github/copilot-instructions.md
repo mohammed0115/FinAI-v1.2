@@ -10,7 +10,7 @@
 - **Startup:** Use `startup.sh` for production: runs migrations, static collection, DB init, then launches with `uvicorn server:app`.
 - **Development:**
   - Use `python manage.py runserver` for local dev.
-  - Environment config via `.env` (see `server.py` and `config/settings.py`).
+  - Environment config via `.env` (see `server.py` and `FinAI/settings.py`).
 - **Testing:**
   - Main tests in `tests/` (see `test_ai_explanation.py` for LLM/AI integration tests).
   - Run with `pytest` (see `requirements.txt`).
@@ -26,8 +26,8 @@
   - Static: `/static/` (collected to `/staticfiles/` or `/home/u163153443/public_html/static` in prod).
   - Media: `/media/`.
 - **Custom user model:** `core.User`.
-- **REST API:** Uses JWT auth (see `config/settings.py` > `REST_FRAMEWORK`, `SIMPLE_JWT`).
-- **CORS/CSRF:** Configurable via env vars; see `config/settings.py` for trusted origins.
+- **REST API:** Uses JWT auth (see `FinAI/settings.py` > `REST_FRAMEWORK`, `SIMPLE_JWT`).
+- **CORS/CSRF:** Configurable via env vars; see `FinAI/settings.py` for trusted origins.
 
 ## Integration Points
 - **LLM/AI:** Google Gemini, OpenAI, and others (see `requirements.txt`, `ai_plugins/`, `compliance/`).
@@ -41,7 +41,7 @@
 - To run all tests: `pytest tests/`.
 
 ## References
-- Entrypoints: `server.py`, `startup.sh`, `config/settings.py`
+- Entrypoints: `server.py`, `startup.sh`, `FinAI/settings.py`
 - Example test: `tests/test_ai_explanation.py`
 - AI logic: `ai_plugins/`, `compliance/ai_explanation_service.py`
 - Hard rules: `hard_rules/`

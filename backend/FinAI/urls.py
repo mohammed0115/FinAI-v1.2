@@ -3,7 +3,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from config.health_urls import health_check, ready_check
+from FinAI.health_urls import health_check, ready_check
 from django.http import JsonResponse
 
 # Debug endpoint

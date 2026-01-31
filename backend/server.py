@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
 # Set Django settings module
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'FinAI.settings')
 
 # Load environment variables
 from dotenv import load_dotenv

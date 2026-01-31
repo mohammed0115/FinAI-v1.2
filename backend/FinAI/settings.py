@@ -72,7 +72,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+WSGI_APPLICATION = 'FinAI.wsgi.application'
 
 # Database - PostgreSQL (production) or SQLite (development)
 if os.environ.get('USE_SQLITE', 'True') == 'True':
@@ -142,8 +142,7 @@ csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in csrf_origins.split(',') if origin.strip()
 ] if csrf_origins else [
-    'https://smartaudit-app-3.preview.emergentagent.com',
-    'https://smartaudit-app-3.preview.emergentagent.com',
+    
     'http://localhost:3000',
     'http://localhost:8001',
 ]

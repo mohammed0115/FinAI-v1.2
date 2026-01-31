@@ -4,26 +4,25 @@ set -e
 # =========================
 # CONFIGURATION
 # =========================
-PROJECT_NAME="FinAI"
 PROJECT_DIR="/root/FinAI-v1.2/backend"
-VENV_DIR="FinAI-v1.2/venv"
-DJANGO_SETTINGS_MODULE="config.settings"
+VENV_DIR="/root/FinAI-v1.2/backend/venv"
 DOMAIN_OR_IP="72.62.239.220"
-USER_NAME="root"
 GUNICORN_SOCKET="/run/finai.sock"
 
 echo "🚀 Starting FinAI Deployment..."
 
 # =========================
-# SYSTEM UPDATE
+# SYSTEM PACKAGES
 # =========================
-sudo apt update -y
-sudo apt install -y python3.12 python3.12-venv python3.12-dev \
-git nginx ufw build-essential
+apt update -y
+apt install -y python3.12 python3.12-venv python3.12-dev \
+nginx git build-essential
 
 # =========================
 # VIRTUAL ENV
 # =========================
+cd $PROJECT_DIR
+
 if [ ! -d "$VENV_DIR" ]; then
   echo "🐍 Creating virtual environment..."
   python3.12 -m venv $VENV_DIR
@@ -32,65 +31,59 @@ fi
 source $VENV_DIR/bin/activate
 
 pip install --upgrade pip setuptools wheel
-pip install django gunicorn
+pip install -r requirements.txt
 
 # =========================
-# INSTALL REQUIREMENTS
+# DJANGO
 # =========================
-cd $PROJECT_DIR
-if [ -f requirements.txt ]; then
-  pip install -r requirements.txt
-fi
-
-# =========================
-# DJANGO COMMANDS
-# =========================
-export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
-
-python manage.py migrate
+python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
 # =========================
 # SYSTEMD SERVICE
 # =========================
-echo "⚙️ Creating systemd service..."
-
-sudo tee /etc/systemd/system/finai.service > /dev/null <<EOF
+cat > /etc/systemd/system/finai.service <<EOF
 [Unit]
 Description=FinAI Django Application
 After=network.target
 
 [Service]
-User=$USER_NAME
-Group=www-data
+Type=simple
+User=root
 WorkingDirectory=$PROJECT_DIR
-Environment="PATH=$VENV_DIR/bin"
-ExecStart=$VENV_DIR/bin/gunicorn \
+ExecStartPre=/bin/rm -f /run/finai.sock
+ExecStart=$VENV_DIR/bin/gunicorn FinAI.wsgi:application \
           --workers 3 \
           --bind unix:$GUNICORN_SOCKET \
-          FinAI.wsgi:application
+          --umask 007
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-sudo systemctl daemon-reexec
-sudo systemctl daemon-reload
-sudo systemctl enable finai
-sudo systemctl restart finai
+systemctl daemon-reexec
+systemctl daemon-reload
+systemctl enable finai
+systemctl restart finai
 
 # =========================
-# NGINX CONFIG
+# NGINX
 # =========================
-echo "🌐 Configuring Nginx..."
-
-sudo tee /etc/nginx/sites-available/finai > /dev/null <<EOF
+cat > /etc/nginx/sites-available/finai <<EOF
 server {
     listen 80;
     server_name $DOMAIN_OR_IP;
 
+    client_max_body_size 50M;
+
     location /static/ {
-        root $PROJECT_DIR;
+        alias $PROJECT_DIR/staticfiles/;
+    }
+
+    location /media/ {
+        alias $PROJECT_DIR/media/;
     }
 
     location / {
@@ -100,16 +93,11 @@ server {
 }
 EOF
 
-sudo ln -sf /etc/nginx/sites-available/finai /etc/nginx/sites-enabled
-sudo nginx -t
-sudo systemctl restart nginx
+ln -sf /etc/nginx/sites-available/finai /etc/nginx/sites-enabled/finai
+rm -f /etc/nginx/sites-enabled/default
 
-# =========================
-# FIREWALL
-# =========================
-sudo ufw allow OpenSSH
-sudo ufw allow 'Nginx Full'
-sudo ufw --force enable
+nginx -t
+systemctl restart nginx
 
-echo "✅ FinAI Deployment Completed Successfully!"
+echo "✅ FinAI Deployment Completed Successfully"
 echo "🌍 Open: http://$DOMAIN_OR_IP"
