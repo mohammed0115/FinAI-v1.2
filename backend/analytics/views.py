@@ -7,6 +7,8 @@ from core.ai_service import ai_service
 from datetime import datetime, timedelta
 from django.db.models import Sum, Count, Q, Avg
 from decimal import Decimal
+from django.views.decorators.csrf import csrf_exempt
+from core.analysis.anomaly_service import AnomalyDetectionService
 
 class AnalyticsViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -175,3 +177,17 @@ class AnalyticsViewSet(viewsets.ViewSet):
         }
         
         return Response(kpis)
+
+@csrf_exempt
+def anomaly_check_form(request):
+    result = None
+    values = ""
+    if request.method == "POST":
+        values = request.POST.get("values", "")
+        try:
+            nums = [float(v) for v in values.split(",") if v.strip()]
+            service = AnomalyDetectionService()
+            result = service.detect(nums)
+        except Exception:
+            result = {"success": False, "error": "Invalid input"}
+    return render(request, "anomaly_form.html", {"result": result, "values": values})

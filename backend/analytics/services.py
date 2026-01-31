@@ -10,7 +10,12 @@ from django.db.models import Sum, QuerySet
 
 from documents.models import Document, Transaction
 from reports.models import Report, Insight
-from core.ai_service import ai_service
+from core.ai_service import (
+    CashFlowForecastOperation,
+    AnomalyDetectionOperation,
+    TrendAnalysisOperation,
+    FinancialInsightsOperation
+)
 
 
 class AnalyticsQueryService:
@@ -87,48 +92,32 @@ class AnalyticsQueryService:
 
 
 class ForecastService:
-    """Service for cash flow forecasting."""
-    
-    @staticmethod
-    def generate_forecast(
-        organization_id: str,
-        periods: int = 6
-    ) -> List[Dict[str, Any]]:
-        """Generate cash flow forecast using AI."""
+    """Service for cash flow forecasting (SRP, OCP, LSP)."""
+    ai_forecast_operation = CashFlowForecastOperation()
+
+    @classmethod
+    def generate_forecast(cls, organization_id: str, periods: int = 6) -> List[Dict[str, Any]]:
         historical_data = AnalyticsQueryService.get_historical_transactions(
             organization_id=organization_id
         )
-        
-        forecast = ai_service.generate_cash_flow_forecast(
-            historical_data,
-            periods
-        )
-        
+        forecast = cls.ai_forecast_operation.execute(historical_data, periods)
         return forecast
 
 
 class AnomalyDetectionService:
-    """Service for anomaly detection in transactions."""
-    
-    @staticmethod
-    def detect_and_save_anomalies(
-        organization_id: str
-    ) -> List[Dict[str, Any]]:
-        """Detect anomalies and save critical ones as insights."""
-        # Get transaction data
+    """Service for anomaly detection in transactions (SRP, OCP, LSP)."""
+    ai_anomaly_operation = AnomalyDetectionOperation()
+
+    @classmethod
+    def detect_and_save_anomalies(cls, organization_id: str) -> List[Dict[str, Any]]:
         transaction_list = AnalyticsQueryService.get_recent_transactions_with_details(
             organization_id=organization_id
         )
-        
-        # Detect anomalies
-        anomalies = ai_service.detect_anomalies(transaction_list)
-        
-        # Save critical anomalies as insights
-        AnomalyDetectionService._save_critical_anomalies(
+        anomalies = cls.ai_anomaly_operation.execute(transaction_list)
+        cls._save_critical_anomalies(
             organization_id=organization_id,
             anomalies=anomalies
         )
-        
         return anomalies
     
     @staticmethod
@@ -152,39 +141,31 @@ class AnomalyDetectionService:
 
 
 class TrendAnalysisService:
-    """Service for trend analysis."""
-    
-    @staticmethod
-    def analyze_trends(
-        organization_id: str,
-        metrics: List[str] = None
-    ) -> List[Dict[str, Any]]:
-        """Analyze financial trends using AI."""
+    """Service for trend analysis (SRP, OCP, LSP)."""
+    ai_trend_operation = TrendAnalysisOperation()
+
+    @classmethod
+    def analyze_trends(cls, organization_id: str, metrics: List[str] = None) -> List[Dict[str, Any]]:
         if metrics is None:
             metrics = ['revenue', 'expenses', 'profit']
-        
         financial_data = AnalyticsQueryService.get_transactions_for_period(
             organization_id=organization_id,
             days=180
         )
-        
-        trends = ai_service.analyze_trends(financial_data, metrics)
-        
+        trends = cls.ai_trend_operation.execute(financial_data, metrics)
         return trends
 
 
 class InsightGenerationService:
-    """Service for generating comprehensive insights."""
-    
-    @staticmethod
-    def generate_insights(organization_id: str) -> List[str]:
-        """Generate comprehensive financial insights."""
+    """Service for generating comprehensive insights (SRP, OCP, LSP)."""
+    ai_insight_operation = FinancialInsightsOperation()
+
+    @classmethod
+    def generate_insights(cls, organization_id: str) -> List[str]:
         organization_data = AnalyticsQueryService.gather_organization_data(
             organization_id=organization_id
         )
-        
-        insights = ai_service.generate_financial_insights(organization_data)
-        
+        insights = cls.ai_insight_operation.execute(organization_data)
         return insights
 
 

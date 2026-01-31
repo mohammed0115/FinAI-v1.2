@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>كشف الشذوذ الإحصائي</title>
+</head>
+<body>
+    <h2>كشف الشذوذ الإحصائي</h2>
+    <form method="post">
+        <label>أدخل الأرقام (مفصولة بفواصل):</label><br>
+        <input type="text" name="values" value="{{ values }}" style="width:300px;">
+        <button type="submit">تحليل</button>
+    </form>
+    {% if result %}
+        <h3>النتيجة:</h3>
+        <pre>{{ result|safe }}</pre>
+    {% endif %}
+</body>
+</html>

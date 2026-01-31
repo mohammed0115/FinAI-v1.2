@@ -13,12 +13,14 @@ import uuid
 
 from .models import Document, ExtractedData, Transaction
 from core.models import User, Organization
-from core.ai_service import ai_service
+from core.ai_service import DocumentVisionOperation
 
 
 class DocumentService:
-    """Service for document management operations."""
-    
+    """Service for document management operations (SRP, OCP, LSP)."""
+
+    ai_vision_operation = DocumentVisionOperation()
+
     @staticmethod
     def upload_document(
         file: UploadedFile,
@@ -26,28 +28,12 @@ class DocumentService:
         uploaded_by: User,
         document_type: str = 'other'
     ) -> Document:
-        """Upload and store a document.
-        
-        Args:
-            file: The uploaded file
-            organization: Organization the document belongs to
-            uploaded_by: User who uploaded the document
-            document_type: Type of document
-            
-        Returns:
-            Created Document instance
-            
-        Raises:
-            ValueError: If file is invalid
-        """
         if not file:
             raise ValueError('No file provided')
-        
         doc_id = uuid.uuid4()
         storage_key = f"documents/{organization.id}/{doc_id}/{file.name}"
         storage_path = default_storage.save(storage_key, file)
         storage_url = default_storage.url(storage_path)
-        
         document = Document.objects.create(
             id=doc_id,
             organization=organization,
@@ -60,53 +46,32 @@ class DocumentService:
             document_type=document_type,
             status='pending'
         )
-        
         return document
-    
-    @staticmethod
-    def process_document(document: Document, image_url: str) -> Dict[str, Any]:
-        """Process document with AI extraction.
-        
-        Args:
-            document: Document to process
-            image_url: Full URL to the document image
-            
-        Returns:
-            Dict with processing results
-            
-        Raises:
-            Exception: If processing fails
-        """
-        # Update status
+
+    @classmethod
+    def process_document(cls, document: Document, image_url: str) -> Dict[str, Any]:
         document.status = 'processing'
         document.save(update_fields=['status'])
-        
         try:
-            # Process with AI
-            result = ai_service.process_document_with_vision(
+            # Use AI operation via interface
+            result = cls.ai_vision_operation.execute(
                 image_url=image_url,
                 document_type=document.document_type
             )
-            
             if not result.get('success'):
                 document.status = 'failed'
                 document.save(update_fields=['status'])
                 raise Exception(result.get('error', 'Processing failed'))
-            
-            # Save extracted data in transaction
             with transaction.atomic():
-                extracted_data = DocumentService._save_extracted_data(
+                extracted_data = cls._save_extracted_data(
                     document=document,
                     result=result
                 )
-                
-                # Update document
                 document.status = 'completed'
                 document.language = result.get('language', 'en')
                 document.is_handwritten = result.get('is_handwritten', False)
                 document.processed_at = timezone.now()
                 document.save()
-            
             return {
                 'success': True,
                 'extracted_data_id': str(extracted_data.id),
@@ -114,7 +79,6 @@ class DocumentService:
                 'language': result.get('language'),
                 'is_handwritten': result.get('is_handwritten')
             }
-            
         except Exception as e:
             document.status = 'failed'
             document.save(update_fields=['status'])

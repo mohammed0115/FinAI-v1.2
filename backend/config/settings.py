@@ -28,9 +28,11 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     
+    
     # Local apps
     'core',
     'documents',
+    'ai_plugins',
     'analytics',
     'reports',
     'compliance',

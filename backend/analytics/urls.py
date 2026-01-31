@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import AnalyticsViewSet
+from .views import AnalyticsViewSet, anomaly_check_form
 
 analytics_viewset = AnalyticsViewSet.as_view({
     'post': 'forecast',
@@ -11,4 +11,5 @@ urlpatterns = [
     path('analyze-trends/', AnalyticsViewSet.as_view({'post': 'analyze_trends'}), name='analyze-trends'),
     path('generate-insights/', AnalyticsViewSet.as_view({'post': 'generate_insights'}), name='generate-insights'),
     path('kpis/', AnalyticsViewSet.as_view({'get': 'kpis'}), name='kpis'),
+    path('anomaly-form/', anomaly_check_form, name='anomaly-form'),
 ]

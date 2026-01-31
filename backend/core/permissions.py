@@ -63,8 +63,8 @@ class PermissionMatrix:
     DOCUMENT_PERMISSIONS = {
         UserRole.USER: ['view_own_document', 'upload_document'],
         UserRole.AUDITOR: ['view_document', 'view_extracted_data', 'validate_data', 'view_audit_logs'],
-        UserRole.ACCOUNTANT: ['view_document', 'upload_document', 'process_document', 'edit_extracted_data', 'validate_data'],
-        UserRole.FINANCE_MANAGER: ['view_document', 'upload_document', 'process_document', 'edit_extracted_data', 'validate_data', 'delete_document'],
+        UserRole.ACCOUNTANT: ['view_document', 'upload_document', 'edit_extracted_data', 'validate_data'],
+        UserRole.FINANCE_MANAGER: ['view_document', 'upload_document', 'edit_extracted_data', 'validate_data', 'delete_document'],
         UserRole.ADMIN: ['*'],  # All permissions
     }
     
