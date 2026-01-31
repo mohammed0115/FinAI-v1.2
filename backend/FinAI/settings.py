@@ -151,6 +151,8 @@ csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [
     "http://72.62.239.220",
 ]
+
+
 # REST Framework Settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -190,14 +192,16 @@ ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/t
 
 # Cookie settings for proxy environments
 # Use 'None' for SameSite to allow cross-site requests with Secure cookies
-CSRF_COOKIE_SECURE = True
+
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+
 CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_HTTPONLY = False
-SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 
-# Trust X-Forwarded headers from proxy
-USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_HOST = False
+SECURE_PROXY_SSL_HEADER = None
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # STATIC_URL = "/static/"
 # STATIC_ROOT = "/home/u163153443/public_html/static"
