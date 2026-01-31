@@ -142,13 +142,15 @@ CORS_ALLOW_CREDENTIALS = True
 # CSRF Trusted Origins (for form submissions from external domain)
 # CSRF Trusted Origins - read from environment for deployment flexibility
 csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip() for origin in csrf_origins.split(',') if origin.strip()
-] if csrf_origins else [
+# CSRF_TRUSTED_ORIGINS = [
+#     origin.strip() for origin in csrf_origins.split(',') if origin.strip()
+# ] if csrf_origins else [
     
-    "http://72.62.239.220"
+#     "http://72.62.239.220"
+# ]
+CSRF_TRUSTED_ORIGINS = [
+    "http://72.62.239.220",
 ]
-
 # REST Framework Settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -197,5 +199,5 @@ SESSION_COOKIE_SAMESITE = 'None'
 # Trust X-Forwarded headers from proxy
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-STATIC_URL = "/static/"
-STATIC_ROOT = "/home/u163153443/public_html/static"
+# STATIC_URL = "/static/"
+# STATIC_ROOT = "/home/u163153443/public_html/static"
