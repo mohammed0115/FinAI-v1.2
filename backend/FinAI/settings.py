@@ -14,8 +14,10 @@ DEBUG = False
 
 ALLOWED_HOSTS = [
     '72.62.239.220',
+    # "127.0.0.1",
     "tadgeeg.com",
-    "www.tadgeeg.com"
+    "www.tadgeeg.com",
+    # 'localhost',
 ]
 
 INSTALLED_APPS = [
@@ -128,7 +130,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS Settings - Allow all origins in production
-cors_origins_env = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:8001')
+cors_origins_env = os.environ.get('CORS_ORIGINS', "http://72.62.239.220")
 if cors_origins_env == '*':
     CORS_ALLOW_ALL_ORIGINS = True
     CORS_ALLOWED_ORIGINS = []
@@ -144,8 +146,7 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in csrf_origins.split(',') if origin.strip()
 ] if csrf_origins else [
     
-    'http://localhost:3000',
-    'http://localhost:8001',
+    "http://72.62.239.220"
 ]
 
 # REST Framework Settings
