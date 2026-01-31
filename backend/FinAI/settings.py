@@ -13,6 +13,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-finai-dev-key-change-
 DEBUG = False
 
 ALLOWED_HOSTS = [
+    '72.62.239.220',
     "tadgeeg.com",
     "www.tadgeeg.com"
 ]
