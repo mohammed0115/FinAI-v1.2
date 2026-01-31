@@ -10,10 +10,12 @@ load_dotenv()
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-finai-dev-key-change-in-production')
 
-DEBUG = True
+DEBUG = False
 
-# Allow all hosts - this is managed by Kubernetes ingress in production
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    "tadgeeg.com",
+    "www.tadgeeg.com"
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -194,3 +196,5 @@ SESSION_COOKIE_SAMESITE = 'None'
 # Trust X-Forwarded headers from proxy
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+STATIC_URL = "/static/"
+STATIC_ROOT = "/home/u163153443/public_html/static"
