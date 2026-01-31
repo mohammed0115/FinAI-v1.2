@@ -51,20 +51,40 @@ class PytesseractOCRProvider(IOCRProvider):
     def __init__(self):
         import pytesseract
         self.pytesseract = pytesseract
-        # تعيين المسار إذا لزم الأمر
         self._set_tesseract_path()
         from PIL import Image
         self.Image = Image
+        import cv2
+        import numpy as np
+        self.cv2 = cv2
+        self.np = np
 
     def _set_tesseract_path(self):
         if platform.system() == "Windows":
             self.pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
+    def _preprocess_cv2(self, file_path: str) -> 'np.ndarray':
+        # Read image with OpenCV
+        img = self.cv2.imread(file_path)
+        if img is None:
+            raise ValueError("Unable to read image for OCR preprocessing.")
+        # Convert to grayscale
+        gray = self.cv2.cvtColor(img, self.cv2.COLOR_BGR2GRAY)
+        # Binarize with OTSU
+        gray = self.cv2.threshold(gray, 0, 255, self.cv2.THRESH_BINARY + self.cv2.THRESH_OTSU)[1]
+        return gray
+
     def extract_text(self, file_path: str, lang: str, is_handwritten: bool = False) -> dict:
         try:
-            image = self.Image.open(file_path)
+            # Use OpenCV preprocessing for better OCR
+            pre_img = self._preprocess_cv2(file_path)
+            # Convert back to PIL Image for pytesseract
+            from PIL import Image
+            pil_img = Image.fromarray(pre_img)
+            # Use both Arabic and English by default
+            lang = lang or "ara+eng"
             config = '--oem 1 --psm 6' if is_handwritten else '--oem 3 --psm 6'
-            text = self.pytesseract.image_to_string(image, lang=lang, config=config)
+            text = self.pytesseract.image_to_string(pil_img, lang=lang, config=config)
             return {"text": text.strip(), "engine": "pytesseract", "error": None}
         except Exception as e:
             return {"text": "", "engine": "pytesseract", "error": str(e)}
