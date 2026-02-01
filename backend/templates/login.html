@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinAI - تسجيل الدخول</title>
+    <title>Tadgeeg - تسجيل الدخول</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
@@ -68,6 +68,16 @@
         .logo-upload:hover {
             border-color: #0891b2;
             background-color: #f0fdfa;
+        }
+        
+        .stat-number {
+            color: #1e293b; /* أزرق غامق/رمادي غامق */
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 1px 0 #fff;
+            letter-spacing: 1px;
+            opacity: 1 !important;
+            background: none !important;
         }
     </style>
 </head>
@@ -204,10 +214,34 @@
                 </div>
             </div>
             
+            <!-- Additional Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 my-8">
+                <div class="flex flex-col items-center bg-white/80 rounded-2xl shadow px-6 py-5">
+                    <svg class="w-8 h-8 text-cyan-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-2.21 1.79-4 4-4s4 1.79 4 4-1.79 4-4 4-4-1.79-4-4zm0 0c0-2.21-1.79-4-4-4s-4 1.79-4 4 1.79 4 4 4 4-1.79 4-4z"/></svg>
+                    <span class="font-semibold text-slate-800">GCC Compliant</span>
+                    <span class="text-xs text-slate-500 mt-1">ZATCA & VAT Ready</span>
+                </div>
+                <div class="flex flex-col items-center bg-white/80 rounded-2xl shadow px-6 py-5">
+                    <svg class="w-8 h-8 text-purple-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m4 0h-1v4h-1m-4 0h-1v-4h-1"/></svg>
+                    <span class="font-semibold text-slate-800">AI Analytics</span>
+                    <span class="text-xs text-slate-500 mt-1">Predictive Insights</span>
+                </div>
+                <div class="flex flex-col items-center bg-white/80 rounded-2xl shadow px-6 py-5">
+                    <svg class="w-8 h-8 text-amber-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h8M12 8v8"/></svg>
+                    <span class="font-semibold text-slate-800">Multilingual</span>
+                    <span class="text-xs text-slate-500 mt-1">Arabic & English</span>
+                </div>
+                <div class="flex flex-col items-center bg-white/80 rounded-2xl shadow px-6 py-5">
+                    <svg class="w-8 h-8 text-yellow-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553 2.276A2 2 0 0121 14.118V17a2 2 0 01-2 2H5a2 2 0 01-2-2v-2.882a2 2 0 01.447-1.342L8 10m7 0V7a5 5 0 00-10 0v3"/></svg>
+                    <span class="font-semibold text-slate-800">OCR/HDR</span>
+                    <span class="text-xs text-slate-500 mt-1">Smart Extraction</span>
+                </div>
+            </div>
+            
             <!-- Footer -->
-            {% comment %} <div class="mt-auto pt-8 text-center text-xs text-slate-400">
-                © FinAI 2026. مدعوم بالذكاء الاصطناعي للتميز المالي في دول الخليج.
-            </div> {% endcomment %}
+            <footer class="text-center text-xs text-slate-400 py-4">
+                © 2026 GSC-Tadgeeg. All rights reserved for GetSolution Co.
+            </footer>
         </div>
         
         <!-- Right Side - Login/Register Form -->
@@ -336,7 +370,7 @@
                             <label class="block text-sm font-medium text-slate-700 mb-2">اسم الشركة</label>
                             <input type="text" name="company_name" required
                                    class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 text-sm outline-none"
-                                   placeholder="شركة المثال للتجارة">
+                                   placeholder=" شركة المثال للتجارة">
                         </div>
                         
                         <!-- Tax Number -->
@@ -414,7 +448,7 @@
                 
                 <!-- Footer -->
                 <div class="mt-8 text-center text-xs text-slate-400">
-                    © FinAI 2026. جميع الحقوق محفوظة.
+                    © 2026 GSC-Tadgeeg. All rights reserved for GetSolution Co.
                 </div>
             </div>
         </div>
