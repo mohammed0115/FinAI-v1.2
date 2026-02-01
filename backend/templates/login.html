@@ -77,33 +77,22 @@
         <div class="hidden lg:flex lg:w-1/2 flex-col p-8 relative overflow-hidden">
             <!-- Language Toggle -->
             <div class="absolute top-6 left-6">
-                <button class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-800 flex items-center gap-1">
-                    EN
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
-                    </svg>
-                </button>
+                <form method="post" action="{% url 'toggle_language' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-800 flex items-center gap-1">
+                        {% if request.LANGUAGE_CODE == 'ar' %}EN{% else %}عربي{% endif %}
+                    </button>
+                </form>
             </div>
             
             <!-- Logo -->
             <div class="flex items-center gap-3 mb-12">
-                <div class="w-14 h-14 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg relative">
-                    <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <rect x="6" y="6" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
-                        <rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
-                        <line x1="12" y1="3" x2="12" y2="6" stroke="currentColor" stroke-width="1.5"/>
-                        <line x1="12" y1="18" x2="12" y2="21" stroke="currentColor" stroke-width="1.5"/>
-                        <line x1="3" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="1.5"/>
-                        <line x1="18" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="1.5"/>
-                        <line x1="6" y1="9" x2="3" y2="9" stroke="currentColor" stroke-width="1.5"/>
-                        <line x1="6" y1="15" x2="3" y2="15" stroke="currentColor" stroke-width="1.5"/>
-                        <line x1="21" y1="9" x2="18" y2="9" stroke="currentColor" stroke-width="1.5"/>
-                        <line x1="21" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="1.5"/>
-                    </svg>
+                <div class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg relative bg-white">
+                    <img src="/static/img/icon.png" alt="FinAI Logo" class="w-12 h-12 object-contain" />
                     <div class="absolute -top-1 -left-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
                 </div>
                 <div>
-                    <div class="text-2xl font-bold text-slate-800 italic">FinAI</div>
+                    <div class="text-2xl font-bold text-slate-800 italic">Tadgeeg <span>for Financial Audit</span></div>
                     <div class="text-sm text-slate-500">منصة مالية ذكية</div>
                 </div>
             </div>
@@ -111,7 +100,7 @@
             <!-- Main Heading -->
             <div class="mb-12">
                 <h1 class="text-4xl font-bold text-slate-800 leading-tight mb-2">
-                    <span class="gradient-text">منصة الدقيق المالي الذكية</span>
+                    <span class="gradient-text">منصة تدقيق المالي الذكية</span>
                 </h1>
                 <p class="text-slate-600 mt-6 leading-relaxed">
                     معالجة المستندات المدعومة بالذكاء الاصطناعي، والأتمتة
@@ -409,6 +398,11 @@
                             </span>
                         </div>
                         
+                        <!-- reCAPTCHA -->
+                        <div class="flex justify-center my-2">
+                            <!-- Google reCAPTCHA v2 widget -->
+                            <div class="g-recaptcha" data-sitekey="YOUR_RECAPTCHA_SITE_KEY"></div>
+                        </div>
                         <button type="submit" class="btn-gradient w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all">
                             <span>إنشاء الحساب</span>
                             <svg class="w-5 h-5 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -472,4 +466,5 @@
         }
     </script>
 </body>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </html>

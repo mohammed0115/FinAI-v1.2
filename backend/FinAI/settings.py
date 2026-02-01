@@ -1,3 +1,6 @@
+# Google reCAPTCHA secret key (for backend validation)
+# Set this in your .env or environment variables for security
+RECAPTCHA_SECRET_KEY = os.environ.get('RECAPTCHA_SECRET_KEY', '')
 from pathlib import Path
 import os
 from datetime import timedelta
