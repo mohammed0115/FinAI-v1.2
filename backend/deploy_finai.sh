@@ -150,6 +150,17 @@ certbot --nginx \
   -m "$EMAIL"
 fi
 
+
+
+# =========================
+# FINAL RELOAD
+# =========================
+nginx -t
+systemctl reload nginx
+
+echo "✅ Deployment completed successfully!"
+echo "🌍 https://$DOMAIN"
+
 # ======================================================
 # AUTO UPDATE + ROLLBACK SCRIPT (CREATE ONCE)
 # ======================================================
