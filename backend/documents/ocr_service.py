@@ -27,6 +27,7 @@ from typing import Dict, List, Optional, Tuple
 from decimal import Decimal
 import tempfile
 import re
+import pytesseract
 
 from django.conf import settings
 from django.utils import timezone
@@ -42,6 +43,9 @@ try:
 except ImportError:
     AIPluginSettingsService = None
 
+if platform.system() == "Windows":
+    pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
+
 class IOCRProvider(ABC):
     @abstractmethod
     def extract_text(self, file_path: str, lang: str, is_handwritten: bool = False) -> dict:
@@ -49,7 +53,6 @@ class IOCRProvider(ABC):
 
 class PytesseractOCRProvider(IOCRProvider):
     def __init__(self):
-        import pytesseract
         self.pytesseract = pytesseract
         self._set_tesseract_path()
         from PIL import Image
@@ -190,35 +193,48 @@ class DocumentOCRService:
 
         # تحديد لغة tesseract أولاً
         tesseract_lang = self._get_tesseract_lang(language)
-        # استخدم المزود المناسب حسب النظام
-        ocr_result = self.provider.extract_text(file_path, tesseract_lang, is_handwritten)
-        if ocr_result["error"]:
-            return {
-                'text': '',
-                'text_ar': '',
-                'text_en': '',
-                'confidence': 0,
-                'error': ocr_result["error"],
-                'ocr_engine': ocr_result["engine"],
-                'available': False,
-            }
-
         extraction_start = timezone.now()
+        ocr_result = {"engine": "pytesseract", "error": None}
 
         # Process based on file type
         if file_type.lower() == '.pdf':
             result = self._process_pdf(file_path, tesseract_lang, is_handwritten)
+            if result.get('error'):
+                return {
+                    'text': '',
+                    'text_ar': '',
+                    'text_en': '',
+                    'confidence': 0,
+                    'error': result.get('error'),
+                    'ocr_engine': "pytesseract",
+                    'available': False,
+                }
         elif file_type.lower() in SUPPORTED_IMAGE_TYPES:
-            # استخدم المزود مباشرة للصورة
-            text = ocr_result["text"]
-            result = {
-                'text': text,
-                'text_ar': self._extract_arabic_text(text),
-                'text_en': self._extract_english_text(text),
-                'confidence': 80 if text else 0,  # تقدير مبدئي
-                'document_type': 'image',
-                'page_count': 1,
-            }
+            # استخدم المزود المناسب حسب النظام
+            ocr_result = self.provider.extract_text(file_path, tesseract_lang, is_handwritten)
+            if ocr_result["error"]:
+                logger.error(f"OCR provider error: {ocr_result['error']}")
+                result = self._process_image(file_path, tesseract_lang, is_handwritten)
+                if result.get('error'):
+                    return {
+                        'text': '',
+                        'text_ar': '',
+                        'text_en': '',
+                        'confidence': 0,
+                        'error': result.get('error'),
+                        'ocr_engine': ocr_result.get("engine", "pytesseract"),
+                        'available': False,
+                    }
+            else:
+                text = ocr_result["text"]
+                result = {
+                    'text': text,
+                    'text_ar': self._extract_arabic_text(text),
+                    'text_en': self._extract_english_text(text),
+                    'confidence': 80 if text else 0,  # تقدير مبدئي
+                    'document_type': 'image',
+                    'page_count': 1,
+                }
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
 
@@ -230,7 +246,7 @@ class DocumentOCRService:
         result['language_used'] = language
         result['tesseract_lang'] = tesseract_lang
         result['is_handwritten'] = is_handwritten
-        result['ocr_engine'] = ocr_result["engine"]
+        result['ocr_engine'] = ocr_result.get("engine", "pytesseract")
         result['ocr_version'] = "N/A"
 
         # Generate evidence hash
