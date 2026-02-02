@@ -1,12 +1,12 @@
 # Google reCAPTCHA secret key (for backend validation)
 # Set this in your .env or environment variables for security
-RECAPTCHA_SECRET_KEY = os.environ.get('RECAPTCHA_SECRET_KEY', '')
+
 from pathlib import Path
 import os
 from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+RECAPTCHA_SECRET_KEY = os.environ.get('RECAPTCHA_SECRET_KEY', '')
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
