@@ -1,29 +1,27 @@
 #!/bin/bash
 set -e
 
-echo "🚀 FinAI / Tadgeeg Production Deployment Started"
-
 # =========================
 # CONFIG
 # =========================
 PROJECT_DIR="/root/FinAI-v1.2/backend"
 VENV_DIR="$PROJECT_DIR/venv"
-SOCKET="/run/finai.sock"
 DOMAIN="tadgeeg.com"
+WWW_DOMAIN="www.tadgeeg.com"
+SOCKET="/run/finai.sock"
 EMAIL="admin@tadgeeg.com"
 
-export DJANGO_SETTINGS_MODULE=FinAI.settings.prod
+echo "🚀 Starting FULL Production Deployment..."
 
 # =========================
-# SYSTEM
+# SYSTEM PACKAGES
 # =========================
 apt update -y
 apt install -y python3.12 python3.12-venv python3.12-dev \
-nginx certbot python3-certbot-nginx \
-build-essential
+nginx git build-essential certbot python3-certbot-nginx
 
 # =========================
-# VENV
+# PYTHON ENV
 # =========================
 cd $PROJECT_DIR
 
@@ -32,7 +30,7 @@ if [ ! -d "$VENV_DIR" ]; then
 fi
 
 source $VENV_DIR/bin/activate
-pip install --upgrade pip wheel setuptools
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 
 # =========================
@@ -42,54 +40,81 @@ python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
 # =========================
-# SYSTEMD
+# SYSTEMD – GUNICORN
 # =========================
 cat > /etc/systemd/system/finai.service <<EOF
 [Unit]
-Description=FinAI Gunicorn
+Description=FinAI Django App
 After=network.target
 
 [Service]
 User=root
 WorkingDirectory=$PROJECT_DIR
-Environment="DJANGO_SETTINGS_MODULE=FinAI.settings.prod"
 ExecStartPre=/bin/rm -f $SOCKET
 ExecStart=$VENV_DIR/bin/gunicorn FinAI.wsgi:application \
   --workers 3 \
-  --bind unix:$SOCKET \
-  --timeout 120
-
+  --bind unix:$SOCKET
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reexec
 systemctl daemon-reload
 systemctl enable finai
 systemctl restart finai
 
 # =========================
-# NGINX
+# NGINX (HTTP FIRST)
 # =========================
 cat > /etc/nginx/sites-available/finai <<EOF
 server {
     listen 80;
-    server_name tadgeeg.com www.tadgeeg.com;
+    server_name $DOMAIN $WWW_DOMAIN;
+}
+EOF
+
+ln -sf /etc/nginx/sites-available/finai /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+
+nginx -t
+systemctl reload nginx
+
+# =========================
+# SSL (CERTBOT)
+# =========================
+certbot --nginx -d $DOMAIN -d $WWW_DOMAIN \
+  --non-interactive --agree-tos -m $EMAIL
+
+# =========================
+# FINAL NGINX CONFIG (HTTPS)
+# =========================
+cat > /etc/nginx/sites-available/finai <<EOF
+server {
+    listen 80;
+    server_name $DOMAIN $WWW_DOMAIN;
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name $DOMAIN $WWW_DOMAIN;
+
+    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
 
     client_max_body_size 50M;
 
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-
     location /static/ {
         alias $PROJECT_DIR/staticfiles/;
+        expires 30d;
+        access_log off;
     }
 
     location /media/ {
         alias $PROJECT_DIR/media/;
+        expires 30d;
     }
 
     location / {
@@ -102,23 +127,9 @@ server {
 }
 EOF
 
-ln -sf /etc/nginx/sites-available/finai /etc/nginx/sites-enabled/finai
-rm -f /etc/nginx/sites-enabled/default
-
 nginx -t
-systemctl restart nginx
-
-# =========================
-# SSL
-# =========================
-certbot --nginx \
-  -d tadgeeg.com \
-  -d www.tadgeeg.com \
-  --non-interactive \
-  --agree-tos \
-  -m $EMAIL
-
 systemctl reload nginx
+systemctl restart finai
 
-echo "✅ Deployment Finished Successfully"
-echo "🌍 https://tadgeeg.com"
+echo "✅ DEPLOYMENT COMPLETE"
+echo "🌍 https://$DOMAIN"

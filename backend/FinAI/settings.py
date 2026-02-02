@@ -152,8 +152,8 @@ csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 #     "http://72.62.239.220"
 # ]
 CSRF_TRUSTED_ORIGINS = [
-    "http://tadgeeg.com",
-    "http://www.tadgeeg.com",
+    "https://tadgeeg.com",
+    "https://www.tadgeeg.com",
 ]
 
 
@@ -204,7 +204,7 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
 
 USE_X_FORWARDED_HOST = False
-SECURE_PROXY_SSL_HEADER = None
+# SECURE_PROXY_SSL_HEADER = None
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # STATIC_URL = "/static/"
