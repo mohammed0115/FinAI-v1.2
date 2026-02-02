@@ -1,38 +1,38 @@
 #!/bin/bash
 set -e
 
-echo "🚀 FinAI / Tadgeeg Production Deployment Started"
-
 # =========================
-# CONFIG
+# CONFIGURATION
 # =========================
 PROJECT_DIR="/root/FinAI-v1.2/backend"
 VENV_DIR="$PROJECT_DIR/venv"
-SOCKET="/run/finai.sock"
 DOMAIN="tadgeeg.com"
+WWW_DOMAIN="www.tadgeeg.com"
+GUNICORN_SOCKET="/run/finai.sock"
 EMAIL="admin@tadgeeg.com"
 
-export DJANGO_SETTINGS_MODULE=FinAI.settings.prod
+echo "🚀 Starting FinAI Full Deployment with SSL..."
 
 # =========================
-# SYSTEM
+# SYSTEM PACKAGES
 # =========================
 apt update -y
 apt install -y python3.12 python3.12-venv python3.12-dev \
-nginx certbot python3-certbot-nginx \
-build-essential
+nginx git build-essential certbot python3-certbot-nginx
 
 # =========================
-# VENV
+# VIRTUAL ENV
 # =========================
 cd $PROJECT_DIR
 
 if [ ! -d "$VENV_DIR" ]; then
+  echo "🐍 Creating virtual environment..."
   python3.12 -m venv $VENV_DIR
 fi
 
 source $VENV_DIR/bin/activate
-pip install --upgrade pip wheel setuptools
+
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 
 # =========================
@@ -42,24 +42,23 @@ python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
 # =========================
-# SYSTEMD
+# SYSTEMD - GUNICORN
 # =========================
 cat > /etc/systemd/system/finai.service <<EOF
 [Unit]
-Description=FinAI Gunicorn
+Description=FinAI Django Application
 After=network.target
 
 [Service]
 User=root
 WorkingDirectory=$PROJECT_DIR
-Environment="DJANGO_SETTINGS_MODULE=FinAI.settings.prod"
-ExecStartPre=/bin/rm -f $SOCKET
+ExecStartPre=/bin/rm -f $GUNICORN_SOCKET
 ExecStart=$VENV_DIR/bin/gunicorn FinAI.wsgi:application \
-  --workers 3 \
-  --bind unix:$SOCKET \
-  --timeout 120
-
+    --workers 3 \
+    --bind unix:$GUNICORN_SOCKET \
+    --umask 007
 Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
@@ -71,18 +70,14 @@ systemctl enable finai
 systemctl restart finai
 
 # =========================
-# NGINX
+# NGINX (HTTP only first)
 # =========================
 cat > /etc/nginx/sites-available/finai <<EOF
 server {
     listen 80;
-    server_name tadgeeg.com www.tadgeeg.com;
+    server_name $DOMAIN $WWW_DOMAIN;
 
     client_max_body_size 50M;
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
 
     location /static/ {
         alias $PROJECT_DIR/staticfiles/;
@@ -93,11 +88,11 @@ server {
     }
 
     location / {
+        proxy_pass http://unix:$GUNICORN_SOCKET;
         proxy_set_header Host \$host;
-        proxy_set_header X-Forwarded-Proto https;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_pass http://unix:$SOCKET;
+        proxy_set_header X-Forwarded-Proto http;
     }
 }
 EOF
@@ -106,19 +101,25 @@ ln -sf /etc/nginx/sites-available/finai /etc/nginx/sites-enabled/finai
 rm -f /etc/nginx/sites-enabled/default
 
 nginx -t
-systemctl restart nginx
-
-# =========================
-# SSL
-# =========================
-certbot --nginx \
-  -d tadgeeg.com \
-  -d www.tadgeeg.com \
-  --non-interactive \
-  --agree-tos \
-  -m $EMAIL
-
 systemctl reload nginx
 
-echo "✅ Deployment Finished Successfully"
-echo "🌍 https://tadgeeg.com"
+# =========================
+# SSL - CERTBOT
+# =========================
+echo "🔐 Issuing SSL certificate..."
+certbot --nginx \
+  -d $DOMAIN \
+  -d $WWW_DOMAIN \
+  --non-interactive \
+  --agree-tos \
+  -m $EMAIL \
+  --redirect
+
+# =========================
+# FINAL RELOAD
+# =========================
+nginx -t
+systemctl reload nginx
+
+echo "✅ Deployment completed successfully!"
+echo "🌍 https://$DOMAIN"
