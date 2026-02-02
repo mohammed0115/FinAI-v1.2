@@ -159,7 +159,6 @@ cat > "$AUTO_UPDATE_SCRIPT" <<'EOF'
 set -e
 
 PROJECT_ROOT="/root/FinAI-v1.2"
-BACKEND="$PROJECT_ROOT/backend"
 BACKUP_DIR="/root/backups"
 BRANCH="main"
 DEPLOY="./deploy.sh"
@@ -179,21 +178,43 @@ REMOTE=$(git rev-parse "origin/$BRANCH")
 STAMP=$(date +%F_%H-%M-%S)
 BACKUP="$BACKUP_DIR/finai_$STAMP.tar.gz"
 
+# =========================
+# BACKUP
+# =========================
 tar -czf "$BACKUP" --exclude=.git .
 
+# =========================
+# STASH BEFORE PULL
+# =========================
+git stash push -u -m "auto-stash-before-pull-$STAMP"
+
+# =========================
+# PULL
+# =========================
 if ! git pull origin "$BRANCH"; then
+  git stash pop || true
   tar -xzf "$BACKUP" -C "$PROJECT_ROOT"
   exit 1
 fi
 
 chmod +x "$DEPLOY"
 
+# =========================
+# DEPLOY
+# =========================
 if ! "$DEPLOY"; then
+  git stash pop || true
   tar -xzf "$BACKUP" -C "$PROJECT_ROOT"
   systemctl restart finai
   systemctl restart nginx
   exit 1
 fi
+
+# =========================
+# CLEAN STASH (SUCCESS)
+# =========================
+git stash drop || true
+
 EOF
 
 chmod +x "$AUTO_UPDATE_SCRIPT"
