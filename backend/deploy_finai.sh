@@ -5,18 +5,20 @@ set -e
 # CONFIGURATION
 # =========================
 PROJECT_DIR="/root/FinAI-v1.2/backend"
-VENV_DIR="/root/FinAI-v1.2/backend/venv"
-DOMAIN_OR_IP="72.62.239.220"
+VENV_DIR="$PROJECT_DIR/venv"
+DOMAIN="tadgeeg.com"
+WWW_DOMAIN="www.tadgeeg.com"
 GUNICORN_SOCKET="/run/finai.sock"
+EMAIL="admin@tadgeeg.com"
 
-echo "🚀 Starting FinAI Deployment..."
+echo "🚀 Starting FinAI Full Deployment with SSL..."
 
 # =========================
 # SYSTEM PACKAGES
 # =========================
 apt update -y
 apt install -y python3.12 python3.12-venv python3.12-dev \
-nginx git build-essential
+nginx git build-essential certbot python3-certbot-nginx
 
 # =========================
 # VIRTUAL ENV
@@ -40,7 +42,7 @@ python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 
 # =========================
-# SYSTEMD SERVICE
+# SYSTEMD - GUNICORN
 # =========================
 cat > /etc/systemd/system/finai.service <<EOF
 [Unit]
@@ -48,14 +50,13 @@ Description=FinAI Django Application
 After=network.target
 
 [Service]
-Type=simple
 User=root
 WorkingDirectory=$PROJECT_DIR
-ExecStartPre=/bin/rm -f /run/finai.sock
+ExecStartPre=/bin/rm -f $GUNICORN_SOCKET
 ExecStart=$VENV_DIR/bin/gunicorn FinAI.wsgi:application \
-          --workers 3 \
-          --bind unix:$GUNICORN_SOCKET \
-          --umask 007
+    --workers 3 \
+    --bind unix:$GUNICORN_SOCKET \
+    --umask 007
 Restart=always
 RestartSec=5
 
@@ -69,12 +70,12 @@ systemctl enable finai
 systemctl restart finai
 
 # =========================
-# NGINX
+# NGINX (HTTP only first)
 # =========================
 cat > /etc/nginx/sites-available/finai <<EOF
 server {
     listen 80;
-    server_name $DOMAIN_OR_IP;
+    server_name $DOMAIN $WWW_DOMAIN;
 
     client_max_body_size 50M;
 
@@ -87,8 +88,11 @@ server {
     }
 
     location / {
-        include proxy_params;
         proxy_pass http://unix:$GUNICORN_SOCKET;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto http;
     }
 }
 EOF
@@ -97,7 +101,25 @@ ln -sf /etc/nginx/sites-available/finai /etc/nginx/sites-enabled/finai
 rm -f /etc/nginx/sites-enabled/default
 
 nginx -t
-systemctl restart nginx
+systemctl reload nginx
 
-echo "✅ FinAI Deployment Completed Successfully"
-echo "🌍 Open: http://$DOMAIN_OR_IP"
+# =========================
+# SSL - CERTBOT
+# =========================
+echo "🔐 Issuing SSL certificate..."
+certbot --nginx \
+  -d $DOMAIN \
+  -d $WWW_DOMAIN \
+  --non-interactive \
+  --agree-tos \
+  -m $EMAIL \
+  --redirect
+
+# =========================
+# FINAL RELOAD
+# =========================
+nginx -t
+systemctl reload nginx
+
+echo "✅ Deployment completed successfully!"
+echo "🌍 https://$DOMAIN"
