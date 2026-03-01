@@ -1,11 +1,24 @@
 import os
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 from typing import Dict, Any, List
 import json
 import asyncio
 import base64
 import requests
 from dotenv import load_dotenv
+import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+    EMERGENT_SDK_AVAILABLE = True
+    EMERGENT_SDK_IMPORT_ERROR = None
+except Exception as e:
+    LlmChat = None  # type: ignore[assignment]
+    UserMessage = None  # type: ignore[assignment]
+    ImageContent = None  # type: ignore[assignment]
+    EMERGENT_SDK_AVAILABLE = False
+    EMERGENT_SDK_IMPORT_ERROR = str(e)
 
 load_dotenv()
 
@@ -14,9 +27,28 @@ class EmergentAIService:
     
     def __init__(self):
         self.api_key = os.environ.get('EMERGENT_LLM_KEY', '')
+        self.sdk_available = EMERGENT_SDK_AVAILABLE
+        self.sdk_import_error = EMERGENT_SDK_IMPORT_ERROR
+        if not self.sdk_available:
+            logger.warning(f"Emergent SDK not available. AI features disabled: {self.sdk_import_error}")
+
+    def _ensure_ai_available(self) -> bool:
+        """Return True if AI SDK and API key are configured."""
+        if not self.sdk_available:
+            return False
+        if not self.api_key:
+            logger.warning("EMERGENT_LLM_KEY is not configured. AI features disabled.")
+            return False
+        return True
     
     def process_document_with_vision(self, image_url: str, document_type: str = 'invoice') -> Dict[str, Any]:
         """Process document using AI vision capabilities"""
+        if not self._ensure_ai_available():
+            return {
+                'success': False,
+                'error': 'AI service unavailable: SDK not installed or API key missing'
+            }
+
         try:
             # Create chat instance
             chat = LlmChat(
@@ -99,6 +131,9 @@ class EmergentAIService:
     
     def generate_cash_flow_forecast(self, historical_data: List[Dict], periods: int = 6) -> List[Dict]:
         """Generate cash flow forecast using AI"""
+        if not self._ensure_ai_available():
+            return []
+
         try:
             # Create chat instance
             chat = LlmChat(
@@ -147,6 +182,9 @@ Return JSON with this exact structure:
     
     def detect_anomalies(self, transactions: List[Dict]) -> List[Dict]:
         """Detect anomalies in financial transactions"""
+        if not self._ensure_ai_available():
+            return []
+
         try:
             # Create chat instance
             chat = LlmChat(
@@ -198,6 +236,9 @@ Return JSON with this exact structure:
         """Analyze financial trends"""
         if metrics is None:
             metrics = ['revenue', 'expenses', 'profit']
+
+        if not self._ensure_ai_available():
+            return []
         
         try:
             # Create chat instance
@@ -244,6 +285,9 @@ Return JSON with this exact structure:
     
     def generate_financial_insights(self, organization_data: Dict) -> List[str]:
         """Generate AI-powered financial insights"""
+        if not self._ensure_ai_available():
+            return []
+
         try:
             # Create chat instance
             chat = LlmChat(

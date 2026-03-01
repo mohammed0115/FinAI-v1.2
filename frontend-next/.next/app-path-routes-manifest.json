@@ -1,0 +1,8 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/_global-error/page": "/_global-error",
+  "/[locale]/page": "/[locale]",
+  "/[locale]/login/page": "/[locale]/login",
+  "/login/page": "/login",
+  "/page": "/"
+}

@@ -1,0 +1,10 @@
+▲ Next.js 16.1.6 (webpack)
+- Local:         http://localhost:3022
+- Network:       http://192.168.1.8:3022
+
+✓ Starting...
+✓ Ready in 1459ms
+ GET /ar/login 200 in 2.6s (compile: 2.4s, render: 119ms)
+[?25h
+
+C:\Users\jnass\NodeJs Projects\FinAI-v1.2>

@@ -64,16 +64,34 @@ class DocumentOCRService:
     """
     
     def __init__(self):
+        self.is_available = False
+        self.tesseract_version = None
+        self.unavailable_reason = None
+        self._configure_tesseract_path()
         self._verify_tesseract()
+
+    def _configure_tesseract_path(self):
+        """
+        Configure custom Tesseract executable path when provided.
+        Useful on Windows where tesseract.exe may not be on PATH.
+        """
+        custom_cmd = os.environ.get('TESSERACT_CMD') or getattr(settings, 'TESSERACT_CMD', None)
+        if custom_cmd:
+            pytesseract.pytesseract.tesseract_cmd = custom_cmd
+            logger.info(f"Using custom Tesseract path: {custom_cmd}")
     
     def _verify_tesseract(self):
         """Verify tesseract is installed and available"""
         try:
-            version = pytesseract.get_tesseract_version()
-            logger.info(f"Tesseract OCR initialized: version {version}")
+            self.tesseract_version = str(pytesseract.get_tesseract_version())
+            self.is_available = True
+            self.unavailable_reason = None
+            logger.info(f"Tesseract OCR initialized: version {self.tesseract_version}")
         except Exception as e:
+            self.is_available = False
+            self.unavailable_reason = "Tesseract OCR is not installed or not accessible"
             logger.error(f"Tesseract not available: {e}")
-            raise RuntimeError("Tesseract OCR is not installed or not accessible")
+            logger.warning("OCR features are disabled until Tesseract is installed/configured")
     
     def process_document(
         self,
@@ -94,6 +112,9 @@ class DocumentOCRService:
         Returns:
             Dict with extracted text, confidence, and metadata
         """
+        if not self.is_available:
+            raise RuntimeError(self.unavailable_reason or "OCR engine is unavailable")
+
         extraction_start = timezone.now()
         
         # Determine tesseract language
@@ -116,7 +137,7 @@ class DocumentOCRService:
         result['tesseract_lang'] = tesseract_lang
         result['is_handwritten'] = is_handwritten
         result['ocr_engine'] = 'tesseract'
-        result['ocr_version'] = str(pytesseract.get_tesseract_version())
+        result['ocr_version'] = self.tesseract_version or ''
         
         # Generate evidence hash
         result['evidence_hash'] = self._generate_evidence_hash(result)
