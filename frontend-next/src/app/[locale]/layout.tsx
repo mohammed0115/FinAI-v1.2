@@ -9,11 +9,13 @@ export default async function LocaleLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  const isArabic = locale === "ar";
 
   return (
     <NextIntlClientProvider locale={locale} messages={{}}>
-      {children}
+      <div dir={isArabic ? "rtl" : "ltr"} className="min-h-screen">
+        {children}
+      </div>
     </NextIntlClientProvider>
   );
 }
-

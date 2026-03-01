@@ -2,29 +2,90 @@
 
 {% block title %}{{ t.nav_dashboard|default:'لوحة القيادة' }} - FinAI{% endblock %}
 
+{% block extra_css %}
+<style>
+    .dashboard-view {
+        position: relative;
+    }
+
+    .dashboard-header h1 {
+        font-size: clamp(1.25rem, 2.1vw, 1.7rem);
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        color: #0f172a;
+    }
+
+    .dashboard-header p {
+        color: #475569;
+    }
+
+    .dashboard-meta {
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.7);
+        color: #475569;
+        padding: 0.35rem 0.8rem;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .dashboard-section-title {
+        color: #0f172a;
+    }
+
+    .dashboard-link {
+        color: #2563eb;
+        font-weight: 700;
+    }
+
+    .dashboard-link:hover {
+        color: #0891b2;
+    }
+
+    .dashboard-value {
+        line-height: 1;
+        letter-spacing: -0.01em;
+    }
+
+    .dashboard-empty {
+        color: #64748b;
+    }
+
+    .dashboard-risk-dot {
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.88), 0 8px 20px rgba(15, 23, 42, 0.12);
+    }
+
+    @media (max-width: 1024px) {
+        .dashboard-header {
+            gap: 0.7rem;
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6 dashboard-view">
     <!-- Page Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between dashboard-header">
         <div>
             <h1 class="text-xl font-bold text-slate-800">{{ t.nav_dashboard|default:'لوحة القيادة' }}</h1>
             <p class="text-sm text-slate-500">{{ t.dashboard_subtitle|default:'نظرة عامة على حالة التدقيق والامتثال' }}</p>
         </div>
-        <div class="text-xs text-slate-400">
-            {{ t.last_updated|default:'آخر تحديث' }}: {{ now|date:"Y/m/d H:i" }}
+        <div class="text-xs text-slate-400 dashboard-meta" dir="ltr">{{ t.last_updated|default:'آخر تحديث' }}: {{ now|date:"Y/m/d H:i" }}
         </div>
     </div>
 
     <!-- KPI Cards Row -->
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <!-- Compliance Score -->
-        <div class="bg-white rounded-xl border border-slate-200/60 p-5">
+        <div class="bg-white rounded-xl border border-slate-200/60 p-5 dash-card">
             <div class="flex items-start justify-between">
                 <div>
                     <p class="text-sm font-medium text-slate-500 mb-1">{{ t.compliance_score|default:'درجة الامتثال' }}</p>
-                    <p class="text-3xl font-bold {% if stats.compliance_score >= 80 %}text-emerald-600{% elif stats.compliance_score >= 60 %}text-amber-600{% else %}text-red-600{% endif %}">{{ stats.compliance_score|default:0 }}%</p>
+                    <p dir="ltr" class="text-3xl font-bold mono dashboard-value {% if stats.compliance_score >= 80 %}text-emerald-600{% elif stats.compliance_score >= 60 %}text-amber-600{% else %}text-red-600{% endif %}">{{ stats.compliance_score|default:0 }}%</p>
                 </div>
-                <div class="w-10 h-10 rounded-lg flex items-center justify-center {% if stats.compliance_score >= 80 %}bg-emerald-50{% else %}bg-amber-50{% endif %}">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center dashboard-kpi-icon {% if stats.compliance_score >= 80 %}bg-emerald-50{% else %}bg-amber-50{% endif %}">
                     <svg class="w-5 h-5 {% if stats.compliance_score >= 80 %}text-emerald-600{% else %}text-amber-600{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
@@ -33,13 +94,13 @@
         </div>
 
         <!-- VAT Status -->
-        <div class="bg-white rounded-xl border border-slate-200/60 p-5">
+        <div class="bg-white rounded-xl border border-slate-200/60 p-5 dash-card">
             <div class="flex items-start justify-between">
                 <div>
                     <p class="text-sm font-medium text-slate-500 mb-1">{{ t.vat|default:'ض.ق.م' }}</p>
-                    <p class="text-3xl font-bold {% if chart_data.compliance_scores.values.1 >= 80 %}text-emerald-600{% else %}text-amber-600{% endif %}">{{ chart_data.compliance_scores.values.1|default:0 }}%</p>
+                    <p dir="ltr" class="text-3xl font-bold mono dashboard-value {% if chart_data.compliance_scores.values.1 >= 80 %}text-emerald-600{% else %}text-amber-600{% endif %}">{{ chart_data.compliance_scores.values.1|default:0 }}%</p>
                 </div>
-                <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-50">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center dashboard-kpi-icon bg-blue-50">
                     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                     </svg>
@@ -48,13 +109,13 @@
         </div>
 
         <!-- Zakat Status -->
-        <div class="bg-white rounded-xl border border-slate-200/60 p-5">
+        <div class="bg-white rounded-xl border border-slate-200/60 p-5 dash-card">
             <div class="flex items-start justify-between">
                 <div>
                     <p class="text-sm font-medium text-slate-500 mb-1">{{ t.zakat|default:'الزكاة' }}</p>
-                    <p class="text-3xl font-bold {% if chart_data.compliance_scores.values.2 >= 80 %}text-emerald-600{% else %}text-amber-600{% endif %}">{{ chart_data.compliance_scores.values.2|default:0 }}%</p>
+                    <p dir="ltr" class="text-3xl font-bold mono dashboard-value {% if chart_data.compliance_scores.values.2 >= 80 %}text-emerald-600{% else %}text-amber-600{% endif %}">{{ chart_data.compliance_scores.values.2|default:0 }}%</p>
                 </div>
-                <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-emerald-50">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center dashboard-kpi-icon bg-emerald-50">
                     <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -63,13 +124,13 @@
         </div>
 
         <!-- Risk Level -->
-        <div class="bg-white rounded-xl border border-slate-200/60 p-5">
+        <div class="bg-white rounded-xl border border-slate-200/60 p-5 dash-card">
             <div class="flex items-start justify-between">
                 <div>
                     <p class="text-sm font-medium text-slate-500 mb-1">{{ t.findings|default:'نتائج التدقيق' }}</p>
-                    <p class="text-3xl font-bold {% if stats.total_findings > 0 %}text-amber-600{% else %}text-slate-700{% endif %}">{{ stats.total_findings|default:0 }}</p>
+                    <p dir="ltr" class="text-3xl font-bold mono dashboard-value {% if stats.total_findings > 0 %}text-amber-600{% else %}text-slate-700{% endif %}">{{ stats.total_findings|default:0 }}</p>
                 </div>
-                <div class="w-10 h-10 rounded-lg flex items-center justify-center {% if stats.total_findings > 0 %}bg-amber-50{% else %}bg-slate-50{% endif %}">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center dashboard-kpi-icon {% if stats.total_findings > 0 %}bg-amber-50{% else %}bg-slate-50{% endif %}">
                     <svg class="w-5 h-5 {% if stats.total_findings > 0 %}text-amber-600{% else %}text-slate-400{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
@@ -78,13 +139,13 @@
         </div>
 
         <!-- Pending Reviews -->
-        <div class="bg-white rounded-xl border border-slate-200/60 p-5">
+        <div class="bg-white rounded-xl border border-slate-200/60 p-5 dash-card">
             <div class="flex items-start justify-between">
                 <div>
                     <p class="text-sm font-medium text-slate-500 mb-1">{{ t.pending_review|default:'بانتظار المراجعة' }}</p>
-                    <p class="text-3xl font-bold {% if stats.anomaly_count > 0 %}text-red-600{% else %}text-slate-700{% endif %}">{{ stats.anomaly_count|default:0 }}</p>
+                    <p dir="ltr" class="text-3xl font-bold mono dashboard-value {% if stats.anomaly_count > 0 %}text-red-600{% else %}text-slate-700{% endif %}">{{ stats.anomaly_count|default:0 }}</p>
                 </div>
-                <div class="w-10 h-10 rounded-lg flex items-center justify-center {% if stats.anomaly_count > 0 %}bg-red-50{% else %}bg-slate-50{% endif %}">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center dashboard-kpi-icon {% if stats.anomaly_count > 0 %}bg-red-50{% else %}bg-slate-50{% endif %}">
                     <svg class="w-5 h-5 {% if stats.anomaly_count > 0 %}text-red-600{% else %}text-slate-400{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -96,9 +157,9 @@
     <!-- Charts Row -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Compliance Trend Chart -->
-        <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden">
+        <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden dash-card">
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-slate-700">{{ t.compliance_trend|default:'اتجاه الامتثال' }}</h3>
+                <h3 class="text-sm font-semibold text-slate-700 dashboard-section-title">{{ t.compliance_trend|default:'اتجاه الامتثال' }}</h3>
                 <span class="text-xs text-slate-400">{{ t.last_6_months|default:'آخر 6 أشهر' }}</span>
             </div>
             <div class="p-5">
@@ -109,9 +170,9 @@
         </div>
 
         <!-- Risk Distribution Chart -->
-        <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden">
+        <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden dash-card">
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-slate-700">{{ t.risk_distribution|default:'توزيع المخاطر' }}</h3>
+                <h3 class="text-sm font-semibold text-slate-700 dashboard-section-title">{{ t.risk_distribution|default:'توزيع المخاطر' }}</h3>
             </div>
             <div class="p-5">
                 <div class="h-56">
@@ -119,24 +180,24 @@
                 </div>
                 <div class="mt-4 grid grid-cols-4 gap-3">
                     <div class="text-center">
-                        <div class="w-3 h-3 bg-red-500 rounded-full mx-auto mb-1"></div>
+                        <div class="w-3 h-3 bg-red-500 rounded-full mx-auto mb-1 dashboard-risk-dot"></div>
                         <div class="text-xs text-slate-500">{{ t.critical|default:'حرج' }}</div>
-                        <div class="text-sm font-semibold text-slate-700">{{ chart_data.findings_by_risk.values.0|default:0 }}</div>
+                        <div class="text-sm font-semibold text-slate-700 dashboard-section-title mono" dir="ltr">{{ chart_data.findings_by_risk.values.0|default:0 }}</div>
                     </div>
                     <div class="text-center">
-                        <div class="w-3 h-3 bg-amber-500 rounded-full mx-auto mb-1"></div>
+                        <div class="w-3 h-3 bg-amber-500 rounded-full mx-auto mb-1 dashboard-risk-dot"></div>
                         <div class="text-xs text-slate-500">{{ t.high|default:'مرتفع' }}</div>
-                        <div class="text-sm font-semibold text-slate-700">{{ chart_data.findings_by_risk.values.1|default:0 }}</div>
+                        <div class="text-sm font-semibold text-slate-700 dashboard-section-title mono" dir="ltr">{{ chart_data.findings_by_risk.values.1|default:0 }}</div>
                     </div>
                     <div class="text-center">
-                        <div class="w-3 h-3 bg-yellow-500 rounded-full mx-auto mb-1"></div>
+                        <div class="w-3 h-3 bg-yellow-500 rounded-full mx-auto mb-1 dashboard-risk-dot"></div>
                         <div class="text-xs text-slate-500">{{ t.medium|default:'متوسط' }}</div>
-                        <div class="text-sm font-semibold text-slate-700">{{ chart_data.findings_by_risk.values.2|default:0 }}</div>
+                        <div class="text-sm font-semibold text-slate-700 dashboard-section-title mono" dir="ltr">{{ chart_data.findings_by_risk.values.2|default:0 }}</div>
                     </div>
                     <div class="text-center">
-                        <div class="w-3 h-3 bg-emerald-500 rounded-full mx-auto mb-1"></div>
+                        <div class="w-3 h-3 bg-emerald-500 rounded-full mx-auto mb-1 dashboard-risk-dot"></div>
                         <div class="text-xs text-slate-500">{{ t.low|default:'منخفض' }}</div>
-                        <div class="text-sm font-semibold text-slate-700">{{ chart_data.findings_by_risk.values.3|default:0 }}</div>
+                        <div class="text-sm font-semibold text-slate-700 dashboard-section-title mono" dir="ltr">{{ chart_data.findings_by_risk.values.3|default:0 }}</div>
                     </div>
                 </div>
             </div>
@@ -146,10 +207,10 @@
     <!-- Tables Row -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Recent Audit Findings -->
-        <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden">
+        <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden dash-card">
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-slate-700">{{ t.recent_findings|default:'آخر نتائج التدقيق' }}</h3>
-                <a href="{% url 'audit_findings_list' %}" class="text-xs text-blue-600 hover:text-blue-700 font-medium">{{ t.view_all|default:'عرض الكل' }}</a>
+                <h3 class="text-sm font-semibold text-slate-700 dashboard-section-title">{{ t.recent_findings|default:'آخر نتائج التدقيق' }}</h3>
+                <a href="{% url 'audit_findings_list' %}" class="text-xs text-blue-600 hover:text-blue-700 font-medium dashboard-link">{{ t.view_all|default:'عرض الكل' }}</a>
             </div>
             <div class="divide-y divide-slate-100">
                 {% for finding in recent_findings %}
@@ -167,7 +228,7 @@
                         </span>
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-medium text-slate-700 truncate">{{ finding.title_ar|default:finding.title_en }}</p>
-                            <p class="text-xs text-slate-400 mt-0.5">{{ finding.finding_number }} · {{ finding.created_at|date:"Y/m/d" }}</p>
+                            <p class="text-xs text-slate-400 mt-0.5"><span dir="ltr" class="mono">{{ finding.finding_number }} · {{ finding.created_at|date:"Y/m/d" }}</span></p>
                         </div>
                         <svg class="w-4 h-4 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -179,17 +240,17 @@
                     <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    <p class="text-sm text-slate-400">{{ t.no_findings|default:'لا توجد نتائج تدقيق' }}</p>
+                    <p class="text-sm text-slate-400 dashboard-empty">{{ t.no_findings|default:'لا توجد نتائج تدقيق' }}</p>
                 </div>
                 {% endfor %}
             </div>
         </div>
 
         <!-- Recent Documents -->
-        <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden">
+        <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden dash-card">
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-slate-700">{{ t.recent_documents|default:'آخر المستندات' }}</h3>
-                <a href="{% url 'document_upload' %}" class="text-xs text-blue-600 hover:text-blue-700 font-medium">{{ t.view_all|default:'عرض الكل' }}</a>
+                <h3 class="text-sm font-semibold text-slate-700 dashboard-section-title">{{ t.recent_documents|default:'آخر المستندات' }}</h3>
+                <a href="{% url 'document_upload' %}" class="text-xs text-blue-600 hover:text-blue-700 font-medium dashboard-link">{{ t.view_all|default:'عرض الكل' }}</a>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full data-table">
@@ -220,7 +281,7 @@
                                 <span class="badge badge-neutral">{{ t.pending|default:'معلق' }}</span>
                                 {% endif %}
                             </td>
-                            <td class="mono text-slate-500">{{ txn.transaction_date|date:"Y/m/d" }}</td>
+                            <td class="mono text-slate-500" dir="ltr">{{ txn.transaction_date|date:"Y/m/d" }}</td>
                         </tr>
                         {% empty %}
                         <tr>
@@ -228,7 +289,7 @@
                                 <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                 </svg>
-                                <p class="text-sm text-slate-400">{{ t.no_documents|default:'لا توجد مستندات' }}</p>
+                                <p class="text-sm text-slate-400 dashboard-empty">{{ t.no_documents|default:'لا توجد مستندات' }}</p>
                             </td>
                         </tr>
                         {% endfor %}

@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --surface-base: 239 243 250;
+  --surface-muted: 226 232 240;
+  --surface-card: 255 255 255;
+  --surface-glass: rgba(255, 255, 255, 0.64);
+  --surface-glass-strong: rgba(255, 255, 255, 0.78);
+
+  --border-soft: 203 213 225;
+  --border-strong: 148 163 184;
+
+  --text-primary: 30 41 59;
+  --text-secondary: 71 85 105;
+  --text-muted: 100 116 139;
+
+  --primary-from: 59 130 246;
+  --primary-to: 6 182 212;
+  --accent-violet: 139 92 246;
+
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.5rem;
+
+  --shadow-soft: 0 10px 30px -20px rgba(15, 23, 42, 0.45);
+  --shadow-card: 0 18px 45px -26px rgba(15, 23, 42, 0.42);
+  --shadow-primary: 0 16px 30px -16px rgba(59, 130, 246, 0.55);
+
+  --gradient-primary: linear-gradient(
+    90deg,
+    rgb(var(--primary-from)) 0%,
+    rgb(var(--primary-to)) 100%
+  );
+  --gradient-sidebar: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  color: rgb(var(--text-primary));
+  background: linear-gradient(
+    135deg,
+    rgb(var(--surface-base)) 0%,
+    rgb(var(--surface-muted)) 55%,
+    #cbd5e1 100%
+  );
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
+.app-grid-overlay {
+  background-image:
+    linear-gradient(to right, #0000000a 1px, transparent 1px),
+    linear-gradient(to bottom, #0000000a 1px, transparent 1px);
+  background-size: 4rem 4rem;
+}
+
+.glass-surface {
+  background: var(--surface-glass);
+  backdrop-filter: blur(16px);
+}
+
+.text-gradient-primary {
+  background-image: linear-gradient(
+    90deg,
+    rgb(var(--primary-from)),
+    rgb(var(--primary-to)),
+    rgb(var(--accent-violet))
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
