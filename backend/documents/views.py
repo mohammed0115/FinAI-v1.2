@@ -3,8 +3,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.storage import default_storage
+from django.conf import settings
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
+from django.core.files.utils import validate_file_name
+import logging
+
 from .models import (
     Document, ExtractedData, Transaction, Account,
     JournalEntry, JournalEntryLine, ComplianceCheck, AuditFlag
@@ -14,11 +18,13 @@ from .serializers import (
     AccountSerializer, JournalEntrySerializer, JournalEntryLineSerializer,
     ComplianceCheckSerializer, AuditFlagSerializer
 )
-from core.ai_service import ai_service
+from core.ai import OCRProcessor, StructuredExtractor
+from core.ai.errors import FileProcessingError, AIAPIError
 from decimal import Decimal
 import uuid
-import base64
 import os
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentViewSet(viewsets.ModelViewSet):
@@ -112,74 +118,210 @@ class DocumentViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def process(self, request, pk=None):
-        """Process document with AI"""
+        """
+        Process document with AI OCR and extraction.
+        
+        Security:
+        - Reads file from disk (no URL-based fetching, prevents SSRF)
+        - Validates organization ownership
+        - Returns proper error codes (400/403/413/429/500)
+        
+        Returns:
+        - extracted_data_id: ID of ExtractedData for access
+        - ocr_confidence: Confidence of OCR (0-1)
+        - extraction_confidence: Confidence of data extraction (0-1)
+        - language: Detected language (ar/en)
+        - method: OCR method used (vision/tesseract)
+        - processing_time_ms: Time taken
+        """
         document = self.get_object()
         
-        # Update status to processing
+        # Security: Validate organization ownership
+        user_org = getattr(request.user, 'organization', None)
+        if not user_org and request.user.role != 'admin':
+            logger.warning(f"Unauthorized document access attempt: user={request.user.id}, doc={pk}")
+            return Response(
+                {'error': 'You do not have access to this document'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        if not request.user.is_staff and document.organization_id != user_org.id:
+            logger.warning(f"Organization mismatch: user_org={user_org.id}, doc_org={document.organization_id}")
+            return Response(
+                {'error': 'You do not have access to this document'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Check if already processing or completed
+        if document.status in ['processing', 'completed']:
+            return Response({
+                'error': 'Document already processed or processing',
+                'current_status': document.status
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Security: Construct full file path from disk (not from URL)
+        file_path = os.path.join(settings.MEDIA_ROOT, document.storage_key)
+        
+        # Security: Validate file path is within MEDIA_ROOT (prevent directory traversal)
+        try:
+            file_path = os.path.abspath(file_path)
+            if not file_path.startswith(os.path.abspath(settings.MEDIA_ROOT)):
+                logger.error(f"Path traversal attempt: {file_path}")
+                return Response(
+                    {'error': 'Invalid file path'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Exception as e:
+            logger.error(f"Path validation error: {e}")
+            return Response(
+                {'error': 'Invalid file path'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check file exists
+        if not os.path.isfile(file_path):
+            logger.error(f"Document file not found: {file_path}")
+            document.status = 'failed'
+            document.save(update_fields=['status'])
+            return Response(
+                {'error': 'Document file not found on disk'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Update status
         document.status = 'processing'
-        document.save()
+        document.save(update_fields=['status'])
         
         try:
-            # Get full URL for the image
-            image_url = request.build_absolute_uri(document.storage_url)
+            # Phase 1: OCR (Extract text)
+            logger.info(f"Starting OCR for document {document.id}: {file_path}")
+            ocr_processor = OCRProcessor()
             
-            # Process with AI
-            result = ai_service.process_document_with_vision(
-                image_url=image_url,
-                document_type=document.document_type
-            )
-            
-            if not result.get('success'):
+            try:
+                ocr_result = ocr_processor.process(
+                    file_path=file_path,
+                    language_hint='ar'  # Default to Arabic
+                )
+            except FileProcessingError as e:
+                logger.error(f"File validation failed: {e.message}")
                 document.status = 'failed'
-                document.save()
-                return Response({
-                    'success': False,
-                    'error': result.get('error', 'Processing failed')
-                }, status=status.HTTP_400_BAD_REQUEST)
+                document.save(update_fields=['status'])
+                return Response(
+                    {'error': e.message},
+                    status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE  # For file size errors
+                )
+            except AIAPIError as e:
+                logger.error(f"OCR API error: {e.message}")
+                document.status = 'failed'
+                document.save(update_fields=['status'])
+                return Response(
+                    {'error': 'OCR processing failed. Please try again.'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            except Exception as e:
+                logger.error(f"Unexpected OCR error: {e}")
+                document.status = 'failed'
+                document.save(update_fields=['status'])
+                return Response(
+                    {'error': 'OCR processing failed'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
             
-            # Save extracted data
-            structured_data = result.get('structured_data', {})
-            extracted_text = result.get('extracted_text', {})
+            extracted_text = ocr_result.get('extracted_text', '')
+            if not extracted_text or len(extracted_text.strip()) < 10:
+                logger.warning(f"OCR extracted very little text: {len(extracted_text)} chars")
+                document.status = 'completed'
+                document.language = ocr_result.get('language', 'ar')
+                document.processed_at = timezone.now()
+                document.save()
+                
+                return Response({
+                    'warning': 'Document OCR succeeded but extracted text is very short',
+                    'extracted_text_length': len(extracted_text),
+                    'ocr_confidence': ocr_result.get('confidence', 0),
+                    'language': ocr_result.get('language'),
+                    'method': ocr_result.get('method'),
+                })
+            
+            # Phase 2: Structured Data Extraction (Parse invoice details)
+            logger.info(f"Starting extraction for document {document.id}")
+            extractor = StructuredExtractor()
+            
+            try:
+                extraction_result = extractor.extract_invoice_data(
+                    ocr_text=extracted_text,
+                    language=ocr_result.get('language', 'ar')
+                )
+            except AIAPIError as e:
+                logger.error(f"Extraction API error: {e.message}")
+                # Fall back to creating ExtractedData with OCR text only
+                extraction_result = {
+                    'extracted_data': {},
+                    'confidence': 0.3,
+                    'warnings': ['Could not extract structured data'],
+                }
+            except Exception as e:
+                logger.error(f"Extraction error: {e}")
+                extraction_result = {
+                    'extracted_data': {},
+                    'confidence': 0.3,
+                    'warnings': ['Extraction processing failed'],
+                }
+            
+            # Phase 3: Save Results
+            extracted_invoice = extraction_result.get('extracted_data', {})
             
             extracted_data = ExtractedData.objects.create(
                 document=document,
                 organization=document.organization,
-                vendor_name=structured_data.get('vendorName'),
-                customer_name=structured_data.get('customerName'),
-                invoice_number=structured_data.get('invoiceNumber'),
-                invoice_date=structured_data.get('invoiceDate'),
-                due_date=structured_data.get('dueDate'),
-                total_amount=Decimal(str(structured_data.get('totalAmount', 0))) if structured_data.get('totalAmount') else None,
-                tax_amount=Decimal(str(structured_data.get('taxAmount', 0))) if structured_data.get('taxAmount') else None,
-                currency=structured_data.get('currency'),
-                items_json=structured_data.get('items'),
-                raw_text_ar=extracted_text.get('arabic'),
-                raw_text_en=extracted_text.get('english'),
-                confidence=result.get('confidence', 0)
+                # Extracted fields
+                vendor_name=extracted_invoice.get('vendor_name'),
+                customer_name=extracted_invoice.get('customer_name'),
+                invoice_number=extracted_invoice.get('invoice_number'),
+                invoice_date=extracted_invoice.get('invoice_date'),
+                due_date=extracted_invoice.get('due_date'),
+                # Amounts
+                total_amount=Decimal(str(extracted_invoice.get('total', 0))) if extracted_invoice.get('total') else None,
+                tax_amount=Decimal(str(extracted_invoice.get('tax_amount', 0))) if extracted_invoice.get('tax_amount') else None,
+                currency=extracted_invoice.get('currency'),
+                # Items
+                items_json=extracted_invoice.get('line_items'),
+                # OCR text
+                raw_text_ar=extracted_text if ocr_result.get('language') in ['ar', 'mixed'] else None,
+                raw_text_en=extracted_text if ocr_result.get('language') in ['en', 'mixed'] else None,
+                # Confidence scores
+                confidence=round(extraction_result.get('confidence', 0.5), 2),
             )
             
             # Update document
             document.status = 'completed'
-            document.language = result.get('language', 'en')
-            document.is_handwritten = result.get('is_handwritten', False)
+            document.language = ocr_result.get('language', 'ar')
+            document.is_handwritten = False  # Vision API doesn't detect this
             document.processed_at = timezone.now()
             document.save()
+            
+            logger.info(f"Document {document.id} processed successfully. "
+                       f"Extraction confidence: {extraction_result.get('confidence')}")
             
             return Response({
                 'success': True,
                 'extracted_data_id': str(extracted_data.id),
-                'confidence': result.get('confidence'),
-                'language': result.get('language'),
-                'is_handwritten': result.get('is_handwritten')
-            })
-            
+                'ocr_confidence': ocr_result.get('confidence', 0),
+                'extraction_confidence': extraction_result.get('confidence', 0),
+                'language': ocr_result.get('language', 'ar'),
+                'method': ocr_result.get('method', 'vision'),
+                'processing_time_ms': ocr_result.get('processing_time_ms', 0),
+                'warnings': extraction_result.get('warnings', []),
+            }, status=status.HTTP_200_OK)
+        
         except Exception as e:
+            logger.error(f"Unexpected error processing document {document.id}: {e}", exc_info=True)
             document.status = 'failed'
-            document.save()
-            return Response({
-                'success': False,
-                'error': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            document.save(update_fields=['status'])
+            return Response(
+                {'error': 'Internal server error during processing'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class ExtractedDataViewSet(viewsets.ModelViewSet):

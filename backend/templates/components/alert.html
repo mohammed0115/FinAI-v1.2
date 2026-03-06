@@ -1,0 +1,12 @@
+{# Alert / Message Component
+   Usage: {% include "components/alert.html" with message="Success!" variant="success" %}
+#}
+<div class="px-4 py-3 rounded-lg text-sm border
+    {% if variant == 'error' or variant == 'danger' %}bg-red-50 text-red-700 border-red-200
+    {% elif variant == 'success' %}bg-emerald-50 text-emerald-700 border-emerald-200
+    {% elif variant == 'warning' %}bg-amber-50 text-amber-700 border-amber-200
+    {% else %}bg-blue-50 text-blue-700 border-blue-200{% endif %}">
+    {% if icon_html %}<div class="flex gap-3">{{ icon_html|safe }}<div>{% endif %}
+        <p>{{ message }}</p>
+    {% if icon_html %}</div></div>{% endif %}
+</div>

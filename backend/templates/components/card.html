@@ -1,0 +1,12 @@
+{# Card Component
+   Usage: {% include "components/card.html" with title="Revenue" content_html=content elevated=True %}
+#}
+<div class="bg-white rounded-xl border border-slate-200/60 p-5 dash-card {% if extra_classes %}{{ extra_classes }}{% endif %}" {% if card_id %}id="{{ card_id }}"{% endif %}>
+    {% if title %}
+    <div class="flex items-start justify-between mb-4">
+        <h3 class="text-sm font-semibold text-slate-700 dashboard-section-title">{{ title }}</h3>
+        {% if action_html %}{{ action_html|safe }}{% endif %}
+    </div>
+    {% endif %}
+    {% if content_html %}{{ content_html|safe }}{% else %}{{ content }}{% endif %}
+</div>

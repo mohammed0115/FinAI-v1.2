@@ -1,0 +1,20 @@
+{# Dropdown Component with AlpineJS
+   Usage: {% include "components/dropdown.html" with dropdown_id="menu1" label="Actions" items=dropdown_items %}
+#}
+<div x-data="{ open: false }" @click.away="open = false" class="relative inline-block">
+    <button @click="open = !open" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50">
+        {{ label }}
+        <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+        </svg>
+    </button>
+    
+    <div x-show="open" x-transition class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10">
+        {% for item in items %}
+        <a href="{{ item.url }}" class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+            {% if item.icon %}{{ item.icon|safe }}{% endif %}
+            {{ item.label }}
+        </a>
+        {% endfor %}
+    </div>
+</div>

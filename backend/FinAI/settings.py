@@ -182,7 +182,24 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Emergent LLM Integration
+# ===== OpenAI Configuration (Production-Grade AI Integration) =====
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
+OPENAI_VISION_MODEL = os.environ.get('OPENAI_VISION_MODEL', 'gpt-4o-mini')
+OPENAI_TIMEOUT = int(os.environ.get('OPENAI_TIMEOUT', '120'))
+OPENAI_MAX_TOKENS = int(os.environ.get('OPENAI_MAX_TOKENS', '2000'))
+OPENAI_TEMPERATURE = float(os.environ.get('OPENAI_TEMPERATURE', '0.3'))
+
+# File Processing Constraints
+MAX_OCR_PAGES = int(os.environ.get('MAX_OCR_PAGES', '20'))
+MAX_UPLOAD_SIZE_MB = int(os.environ.get('MAX_UPLOAD_SIZE_MB', '50'))
+ALLOWED_DOCUMENT_TYPES_AI = ['pdf', 'jpeg', 'png', 'jpg']
+
+# AI Rate Limiting (requests per hour)
+AI_RATE_LIMIT_REQUESTS = int(os.environ.get('AI_RATE_LIMIT_REQUESTS', '100'))
+AI_RATE_LIMIT_PERIOD = int(os.environ.get('AI_RATE_LIMIT_PERIOD', '3600'))
+
+# Emergent LLM Integration (legacy, kept for backward compatibility)
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
 # Authentication URLs

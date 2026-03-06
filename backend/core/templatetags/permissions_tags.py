@@ -101,3 +101,55 @@ def can_access_feature(user, feature):
         return user.role == UserRole.ADMIN
     
     return check_permission(user, permission, category)
+
+
+@register.filter(name='get_color_class')
+def get_color_class(value):
+    """Convert a score (0-100) to appropriate color class.
+    
+    Usage:
+        {{ score|get_color_class }}
+    
+    Returns Tailwind color classes based on score:
+    - 0-30: red (danger)
+    - 31-60: amber (warning)
+    - 61-85: blue (info)
+    - 86-100: emerald (success)
+    """
+    try:
+        score = float(value)
+    except (ValueError, TypeError):
+        return 'bg-neutral-100 text-neutral-700'
+    
+    if score >= 86:
+        return 'bg-emerald-100 text-emerald-700'
+    elif score >= 61:
+        return 'bg-blue-100 text-blue-700'
+    elif score >= 31:
+        return 'bg-amber-100 text-amber-700'
+    else:
+        return 'bg-red-100 text-red-700'
+
+
+@register.filter(name='get_risk_label')
+def get_risk_label(value):
+    """Convert risk level code to human-readable label.
+    
+    Usage:
+        {{ risk_level|get_risk_label }}
+    
+    Risk level mappings:
+    - critical: Critical
+    - high: High
+    - medium: Medium
+    - low: Low
+    - neutral: No Risk
+    """
+    risk_labels = {
+        'critical': 'Critical',
+        'high': 'High',
+        'medium': 'Medium',
+        'low': 'Low',
+        'neutral': 'No Risk',
+    }
+    return risk_labels.get(str(value).lower(), str(value))

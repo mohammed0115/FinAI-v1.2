@@ -1,0 +1,17 @@
+{# Page Header Component
+   Usage: {% include "components/page_header.html" with title="Dashboard" description="Overview" action_html="..." %}
+#}
+<div class="flex items-center justify-between dashboard-header mb-6 gap-4">
+    <div>
+        <h1 class="text-xl font-bold text-slate-800">{{ title }}</h1>
+        {% if description %}<p class="text-sm text-slate-500">{{ description }}</p>{% endif %}
+    </div>
+    {% if action_html %}
+    <div>{{ action_html|safe }}</div>
+    {% endif %}
+    {% if show_timestamp %}
+    <div class="text-xs text-slate-400 dashboard-meta" dir="ltr">
+        {{ timestamp_label|default:"Last Updated" }}: {{ now|date:"Y/m/d H:i" }}
+    </div>
+    {% endif %}
+</div>

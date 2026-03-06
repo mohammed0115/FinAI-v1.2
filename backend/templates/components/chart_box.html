@@ -1,0 +1,17 @@
+{# Chart Container Component
+   Usage: {% include "components/chart_container.html" with title="Compliance Trend" chart_id="complianceTrendChart" height="h-56" %}
+#}
+<div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden dash-card">
+    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-700 dashboard-section-title">{{ title }}</h3>
+        {% if subtitle %}<span class="text-xs text-slate-400">{{ subtitle }}</span>{% endif %}
+    </div>
+    <div class="p-5">
+        <div class="{{ height|default:'h-56' }}">
+            <canvas id="{{ chart_id }}" data-testid="{{ chart_id }}"></canvas>
+        </div>
+        {% if legend_html %}
+        <div class="mt-4">{{ legend_html|safe }}</div>
+        {% endif %}
+    </div>
+</div>

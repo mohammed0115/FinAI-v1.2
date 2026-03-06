@@ -1,0 +1,8 @@
+{# Stats Grid Component
+   Usage: {% include "components/stats_grid.html" with stats=stats_list %}
+#}
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-{{ cols|default:5 }} gap-4">
+    {% for stat in stats %}
+    {% include "components/stat_card.html" with label=stat.label value=stat.value suffix=stat.suffix icon_html=stat.icon color_class=stat.color %}
+    {% endfor %}
+</div>

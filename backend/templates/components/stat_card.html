@@ -1,0 +1,14 @@
+{# Stat Card / KPI Component
+   Usage: {% include "components/stat_card.html" with label="Compliance Score" value="85" suffix="%" icon_html="..." color_class="emerald" %}
+#}
+<div class="bg-white rounded-xl border border-slate-200/60 p-5 dash-card">
+    <div class="flex items-start justify-between">
+        <div>
+            <p class="text-sm font-medium text-slate-500 mb-1">{{ label }}</p>
+            <p dir="ltr" class="text-3xl font-bold mono dashboard-value {% if color_class == 'emerald' %}text-emerald-600{% elif color_class == 'amber' %}text-amber-600{% elif color_class == 'red' %}text-red-600{% elif color_class == 'blue' %}text-blue-600{% else %}text-slate-700{% endif %}">{{ value }}{% if suffix %}<span class="text-lg">{{ suffix }}</span>{% endif %}</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center dashboard-kpi-icon {% if color_class == 'emerald' %}bg-emerald-50{% elif color_class == 'amber' %}bg-amber-50{% elif color_class == 'red' %}bg-red-50{% elif color_class == 'blue' %}bg-blue-50{% else %}bg-slate-50{% endif %}">
+            {% if icon_html %}{{ icon_html|safe }}{% endif %}
+        </div>
+    </div>
+</div>

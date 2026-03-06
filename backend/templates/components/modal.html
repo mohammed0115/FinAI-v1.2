@@ -1,0 +1,33 @@
+{# Modal Component with AlpineJS
+   Usage: {% include "components/modal.html" with modal_id="deleteModal" title="Confirm Delete" content_html="..." %}
+#}
+<div id="{{ modal_id|default:'modal' }}" x-data="{ open: false }" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;" x-show="open">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="open = false"></div>
+    
+    <!-- Modal Content -->
+    <div class="relative bg-white rounded-xl shadow-2xl max-w-md w-full">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-5 border-b border-slate-200">
+            <h3 class="text-lg font-semibold text-slate-900">{{ title }}</h3>
+            <button @click="open = false" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Body -->
+        <div class="p-5">
+            {% if content_html %}{{ content_html|safe }}{% else %}{{ content }}{% endif %}
+        </div>
+        
+        <!-- Footer -->
+        <div class="flex gap-3 p-5 border-t border-slate-200">
+            <button @click="open = false" class="flex-1 px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium">
+                {{ cancel_label|default:"Cancel" }}
+            </button>
+            {% if confirm_html %}{{ confirm_html|safe }}{% endif %}
+        </div>
+    </div>
+</div>

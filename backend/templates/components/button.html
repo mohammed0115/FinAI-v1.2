@@ -1,0 +1,11 @@
+{# Button Component
+   Usage: {% include "components/button.html" with label="Save" variant="primary" onclick="alert('clicked')" %}
+#}
+<button class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60
+    {% if variant == 'primary' %}bg-gradient-to-r from-blue-500 via-blue-600 to-cyan-500 text-white shadow-lg hover:shadow-xl border border-blue-400/50{% elif variant == 'secondary' %}bg-white text-slate-700 border border-slate-200 hover:bg-slate-50{% else %}bg-transparent text-slate-600 hover:bg-slate-100{% endif %}"
+    {% if onclick %}onclick="{{ onclick }}"{% endif %}
+    {% if type %}type="{{ type }}"{% else %}type="button"{% endif %}
+    {% if disabled %}disabled{% endif %}>
+    {% if icon_html %}{{ icon_html|safe }}{% endif %}
+    {{ label }}
+</button>
