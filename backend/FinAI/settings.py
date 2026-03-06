@@ -81,28 +81,19 @@ TEMPLATES = [
 WSGI_APPLICATION = 'FinAI.wsgi.application'
 
 # Database - PostgreSQL (production) or SQLite (development)
-if os.environ.get('USE_SQLITE', 'True') == 'True':
-    # SQLite database - stored in /app/backend for persistence
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-            'OPTIONS': {
-                'timeout': 20,  # Increase timeout for concurrent access
-            }
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'finai_db',
+        'USER': 'finai_user',
+        'PASSWORD': 'FinAI_Strong_Pass123!',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        },
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'finai_db'),
-            'USER': os.environ.get('DB_USER', 'postgres'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
-        }
-    }
+}
 
 # Custom User Model
 AUTH_USER_MODEL = 'core.User'
