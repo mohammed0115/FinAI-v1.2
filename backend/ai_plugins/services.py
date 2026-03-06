@@ -1,5 +1,7 @@
 from .models import AIPluginSetting
-
+from .models import AIPluginSetting
+from django.db import OperationalError, ProgrammingError
+from types import SimpleNamespace
 class AIPluginSettingsService:
 
     @staticmethod
@@ -10,7 +12,7 @@ class AIPluginSettingsService:
                 is_enabled=True
             )
             return setting
-        except AIPluginSetting.DoesNotExist:
+        except (AIPluginSetting.DoesNotExist, OperationalError, ProgrammingError):
             # Fallback: return default classical engine config
             import os
             ocr_config = {"provider": "Tesseract", "model_name": "Document Reader", "label": "OCR"}
@@ -28,4 +30,5 @@ class AIPluginSettingsService:
                 "ocr":          ocr_config,
                 "rules":        {"provider": "Rules Engine",  "model_name": "Compliance Validator", "label": "قواعد"},
             }
-            return fallback.get(plugin_code, None)
+            data = fallback.get(plugin_code, None)
+            return SimpleNamespace(**data) if data else None
