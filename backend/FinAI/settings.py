@@ -4,6 +4,10 @@
 from pathlib import Path
 import os
 from datetime import timedelta
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 RECAPTCHA_SECRET_KEY = os.environ.get('RECAPTCHA_SECRET_KEY', '')
@@ -13,15 +17,9 @@ load_dotenv()
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-finai-dev-key-change-in-production')
 
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = [
-    '72.62.239.220',
-    "127.0.0.1",
-    "tadgeeg.com",
-    "www.tadgeeg.com",
-    'localhost',
-]
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '72.62.239.220,127.0.0.1,tadgeeg.com,www.tadgeeg.com,localhost').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -82,16 +80,13 @@ WSGI_APPLICATION = 'FinAI.wsgi.application'
 
 # Database - PostgreSQL (production) or SQLite (development)
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'finai_db',
-        'USER': 'finai_user',
-        'PASSWORD': 'FinAI_Strong_Pass123!',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-        },
+    "default": {
+        "ENGINE": os.getenv("DB_ENGINE"),
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT"),
     }
 }
 
@@ -174,7 +169,7 @@ SIMPLE_JWT = {
 }
 
 # ===== OpenAI Configuration (Production-Grade AI Integration) =====
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', 'sk-proj-xxxxx-REPLACE-WITH-YOUR-KEY-xxxxx')
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
 OPENAI_VISION_MODEL = os.environ.get('OPENAI_VISION_MODEL', 'gpt-4o-mini')
 OPENAI_TIMEOUT = int(os.environ.get('OPENAI_TIMEOUT', '120'))
