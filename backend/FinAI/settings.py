@@ -199,7 +199,7 @@ ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/t
 
 # Cookie settings for proxy environments
 # Use 'None' for SameSite to allow cross-site requests with Secure cookies
-
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
 CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SECURE = False
 
