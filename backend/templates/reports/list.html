@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ t.reports|default:'التقارير' }} - FinAI{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">{{ t.reports|default:'التقارير' }}</h1>
+            <p class="text-sm text-slate-500">{{ t.reports_subtitle|default:'تقارير التدقيق والامتثال' }}</p>
+        </div>
+        <a href="{% url 'download_pdf_report' %}" 
+           class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors"
+           data-testid="download-pdf-btn">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            {{ t.download_pdf|default:'تحميل PDF' }}
+        </a>
+    </div>
+    
+    <!-- Quick Access Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Arabic Audit Report -->
+        <a href="{% url 'arabic_report' %}" class="group bg-white rounded-xl border border-slate-200/60 p-5 hover:border-slate-300 hover:shadow-sm transition-all">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-base font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">{{ t.arabic_audit_report|default:'تقرير التدقيق العربي' }}</h3>
+                    <p class="text-sm text-slate-500 mt-1">{{ t.view_full_report|default:'عرض التقرير الكامل مع جميع نتائج التدقيق' }}</p>
+                    <div class="flex items-center gap-1 mt-3 text-xs text-blue-600 font-medium">
+                        <span>{{ t.open_report|default:'فتح التقرير' }}</span>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </a>
+        
+        <!-- Compliance Overview -->
+        <a href="{% url 'compliance_overview' %}" class="group bg-white rounded-xl border border-slate-200/60 p-5 hover:border-slate-300 hover:shadow-sm transition-all">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                    <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-base font-semibold text-slate-800 group-hover:text-emerald-600 transition-colors">{{ t.compliance_report|default:'تقرير الامتثال' }}</h3>
+                    <p class="text-sm text-slate-500 mt-1">{{ t.zatca_vat_zakat|default:'ZATCA، ض.ق.م، الزكاة' }}</p>
+                    <div class="flex items-center gap-1 mt-3 text-xs text-emerald-600 font-medium">
+                        <span>{{ t.view_details|default:'عرض التفاصيل' }}</span>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    
+    <!-- Saved Reports -->
+    <div class="bg-white rounded-xl border border-slate-200/60 overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100">
+            <h3 class="text-sm font-semibold text-slate-700">{{ t.saved_reports|default:'التقارير المحفوظة' }}</h3>
+        </div>
+        <div class="p-5">
+            {% if reports %}
+            <div class="overflow-x-auto">
+                <table class="w-full data-table">
+                    <thead>
+                        <tr>
+                            <th class="text-{% if is_english %}left{% else %}right{% endif %}">{{ t.report_name|default:'اسم التقرير' }}</th>
+                            <th class="text-{% if is_english %}left{% else %}right{% endif %}">{{ t.type|default:'النوع' }}</th>
+                            <th class="text-{% if is_english %}left{% else %}right{% endif %}">{{ t.created_at|default:'تاريخ الإنشاء' }}</th>
+                            <th class="text-{% if is_english %}left{% else %}right{% endif %}">{{ t.status|default:'الحالة' }}</th>
+                            <th class="text-center">{{ t.actions|default:'الإجراءات' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in reports %}
+                        <tr>
+                            <td class="font-medium text-slate-700">{{ report.title }}</td>
+                            <td class="text-slate-500">{{ report.report_type }}</td>
+                            <td class="mono text-slate-500">{{ report.created_at|date:"Y/m/d H:i" }}</td>
+                            <td>
+                                {% if report.status == 'completed' %}
+                                <span class="badge badge-success">{{ t.completed|default:'مكتمل' }}</span>
+                                {% else %}
+                                <span class="badge badge-warning">{{ t.pending|default:'قيد المعالجة' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button class="text-xs text-blue-600 hover:text-blue-700 font-medium">{{ t.view|default:'عرض' }}</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="mt-3 text-sm text-slate-400">{{ t.no_saved_reports|default:'لا توجد تقارير محفوظة' }}</p>
+                <p class="text-xs text-slate-300 mt-1">{{ t.generate_report_hint|default:'يمكنك تحميل تقرير PDF من الزر أعلاه' }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

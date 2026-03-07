@@ -1,0 +1,627 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ t.document_upload|default:'رفع المستندات' }} - FinAI{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">{{ t.document_upload|default:'رفع المستندات' }}</h1>
+            <p class="text-sm text-slate-500">{{ t.upload_desc|default:'رفع مستند واحد أو مجموعة مستندات للتعرف الضوئي على النص' }}</p>
+        </div>
+        <div class="flex items-center gap-2 text-sm text-slate-500">
+            <span class="px-3 py-1.5 bg-slate-100 rounded-lg font-medium">{{ total_docs|default:0 }} {{ t.total|default:'إجمالي' }}</span>
+            {% if pending_docs %}
+            <span class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg font-medium">{{ pending_docs }} {{ t.pending|default:'معلق' }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Scope Notice -->
+    <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
+        <p class="text-sm text-blue-700">
+            <strong>{{ t.scope_notice|default:'ملاحظة' }}:</strong>
+            {{ t.scope_desc|default:'النص المستخرج من المستندات يُستخدم كدليل تدقيق فقط وليس كمصدر للحقيقة المحاسبية. يتم تخزين بصمة رقمية لكل ملف.' }}
+        </p>
+    </div>
+
+    <!-- Upload Results (if any) -->
+    {% if request.session.upload_results %}
+    <div class="bg-white border border-slate-200 rounded mb-4">
+        <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h2 class="font-semibold text-slate-700">{{ t.upload_results|default:'نتائج الرفع' }}</h2>
+            <button onclick="clearResults()" class="text-xs text-slate-500 hover:text-slate-700">{{ t.clear|default:'مسح' }}</button>
+        </div>
+        <div class="p-4 max-h-60 overflow-y-auto">
+            {% with results=request.session.upload_results %}
+            {% if results.success %}
+            <div class="mb-3">
+                <p class="text-sm font-medium text-green-700 mb-2">✓ {{ results.success|length }} {{ t.uploaded_successfully|default:'ملف تم رفعه بنجاح' }}</p>
+                <div class="space-y-1">
+                    {% for item in results.success|slice:":10" %}
+                    <div class="text-xs text-slate-600 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span>{{ item.name }}</span>
+                        <span class="text-slate-400">({{ item.status }})</span>
+                    </div>
+                    {% endfor %}
+                    {% if results.success|length > 10 %}
+                    <p class="text-xs text-slate-400 mt-1">+{{ results.success|length|add:"-10" }} {{ t.more_files|default:'ملفات أخرى' }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% if results.failed %}
+            <div class="mb-3">
+                <p class="text-sm font-medium text-red-700 mb-2">✗ {{ results.failed|length }} {{ t.upload_failed|default:'ملف فشل رفعه' }}</p>
+                <div class="space-y-1">
+                    {% for item in results.failed|slice:":5" %}
+                    <div class="text-xs text-red-600 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+                        <span>{{ item.name }}: {{ item.error }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% if results.skipped %}
+            <div>
+                <p class="text-sm font-medium text-slate-500 mb-2">⊘ {{ results.skipped|length }} {{ t.skipped|default:'ملف تم تخطيه' }}</p>
+                <div class="space-y-1">
+                    {% for item in results.skipped|slice:":5" %}
+                    <div class="text-xs text-slate-500 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-slate-400 rounded-full"></span>
+                        <span>{{ item.name }}: {{ item.reason }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Upload Mode Tabs -->
+    <div class="bg-white border border-slate-200 rounded mb-6">
+        <div class="border-b border-slate-200">
+            <nav class="flex -mb-px" role="tablist">
+                <button type="button" onclick="switchTab('single')" 
+                    id="tab-single"
+                    class="tab-btn flex-1 py-3 px-4 text-center text-sm font-medium border-b-2 transition-colors border-slate-800 text-slate-800"
+                    data-testid="tab-single-upload">
+                    <span class="block text-lg mb-1">📄</span>
+                    {{ t.single_file|default:'ملف واحد' }}
+                </button>
+                <button type="button" onclick="switchTab('multi')"
+                    id="tab-multi"
+                    class="tab-btn flex-1 py-3 px-4 text-center text-sm font-medium border-b-2 transition-colors border-transparent text-slate-500 hover:text-slate-700"
+                    data-testid="tab-multi-upload">
+                    <span class="block text-lg mb-1">📁</span>
+                    {{ t.multi_files|default:'ملفات متعددة' }}
+                </button>
+                <button type="button" onclick="switchTab('zip')"
+                    id="tab-zip"
+                    class="tab-btn flex-1 py-3 px-4 text-center text-sm font-medium border-b-2 transition-colors border-transparent text-slate-500 hover:text-slate-700"
+                    data-testid="tab-zip-upload">
+                    <span class="block text-lg mb-1">🗜️</span>
+                    {{ t.zip_batch|default:'دفعة ZIP' }}
+                </button>
+                <button type="button" onclick="switchTab('structured')"
+                    id="tab-structured"
+                    class="tab-btn flex-1 py-3 px-4 text-center text-sm font-medium border-b-2 transition-colors border-transparent text-slate-500 hover:text-slate-700"
+                    data-testid="tab-structured-upload">
+                    <span class="block text-lg mb-1">📊</span>
+                    CSV / JSON
+                </button>
+            </nav>
+        </div>
+
+        <!-- Single File Upload -->
+        <div id="panel-single" class="tab-panel p-4">
+            <form method="post" enctype="multipart/form-data" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="upload_mode" value="single">
+                
+                <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-slate-400 transition-colors" 
+                    ondrop="handleDrop(event, 'single')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                    <input type="file" name="document" id="single-file" accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.bmp,.txt,.xml" required
+                        data-testid="single-file-input"
+                        class="hidden" onchange="updateSingleFileName(this)">
+                    <label for="single-file" class="cursor-pointer">
+                        <div class="text-5xl mb-3">📄</div>
+                        <p class="text-sm text-slate-600 mb-1" id="single-file-name">{{ t.click_or_drag|default:'اضغط لاختيار ملف أو اسحب الملف هنا' }}</p>
+                        <p class="text-xs text-slate-400">PDF, JPG, PNG, TIFF, BMP, TXT, XML ({{ t.max|default:'الحد الأقصى' }}: 50MB)</p>
+                    </label>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">{{ t.document_type|default:'نوع المستند' }}</label>
+                        <select name="document_type" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-slate-500">
+                            <option value="invoice">{{ t.invoice|default:'فاتورة' }}</option>
+                            <option value="receipt">{{ t.receipt|default:'إيصال' }}</option>
+                            <option value="bank_statement">{{ t.bank_statement|default:'كشف حساب' }}</option>
+                            <option value="contract">{{ t.contract|default:'عقد' }}</option>
+                            <option value="other" selected>{{ t.other|default:'أخرى' }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">{{ t.language|default:'اللغة' }}</label>
+                        <select name="language" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-slate-500">
+                            <option value="ara+eng" selected>{{ t.arabic_english|default:'عربي وإنجليزي' }}</option>
+                            <option value="ara">{{ t.arabic_only|default:'عربي فقط' }}</option>
+                            <option value="eng">{{ t.english_only|default:'إنجليزي فقط' }}</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="is_handwritten" class="w-4 h-4 text-slate-600 border-slate-300 rounded">
+                            <span class="text-sm text-slate-600">{{ t.handwritten|default:'خط يدوي' }}</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <button type="submit" data-testid="single-upload-btn"
+                    class="w-full py-3 bg-slate-800 text-white text-sm font-medium rounded hover:bg-slate-700 transition-colors">
+                    {{ t.upload_process|default:'رفع ومعالجة المستند' }}
+                </button>
+            </form>
+        </div>
+
+        <!-- Multi-File Upload -->
+        <div id="panel-multi" class="tab-panel p-4 hidden">
+            <form method="post" enctype="multipart/form-data" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="upload_mode" value="multi">
+                
+                <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-slate-400 transition-colors"
+                    ondrop="handleDrop(event, 'multi')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                    <input type="file" name="documents" id="multi-files" accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.bmp,.txt,.xml" multiple required
+                        data-testid="multi-files-input"
+                        class="hidden" onchange="updateMultiFileNames(this)">
+                    <label for="multi-files" class="cursor-pointer">
+                        <div class="text-5xl mb-3">📁</div>
+                        <p class="text-sm text-slate-600 mb-1" id="multi-file-names">{{ t.select_multiple|default:'اضغط لاختيار ملفات متعددة' }}</p>
+                        <p class="text-xs text-slate-400">{{ t.max_files|default:'الحد الأقصى 500 ملف' }} | PDF, JPG, PNG, TIFF, BMP, TXT, XML</p>
+                    </label>
+                </div>
+                
+                <div id="multi-file-list" class="hidden max-h-40 overflow-y-auto border border-slate-200 rounded p-2 space-y-1"></div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">{{ t.document_type|default:'نوع المستند' }}</label>
+                        <select name="document_type" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-slate-500">
+                            <option value="invoice">{{ t.invoice|default:'فاتورة' }}</option>
+                            <option value="receipt">{{ t.receipt|default:'إيصال' }}</option>
+                            <option value="bank_statement">{{ t.bank_statement|default:'كشف حساب' }}</option>
+                            <option value="other" selected>{{ t.other|default:'أخرى' }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">{{ t.language|default:'اللغة' }}</label>
+                        <select name="language" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-slate-500">
+                            <option value="ara+eng" selected>{{ t.arabic_english|default:'عربي وإنجليزي' }}</option>
+                            <option value="ara">{{ t.arabic_only|default:'عربي فقط' }}</option>
+                            <option value="eng">{{ t.english_only|default:'إنجليزي فقط' }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">{{ t.ocr_processing|default:'معالجة OCR' }}</label>
+                        <select name="process_ocr" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-slate-500">
+                            <option value="queue" selected>{{ t.queue_later|default:'في قائمة الانتظار' }}</option>
+                            <option value="immediate">{{ t.process_now|default:'معالجة فورية (10 ملفات كحد أقصى)' }}</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button type="submit" data-testid="multi-upload-btn"
+                    class="w-full py-3 bg-slate-800 text-white text-sm font-medium rounded hover:bg-slate-700 transition-colors">
+                    {{ t.upload_files|default:'رفع الملفات' }}
+                </button>
+            </form>
+        </div>
+
+        <!-- ZIP Batch Upload -->
+        <div id="panel-zip" class="tab-panel p-4 hidden">
+            <div class="bg-amber-50 border border-amber-200 rounded p-3 mb-4">
+                <p class="text-sm text-amber-700">
+                    <strong>{{ t.recommended|default:'مستحسن للدفعات الكبيرة' }}:</strong>
+                    {{ t.zip_desc|default:'ارفع ملف ZIP يحتوي على مستنداتك. سيتم استخراج كل ملف وتسجيله بشكل منفصل مع بصمة رقمية مستقلة.' }}
+                </p>
+            </div>
+            
+            <form method="post" enctype="multipart/form-data" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="upload_mode" value="zip">
+                
+                <div class="border-2 border-dashed border-amber-300 rounded-lg p-8 text-center hover:border-amber-400 transition-colors bg-amber-50/50"
+                    ondrop="handleDrop(event, 'zip')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                    <input type="file" name="zip_file" id="zip-file" accept=".zip" required
+                        data-testid="zip-file-input"
+                        class="hidden" onchange="updateZipFileName(this)">
+                    <label for="zip-file" class="cursor-pointer">
+                        <div class="text-5xl mb-3">🗜️</div>
+                        <p class="text-sm text-slate-600 mb-1" id="zip-file-name">{{ t.select_zip|default:'اضغط لاختيار ملف ZIP' }}</p>
+                        <p class="text-xs text-slate-400">{{ t.max_zip|default:'الحد الأقصى 200 ميجابايت' }} | {{ t.supported_inside|default:'يدعم PDF, JPG, PNG, TIFF, TXT, XML داخل الملف' }}</p>
+                    </label>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">{{ t.default_type|default:'النوع الافتراضي' }}</label>
+                        <select name="document_type" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-slate-500">
+                            <option value="invoice">{{ t.invoice|default:'فاتورة' }}</option>
+                            <option value="receipt">{{ t.receipt|default:'إيصال' }}</option>
+                            <option value="other" selected>{{ t.other|default:'أخرى' }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">{{ t.default_language|default:'اللغة الافتراضية' }}</label>
+                        <select name="language" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-slate-500">
+                            <option value="ara+eng" selected>{{ t.arabic_english|default:'عربي وإنجليزي' }}</option>
+                            <option value="ara">{{ t.arabic_only|default:'عربي فقط' }}</option>
+                            <option value="eng">{{ t.english_only|default:'إنجليزي فقط' }}</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button type="submit" data-testid="zip-upload-btn"
+                    class="w-full py-3 bg-amber-600 text-white text-sm font-medium rounded hover:bg-amber-700 transition-colors">
+                    {{ t.extract_register|default:'استخراج وتسجيل الملفات' }}
+                </button>
+            </form>
+        </div>
+
+        <!-- ── Structured File Upload (CSV / JSON) ── -->
+        <div id="panel-structured" class="tab-panel p-4 hidden" x-data="structuredUpload()">
+            <div class="bg-teal-50 border border-teal-200 rounded p-3 mb-4">
+                <p class="text-sm text-teal-700">
+                    <strong>استيراد بيانات محاسبية منظمة:</strong>
+                    ارفع ملف CSV أو JSON يحتوي على قائمة فواتير. يدعم النظام الأرقام العربية والهندية تلقائياً.
+                </p>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="space-y-4" @submit="submitting = true">
+                {% csrf_token %}
+                <input type="hidden" name="upload_mode" value="structured">
+
+                <!-- Drop zone -->
+                <div class="border-2 border-dashed border-teal-300 rounded-lg p-8 text-center hover:border-teal-400 transition-colors bg-teal-50/30"
+                    @dragover.prevent @dragleave.prevent
+                    @drop.prevent="handleStructuredDrop($event)">
+                    <input type="file" name="structured_file" id="structured-file" accept=".csv,.json" required
+                        class="hidden" @change="onFileChange($event)">
+                    <label for="structured-file" class="cursor-pointer block">
+                        <div class="text-5xl mb-3">📊</div>
+                        <p class="text-sm text-slate-600 mb-1" x-text="fileName || 'اضغط لاختيار ملف CSV أو JSON'"></p>
+                        <p class="text-xs text-slate-400">الحد الأقصى 10MB — يدعم الأرقام العربية والإنجليزية</p>
+                    </label>
+                </div>
+
+                <!-- File preview info -->
+                <div x-show="fileName" x-cloak class="bg-white border border-slate-200 rounded p-3 flex items-center gap-3">
+                    <span class="text-2xl" x-text="fileExt === 'csv' ? '📋' : '🔷'"></span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-slate-700 truncate" x-text="fileName"></p>
+                        <p class="text-xs text-slate-400" x-text="fileSize"></p>
+                    </div>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-mono uppercase"
+                        :class="fileExt === 'csv' ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'"
+                        x-text="fileExt"></span>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">نوع المستند الافتراضي</label>
+                    <select name="document_type" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        <option value="invoice">فاتورة</option>
+                        <option value="receipt">إيصال</option>
+                        <option value="other" selected>أخرى</option>
+                    </select>
+                </div>
+
+                <button type="submit"
+                    :disabled="!fileName || submitting"
+                    :class="(!fileName || submitting) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-teal-700'"
+                    class="w-full py-3 bg-teal-600 text-white text-sm font-medium rounded transition-colors flex items-center justify-center gap-2">
+                    <template x-if="submitting">
+                        <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                        </svg>
+                    </template>
+                    <span x-text="submitting ? 'جاري الاستيراد...' : 'استيراد الفواتير'"></span>
+                </button>
+            </form>
+
+            <!-- Column mapping guide -->
+            <div class="mt-4 border border-slate-200 rounded overflow-hidden">
+                <div class="px-4 py-2 bg-slate-50 flex items-center justify-between cursor-pointer"
+                    @click="showGuide = !showGuide">
+                    <p class="text-xs font-medium text-slate-600">دليل أسماء الأعمدة المدعومة</p>
+                    <svg class="w-4 h-4 text-slate-400 transition-transform" :class="showGuide && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div x-show="showGuide" x-collapse class="p-3">
+                    <table class="w-full text-xs">
+                        <thead><tr class="text-slate-500"><th class="text-right pb-1">الحقل</th><th class="text-right pb-1">الأسماء المقبولة</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="py-1 font-mono text-teal-700">invoice_number</td><td class="py-1 text-slate-500">رقم_الفاتورة، inv_no</td></tr>
+                            <tr><td class="py-1 font-mono text-teal-700">vendor_name</td><td class="py-1 text-slate-500">المورد، supplier</td></tr>
+                            <tr><td class="py-1 font-mono text-teal-700">customer_name</td><td class="py-1 text-slate-500">العميل، bill_to</td></tr>
+                            <tr><td class="py-1 font-mono text-teal-700">issue_date</td><td class="py-1 text-slate-500">تاريخ_الإصدار، date</td></tr>
+                            <tr><td class="py-1 font-mono text-teal-700">total_amount</td><td class="py-1 text-slate-500">الإجمالي، amount</td></tr>
+                            <tr><td class="py-1 font-mono text-teal-700">tax_amount</td><td class="py-1 text-slate-500">الضريبة، vat</td></tr>
+                            <tr><td class="py-1 font-mono text-teal-700">currency</td><td class="py-1 text-slate-500">العملة (SAR/AED/USD)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Process Pending Documents -->
+    {% if pending_docs > 0 %}
+    <div class="bg-white border border-slate-200 rounded mb-6 p-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="font-semibold text-slate-700">{{ t.pending_processing|default:'مستندات في انتظار المعالجة' }}</h3>
+                <p class="text-sm text-slate-500">{{ pending_docs }} {{ t.documents_pending|default:'مستند في قائمة الانتظار' }}</p>
+            </div>
+            <button onclick="processPendingDocs()" id="process-btn" data-testid="process-pending-btn"
+                class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition-colors">
+                {{ t.process_now|default:'معالجة الآن' }}
+            </button>
+        </div>
+        <div id="processing-status" class="hidden mt-4">
+            <div class="flex items-center gap-2 text-sm text-slate-600">
+                <div class="animate-spin w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full"></div>
+                <span id="processing-message">{{ t.processing|default:'جاري المعالجة...' }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Documents -->
+    <div class="bg-white border border-slate-200 rounded">
+        <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h2 class="font-semibold text-slate-700">{{ t.recent_documents|default:'المستندات الأخيرة' }}</h2>
+            <a href="{% url 'ocr_evidence_list' %}" class="text-xs text-slate-500 hover:text-slate-700">{{ t.view_all|default:'عرض الكل' }}</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full data-table" data-testid="recent-documents-table">
+                <thead>
+                    <tr>
+                        <th class="text-right">{{ t.file|default:'الملف' }}</th>
+                        <th class="text-right">{{ t.type|default:'النوع' }}</th>
+                        <th class="text-right">{{ t.size|default:'الحجم' }}</th>
+                        <th class="text-right">{{ t.status|default:'الحالة' }}</th>
+                        <th class="text-right">{{ t.date|default:'التاريخ' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in recent_documents %}
+                    <tr>
+                        <td class="text-slate-700">
+                            <div class="flex items-center gap-2">
+                                <span class="text-lg">
+                                    {% if doc.file_type == 'application/pdf' %}📕{% elif 'image' in doc.file_type %}🖼️{% elif doc.file_type == 'text/plain' %}📝{% else %}📄{% endif %}
+                                </span>
+                                <span class="truncate max-w-[200px]">{{ doc.file_name }}</span>
+                            </div>
+                        </td>
+                        <td class="text-slate-500">{{ doc.get_document_type_display }}</td>
+                        <td class="mono text-slate-500">{{ doc.file_size|filesizeformat }}</td>
+                        <td>
+                            {% if doc.status == 'completed' or doc.status == 'processed' %}
+                            <span class="badge badge-success">{{ t.completed|default:'مكتمل' }}</span>
+                            {% elif doc.status == 'processing' %}
+                            <span class="badge badge-warning">{{ t.processing|default:'قيد المعالجة' }}</span>
+                            {% elif doc.status == 'failed' %}
+                            <span class="badge badge-danger">{{ t.failed|default:'فشل' }}</span>
+                            {% else %}
+                            <span class="badge badge-neutral">{{ t.pending|default:'معلق' }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="mono text-slate-500">{{ doc.uploaded_at|date:"Y/m/d H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-8 text-slate-400">{{ t.no_documents|default:'لا توجد مستندات مرفوعة' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Tab switching
+function switchTab(tab) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('border-slate-800', 'text-slate-800');
+        btn.classList.add('border-transparent', 'text-slate-500');
+    });
+    document.getElementById('tab-' + tab).classList.remove('border-transparent', 'text-slate-500');
+    document.getElementById('tab-' + tab).classList.add('border-slate-800', 'text-slate-800');
+    
+    // Update panels
+    document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+    document.getElementById('panel-' + tab).classList.remove('hidden');
+}
+
+// File name display updates
+function updateSingleFileName(input) {
+    const display = document.getElementById('single-file-name');
+    if (input.files && input.files[0]) {
+        display.textContent = input.files[0].name;
+        display.classList.add('text-slate-800', 'font-medium');
+    }
+}
+
+function updateMultiFileNames(input) {
+    const display = document.getElementById('multi-file-names');
+    const list = document.getElementById('multi-file-list');
+    
+    if (input.files && input.files.length > 0) {
+        display.textContent = input.files.length + ' {{ t.files_selected|default:"ملف محدد" }}';
+        display.classList.add('text-slate-800', 'font-medium');
+        
+        // Show file list
+        list.classList.remove('hidden');
+        list.innerHTML = '';
+        for (let i = 0; i < Math.min(input.files.length, 50); i++) {
+            const file = input.files[i];
+            const div = document.createElement('div');
+            div.className = 'text-xs text-slate-600 flex items-center gap-2';
+            div.innerHTML = '<span class="w-2 h-2 bg-slate-400 rounded-full"></span>' + 
+                            '<span class="truncate">' + file.name + '</span>' +
+                            '<span class="text-slate-400">(' + formatFileSize(file.size) + ')</span>';
+            list.appendChild(div);
+        }
+        if (input.files.length > 50) {
+            const more = document.createElement('div');
+            more.className = 'text-xs text-slate-400 mt-1';
+            more.textContent = '+' + (input.files.length - 50) + ' {{ t.more_files|default:"ملفات أخرى" }}';
+            list.appendChild(more);
+        }
+    }
+}
+
+function updateZipFileName(input) {
+    const display = document.getElementById('zip-file-name');
+    if (input.files && input.files[0]) {
+        display.textContent = input.files[0].name + ' (' + formatFileSize(input.files[0].size) + ')';
+        display.classList.add('text-slate-800', 'font-medium');
+    }
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+// Drag and drop handling
+function handleDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('border-slate-500', 'bg-slate-50');
+}
+
+function handleDragLeave(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('border-slate-500', 'bg-slate-50');
+}
+
+function handleDrop(e, mode) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('border-slate-500', 'bg-slate-50');
+    
+    const files = e.dataTransfer.files;
+    if (mode === 'single') {
+        document.getElementById('single-file').files = files;
+        updateSingleFileName(document.getElementById('single-file'));
+    } else if (mode === 'multi') {
+        document.getElementById('multi-files').files = files;
+        updateMultiFileNames(document.getElementById('multi-files'));
+    } else if (mode === 'zip') {
+        document.getElementById('zip-file').files = files;
+        updateZipFileName(document.getElementById('zip-file'));
+    }
+}
+
+// Process pending documents
+function processPendingDocs() {
+    const btn = document.getElementById('process-btn');
+    const status = document.getElementById('processing-status');
+    const message = document.getElementById('processing-message');
+    
+    btn.disabled = true;
+    btn.textContent = '{{ t.processing|default:"جاري المعالجة..." }}';
+    status.classList.remove('hidden');
+    
+    fetch('{% url "process_pending_documents" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const processed = data.processed.length;
+        const remaining = data.remaining;
+        message.textContent = 'تم معالجة ' + processed + ' مستند. المتبقي: ' + remaining;
+        
+        if (remaining > 0) {
+            setTimeout(processPendingDocs, 1000);
+        } else {
+            btn.textContent = '{{ t.completed|default:"مكتمل" }}';
+            setTimeout(() => location.reload(), 2000);
+        }
+    })
+    .catch(error => {
+        message.textContent = '{{ t.error|default:"خطأ" }}: ' + error.message;
+        btn.disabled = false;
+        btn.textContent = '{{ t.retry|default:"إعادة المحاولة" }}';
+    });
+}
+
+// Clear upload results
+function clearResults() {
+    fetch('{% url "document_upload" %}', {
+        method: 'GET',
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    }).then(() => location.reload());
+}
+</script>
+
+<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script>
+function structuredUpload() {
+    return {
+        fileName: '',
+        fileExt: '',
+        fileSize: '',
+        submitting: false,
+        showGuide: false,
+
+        onFileChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.fileName = file.name;
+                this.fileExt  = file.name.split('.').pop().toLowerCase();
+                this.fileSize = this._fmt(file.size);
+            }
+        },
+
+        handleStructuredDrop(event) {
+            const file = event.dataTransfer.files[0];
+            if (!file) return;
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['csv', 'json'].includes(ext)) {
+                alert('يُقبل CSV أو JSON فقط');
+                return;
+            }
+            // Assign to the hidden input via DataTransfer
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            document.getElementById('structured-file').files = dt.files;
+            this.fileName = file.name;
+            this.fileExt  = ext;
+            this.fileSize = this._fmt(file.size);
+        },
+
+        _fmt(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+    }
+}
+</script>
+{% endblock %}

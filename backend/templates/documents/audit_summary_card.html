@@ -1,0 +1,46 @@
+<!-- Document Audit Summary Card -->
+<div class="alert alert-info" role="alert">
+  <div class="d-flex justify-content-between align-items-start">
+    <div>
+      <h5 class="alert-heading">
+        <i class="fas fa-robot"></i> AI Audit Summary
+        {% if summary.final_status == 'approved' %}
+          <span class="badge bg-success">{{ summary.final_status|upper }}</span>
+        {% elif summary.final_status == 'review' %}
+          <span class="badge bg-warning">{{ summary.final_status|upper }}</span>
+        {% else %}
+          <span class="badge bg-danger">{{ summary.final_status|upper }}</span>
+        {% endif %}
+      </h5>
+      <p class="mb-2"><strong>{{ summary.executive_summary }}</strong></p>
+      
+      {% if summary.key_risks %}
+      <div class="mt-3">
+        <h6>Key Risks:</h6>
+        <ul class="list-unstyled">
+          {% for risk in summary.key_risks %}
+          <li class="mb-2">
+            <i class="fas fa-exclamation-triangle text-warning"></i>
+            {{ risk }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      
+      {% if summary.recommended_actions %}
+      <div class="mt-3">
+        <h6>Recommended Actions:</h6>
+        <ol class="list-unstyled">
+          {% for action in summary.recommended_actions %}
+          <li class="mb-2">
+            <i class="fas fa-check-circle text-primary"></i>
+            {{ action }}
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

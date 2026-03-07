@@ -1,0 +1,700 @@
+{% extends 'base.html' %}
+{% block title %}تقرير التدقيق المالي — {{ document.file_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6 pb-12" x-data="{ activeTab: 'report' }">
+
+  <!-- ── Header ── -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <div class="flex items-center gap-2 text-sm text-slate-500 mb-1">
+        <a href="{% url 'document_upload' %}" class="hover:text-slate-700">رفع المستندات</a>
+        <span>/</span>
+        <span class="text-slate-700 truncate max-w-xs">{{ document.file_name }}</span>
+      </div>
+      <h1 class="text-xl font-bold text-slate-800">تقرير التدقيق المالي الشامل</h1>
+      <p class="text-sm text-slate-500 mt-0.5">
+        {{ pipeline_steps }} خطوات معالجة مكتملة
+        {% if audit_report %} · رقم التقرير: <span class="font-mono text-slate-700">{{ audit_report.report_number }}</span>{% endif %}
+      </p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      {% if audit_report %}
+        {% if audit_report.risk_level == 'critical' %}
+          <span class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-semibold">⚠ مخاطر حرجة</span>
+        {% elif audit_report.risk_level == 'high' %}
+          <span class="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-semibold">مخاطر عالية</span>
+        {% elif audit_report.risk_level == 'medium' %}
+          <span class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-sm font-semibold">مخاطر متوسطة</span>
+        {% else %}
+          <span class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-semibold">✓ مخاطر منخفضة</span>
+        {% endif %}
+        {% if audit_report.recommendation == 'approve' %}
+          <span class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold">✓ يُوصى بالموافقة</span>
+        {% elif audit_report.recommendation == 'reject' %}
+          <span class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-semibold">✕ يُوصى بالرفض</span>
+        {% else %}
+          <span class="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-semibold">⚑ مراجعة يدوية</span>
+        {% endif %}
+      {% elif extracted %}
+        {% if extracted.risk_level == 'critical' %}<span class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-semibold">مخاطر حرجة</span>
+        {% elif extracted.risk_level == 'high' %}<span class="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-semibold">مخاطر عالية</span>
+        {% elif extracted.risk_level == 'medium' %}<span class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-sm font-semibold">مخاطر متوسطة</span>
+        {% else %}<span class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-semibold">مخاطر منخفضة</span>
+        {% endif %}
+      {% endif %}
+      <a href="{% url 'ocr_evidence_list' %}" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">كل المستندات</a>
+    </div>
+  </div>
+
+  <!-- ── Pending Review Banner ── -->
+  {% if document.status == 'pending_review' %}
+  <div class="bg-amber-50 border border-amber-300 rounded-xl overflow-hidden" x-data="{ open: true }">
+    <div class="px-6 py-4 flex items-center gap-3 cursor-pointer" @click="open = !open">
+      <div class="w-9 h-9 bg-amber-200 rounded-full flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      </div>
+      <div class="flex-1">
+        <p class="font-semibold text-amber-800">مطلوب مراجعة بشرية — جودة OCR منخفضة</p>
+        <p class="text-xs text-amber-600 mt-0.5">لم يتمكن الذكاء الاصطناعي من قراءة بعض الحقول بدقة كافية. صحِّح البيانات أدناه.</p>
+      </div>
+      <svg class="w-5 h-5 text-amber-500 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </div>
+    <div x-show="open" x-transition class="border-t border-amber-200">
+      <form method="post" action="{% url 'pending_review_submit' document_id=document.id %}" class="p-6 space-y-4">
+        {% csrf_token %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">رقم الفاتورة</label>
+            <input type="text" name="invoice_number" value="{{ extracted.invoice_number|default:'' }}" placeholder="INV-2024-001" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">اسم المورد</label>
+            <input type="text" name="vendor_name" value="{{ extracted.vendor_name|default:'' }}" placeholder="شركة ..." class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">تاريخ الإصدار (YYYY-MM-DD)</label>
+            <input type="text" name="invoice_date" value="{{ extracted.invoice_date|date:'Y-m-d'|default:'' }}" placeholder="2024-03-15" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">المبلغ الإجمالي</label>
+            <input type="number" step="0.01" name="total_amount" value="{{ extracted.total_amount|default:'' }}" placeholder="1500.00" class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">ملاحظات المراجعة</label>
+          <textarea name="review_notes" rows="2" placeholder="أسباب التصحيح أو ملاحظات..." class="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-amber-500"></textarea>
+        </div>
+        <button type="submit" class="px-6 py-2 bg-amber-600 text-white text-sm font-medium rounded hover:bg-amber-700 transition-colors">حفظ التصحيحات وإعادة التحقق</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION 1 — Document Information
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">📄</span>
+      <h2 class="font-semibold text-slate-700 text-sm">١. معلومات المستند</h2>
+    </div>
+    <div class="p-5 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+      <div>
+        <p class="text-xs text-slate-500 mb-0.5">معرّف المستند</p>
+        <p class="font-mono text-slate-700 text-xs break-all">{{ document.id }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-slate-500 mb-0.5">تاريخ الرفع</p>
+        <p class="text-slate-700">{{ document.uploaded_at|date:"Y/m/d H:i" }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-slate-500 mb-0.5">محرك OCR</p>
+        <p class="text-slate-700">
+          {% if audit_report %}{{ audit_report.ocr_engine|default:"—" }}
+          {% elif evidence %}{{ evidence.ocr_engine|default:"—" }}
+          {% else %}—{% endif %}
+        </p>
+      </div>
+      <div>
+        <p class="text-xs text-slate-500 mb-0.5">درجة الثقة</p>
+        <div class="flex items-center gap-2">
+          <div class="flex-1 bg-slate-100 rounded-full h-2 max-w-[80px]">
+            {% if audit_report.ocr_confidence_score %}
+            <div class="h-2 rounded-full {% if audit_report.ocr_confidence_score >= 80 %}bg-green-500{% elif audit_report.ocr_confidence_score >= 50 %}bg-amber-400{% else %}bg-red-400{% endif %}" style="width:{{ audit_report.ocr_confidence_score }}%"></div>
+            {% elif evidence.confidence_score %}
+            <div class="h-2 rounded-full {% if evidence.confidence_score >= 80 %}bg-green-500{% elif evidence.confidence_score >= 50 %}bg-amber-400{% else %}bg-red-400{% endif %}" style="width:{{ evidence.confidence_score }}%"></div>
+            {% else %}
+            <div class="h-2 rounded-full bg-slate-200" style="width:0%"></div>
+            {% endif %}
+          </div>
+          <span class="font-mono font-semibold {% if audit_report.ocr_confidence_score >= 80 %}text-green-700{% elif audit_report.ocr_confidence_score >= 50 %}text-amber-600{% elif evidence.confidence_score %}{% if evidence.confidence_score >= 80 %}text-green-700{% elif evidence.confidence_score >= 50 %}text-amber-600{% else %}text-red-600{% endif %}{% else %}text-slate-400{% endif %}">
+            {% if audit_report.ocr_confidence_score %}{{ audit_report.ocr_confidence_score }}%{% elif evidence.confidence_score %}{{ evidence.confidence_score }}%{% else %}—{% endif %}
+          </span>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs text-slate-500 mb-0.5">حالة المعالجة</p>
+        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium
+          {% if document.status == 'completed' %}bg-green-100 text-green-700
+          {% elif document.status == 'processing' %}bg-blue-100 text-blue-700
+          {% elif document.status == 'failed' %}bg-red-100 text-red-700
+          {% else %}bg-slate-100 text-slate-600{% endif %}">
+          {{ document.get_status_display }}
+        </span>
+      </div>
+      <div>
+        <p class="text-xs text-slate-500 mb-0.5">نوع الملف</p>
+        <p class="text-slate-700">{{ document.file_type }} · {{ document.file_size|filesizeformat }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION 2 — Invoice Data Extraction
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">🧾</span>
+      <h2 class="font-semibold text-slate-700 text-sm">٢. بيانات الفاتورة المستخرجة</h2>
+    </div>
+    <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+      <!-- Invoice identifiers -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">بيانات الفاتورة</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <p class="text-xs text-slate-400">رقم الفاتورة</p>
+            <p class="font-semibold text-slate-700">
+              {% if audit_report %}{{ audit_report.extracted_invoice_number|default:"—" }}
+              {% elif extracted %}{{ extracted.invoice_number|default:"—" }}
+              {% else %}—{% endif %}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400">تاريخ الإصدار</p>
+            <p class="text-slate-700">
+              {% if audit_report %}{{ audit_report.extracted_issue_date|date:"Y/m/d"|default:"—" }}
+              {% elif extracted %}{{ extracted.invoice_date|date:"Y/m/d"|default:"—" }}
+              {% else %}—{% endif %}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400">تاريخ الاستحقاق</p>
+            <p class="text-slate-700">
+              {% if audit_report %}{{ audit_report.extracted_due_date|date:"Y/m/d"|default:"—" }}
+              {% elif extracted %}{{ extracted.due_date|date:"Y/m/d"|default:"—" }}
+              {% else %}—{% endif %}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400">العملة</p>
+            <p class="text-slate-700">
+              {% if audit_report %}{{ audit_report.currency|default:"—" }}
+              {% elif extracted %}{{ extracted.currency|default:"—" }}
+              {% else %}—{% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+      <!-- Vendor / Customer -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">المورد والعميل</h3>
+        <div class="space-y-2">
+          <div class="p-3 bg-slate-50 rounded-lg">
+            <p class="text-xs text-slate-400 mb-0.5">المورد (Vendor)</p>
+            <p class="font-semibold text-slate-700">
+              {% if audit_report %}{{ audit_report.extracted_vendor_name|default:"—" }}
+              {% elif extracted %}{{ extracted.vendor_name|default:"—" }}
+              {% else %}—{% endif %}
+            </p>
+            {% if audit_report and audit_report.extracted_vendor_tin %}
+            <p class="text-xs text-slate-400 mt-1">TIN: <span class="font-mono">{{ audit_report.extracted_vendor_tin }}</span></p>
+            {% endif %}
+            {% if audit_report and audit_report.extracted_vendor_address %}
+            <p class="text-xs text-slate-500 mt-1">{{ audit_report.extracted_vendor_address }}</p>
+            {% endif %}
+          </div>
+          <div class="p-3 bg-slate-50 rounded-lg">
+            <p class="text-xs text-slate-400 mb-0.5">العميل (Customer)</p>
+            <p class="font-semibold text-slate-700">
+              {% if audit_report %}{{ audit_report.extracted_customer_name|default:"—" }}
+              {% elif extracted %}{{ extracted.customer_name|default:"—" }}
+              {% else %}—{% endif %}
+            </p>
+            {% if audit_report and audit_report.extracted_customer_tin %}
+            <p class="text-xs text-slate-400 mt-1">TIN: <span class="font-mono">{{ audit_report.extracted_customer_tin }}</span></p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION 3 — Line Items
+  ══════════════════════════════════════════════════════════════ -->
+  {% if audit_report and audit_report.line_items_json or extracted and extracted.items %}
+  {% if audit_report and audit_report.line_items_json %}
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">📋</span>
+      <h2 class="font-semibold text-slate-700 text-sm">٣. تفاصيل البنود ({{ audit_report.line_items_json|length }} بند)</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">#</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">الوصف</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">الكمية</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">سعر الوحدة</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">الخصم</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for item in audit_report.line_items_json %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-2 text-slate-400 text-xs">{{ forloop.counter }}</td>
+            <td class="px-4 py-2 text-slate-700">{{ item.description|default:"—" }}</td>
+            <td class="px-4 py-2 font-mono text-slate-600">{{ item.quantity|default:"—" }}</td>
+            <td class="px-4 py-2 font-mono text-slate-600">{{ item.unit_price|default:"—" }}</td>
+            <td class="px-4 py-2 font-mono text-slate-500">{{ item.discount|default:"0" }}</td>
+            <td class="px-4 py-2 font-mono font-semibold text-slate-700">{% if item.line_total %}{{ item.line_total }}{% elif item.total %}{{ item.total }}{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% elif extracted and extracted.items %}
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">📋</span>
+      <h2 class="font-semibold text-slate-700 text-sm">٣. تفاصيل البنود ({{ extracted.items|length }} بند)</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">#</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">الوصف</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">الكمية</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">سعر الوحدة</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">الخصم</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500">الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for item in extracted.items %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-2 text-slate-400 text-xs">{{ forloop.counter }}</td>
+            <td class="px-4 py-2 text-slate-700">{{ item.description|default:"—" }}</td>
+            <td class="px-4 py-2 font-mono text-slate-600">{{ item.quantity|default:"—" }}</td>
+            <td class="px-4 py-2 font-mono text-slate-600">{{ item.unit_price|default:"—" }}</td>
+            <td class="px-4 py-2 font-mono text-slate-500">{{ item.discount|default:"0" }}</td>
+            <td class="px-4 py-2 font-mono font-semibold text-slate-700">{% if item.line_total %}{{ item.line_total }}{% elif item.total %}{{ item.total }}{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION 4 — Financial Totals
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">💰</span>
+      <h2 class="font-semibold text-slate-700 text-sm">٤. الإجمالي المالي</h2>
+    </div>
+    <div class="p-5">
+      <div class="max-w-sm ms-auto space-y-2 text-sm">
+        {% if audit_report and audit_report.subtotal_amount %}
+        <div class="flex justify-between text-slate-600">
+          <span>المجموع قبل الضريبة</span>
+          <span class="font-mono">{{ audit_report.subtotal_amount }} {{ audit_report.currency }}</span>
+        </div>
+        {% endif %}
+        {% if audit_report and audit_report.vat_amount %}
+        <div class="flex justify-between text-slate-600">
+          <span>ضريبة القيمة المضافة</span>
+          <span class="font-mono">{{ audit_report.vat_amount }} {{ audit_report.currency }}</span>
+        </div>
+        {% elif extracted and extracted.tax_amount %}
+        <div class="flex justify-between text-slate-600">
+          <span>ضريبة القيمة المضافة</span>
+          <span class="font-mono">{{ extracted.tax_amount }} {{ extracted.currency }}</span>
+        </div>
+        {% endif %}
+        <div class="flex justify-between font-bold text-slate-800 border-t border-slate-200 pt-2 text-base">
+          <span>الإجمالي النهائي</span>
+          <span class="font-mono text-emerald-700">
+            {% if audit_report and audit_report.total_amount %}{{ audit_report.total_amount }} {{ audit_report.currency }}
+            {% elif extracted and extracted.total_amount %}{{ extracted.total_amount }} {{ extracted.currency }}
+            {% else %}—{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION 5 — Validation Results
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">✅</span>
+      <h2 class="font-semibold text-slate-700 text-sm">٥. نتائج التحقق</h2>
+    </div>
+    <div class="p-5">
+      {% if extracted and extracted.compliance_checks %}
+        <!-- List-style compliance_checks from extracted -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {% for check in extracted.compliance_checks %}
+          <div class="flex items-start gap-3 p-3 rounded-lg border
+            {% if check.status == 'pass' %}border-green-200 bg-green-50
+            {% elif check.status == 'warning' %}border-amber-200 bg-amber-50
+            {% else %}border-red-200 bg-red-50{% endif %}">
+            <span class="text-lg mt-0.5">{% if check.status == 'pass' %}✅{% elif check.status == 'warning' %}⚠️{% else %}❌{% endif %}</span>
+            <div>
+              <p class="text-xs font-semibold text-slate-700">{{ check.check_name }}</p>
+              {% if check.message %}<p class="text-xs text-slate-500 mt-0.5">{{ check.message }}</p>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-slate-400">لا تتوفر نتائج تحقق.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION 6 — Duplicate Detection
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">🔍</span>
+      <h2 class="font-semibold text-slate-700 text-sm">٦. كشف التكرار</h2>
+    </div>
+    <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      <div class="text-center p-4 rounded-lg bg-slate-50">
+        <p class="text-2xl font-bold text-slate-600">—</p>
+        <p class="text-xs text-slate-500 mt-1">عدم توفر البيانات</p>
+      </div>
+      <div class="md:col-span-2">
+        <p class="text-xs text-slate-500 mb-1">الحالة</p>
+        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+          {% if audit_report %}
+            {% if audit_report.duplicate_status == 'confirmed_duplicate' %}تكرار مؤكد
+            {% elif audit_report.duplicate_status == 'high_risk' %}خطر تكرار عالٍ
+            {% elif audit_report.duplicate_status == 'medium_risk' %}خطر تكرار متوسط
+            {% elif audit_report.duplicate_status == 'low_risk' %}خطر تكرار منخفض
+            {% else %}لا يوجد تكرار{% endif %}
+          {% else %}عدم توفر البيانات{% endif %}
+        </span>
+        {% if audit_report and audit_report.duplicate_matched_documents_json %}
+        <p class="text-xs text-slate-500 mt-2">المستندات المطابقة: {{ audit_report.duplicate_matched_documents_json|length }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION 7 — Anomaly Detection
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">📊</span>
+      <h2 class="font-semibold text-slate-700 text-sm">٧. كشف الأنماط غير الطبيعية</h2>
+    </div>
+    <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      <div class="text-center p-4 rounded-lg bg-slate-50">
+        <p class="text-2xl font-bold text-slate-600">—</p>
+        <p class="text-xs text-slate-500 mt-1">عدم توفر البيانات</p>
+      </div>
+      <div class="md:col-span-2">
+        <p class="text-xs text-slate-500 mb-2">الحالة:
+          <span class="font-medium text-slate-700">
+            {% if audit_report %}{{ audit_report.anomaly_status|default:"غير محدد" }}
+            {% else %}عدم توفر البيانات{% endif %}
+          </span>
+        </p>
+        {% if audit_report and audit_report.anomaly_explanation %}
+        <p class="text-xs text-slate-600 bg-slate-50 rounded p-2">{{ audit_report.anomaly_explanation }}</p>
+        {% endif %}
+        {% if audit_report and audit_report.anomaly_reasons_json %}
+        <ul class="mt-2 space-y-1">
+          {% for reason in audit_report.anomaly_reasons_json %}
+          <li class="text-xs text-amber-700 flex gap-2"><span>⚠</span><span>{{ reason.reason }}</span></li>
+          {% endfor %}
+        </ul>
+        {% elif extracted and extracted.anomaly_flags %}
+        <ul class="mt-2 space-y-1">
+          {% for flag in extracted.anomaly_flags %}
+          <li class="text-xs text-amber-700 flex gap-2"><span>⚠</span><span>{{ flag }}</span></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION 8 — Risk Assessment
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">🎯</span>
+      <h2 class="font-semibold text-slate-700 text-sm">٨. تقييم المخاطر</h2>
+    </div>
+    <div class="p-5">
+      <div class="flex items-center gap-6 flex-wrap">
+        <!-- Gauge -->
+        <div class="text-center">
+          <div class="relative w-24 h-24 mx-auto">
+            <svg viewBox="0 0 36 36" class="w-24 h-24 -rotate-90">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e2e8f0" stroke-width="3"/>
+              {% if audit_report.risk_score %}
+              <circle cx="18" cy="18" r="15.9" fill="none"
+                stroke="{% if audit_report.risk_score >= 80 %}#ef4444{% elif audit_report.risk_score >= 60 %}#f97316{% elif audit_report.risk_score >= 30 %}#f59e0b{% else %}#10b981{% endif %}"
+                stroke-width="3" stroke-dasharray="{{ audit_report.risk_score }}, 100"
+                stroke-linecap="round"/>
+              {% endif %}
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              {% if audit_report.risk_score %}
+              <span class="text-xl font-bold text-slate-800">{{ audit_report.risk_score }}</span>
+              <span class="text-[10px] text-slate-400">/ 100</span>
+              {% else %}
+              <span class="text-lg text-slate-400">—</span>
+              {% endif %}
+            </div>
+          </div>
+          {% if audit_report.risk_level %}
+          <p class="text-xs font-semibold mt-1
+            {% if audit_report.risk_level == 'critical' %}text-red-600
+            {% elif audit_report.risk_level == 'high' %}text-orange-600
+            {% elif audit_report.risk_level == 'medium' %}text-amber-600
+            {% else %}text-green-600{% endif %}">
+            {% if audit_report.risk_level == 'critical' %}حرجة{% elif audit_report.risk_level == 'high' %}عالية{% elif audit_report.risk_level == 'medium' %}متوسطة{% else %}منخفضة{% endif %}
+          </p>
+          {% else %}
+          <p class="text-xs text-slate-400">لا تتوفر البيانات</p>
+          {% endif %}
+        </div>
+        <!-- Risk factors -->
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-semibold text-slate-500 mb-2">عوامل المخاطرة</p>
+          {% if audit_report and audit_report.risk_factors_json %}
+          <ul class="space-y-1">
+            {% for factor in audit_report.risk_factors_json %}
+            <li class="text-xs text-slate-600 flex gap-2"><span class="text-red-400">•</span><span>{{ factor }}</span></li>
+            {% endfor %}
+          </ul>
+          {% elif extracted and extracted.audit_summary.key_risks %}
+          <ul class="space-y-1">
+            {% for risk in extracted.audit_summary.key_risks %}
+            <li class="text-xs text-slate-600 flex gap-2"><span class="text-red-400">•</span><span>{{ risk }}</span></li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-xs text-slate-400">لا توجد عوامل مخاطرة محددة.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION 9 — AI Summary
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-gradient-to-r from-violet-50 to-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">🤖</span>
+      <h2 class="font-semibold text-slate-700 text-sm">٩. ملخص الذكاء الاصطناعي</h2>
+    </div>
+    <div class="p-5 space-y-4 text-sm">
+      {% if audit_report and audit_report.ai_summary %}
+        <div>
+          <p class="text-xs text-slate-500 mb-1">الملخص التنفيذي</p>
+          <p class="text-slate-700 leading-relaxed">{{ audit_report.ai_summary }}</p>
+        </div>
+        {% if audit_report.ai_findings %}
+        <div>
+          <p class="text-xs text-slate-500 mb-1">المشكلات والاكتشافات</p>
+          <p class="text-slate-700 leading-relaxed">{{ audit_report.ai_findings }}</p>
+        </div>
+        {% endif %}
+        {% if audit_report.ai_review_required %}
+        <div class="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <span>⚠️</span>
+          <p class="text-xs text-amber-700 font-medium">يوصي الذكاء الاصطناعي بإجراء مراجعة يدوية لهذه الفاتورة.</p>
+        </div>
+        {% endif %}
+      {% elif extracted and extracted.audit_summary %}
+        {% if extracted.audit_summary.executive_summary %}
+        <div>
+          <p class="text-xs text-slate-500 mb-1">الملخص التنفيذي</p>
+          <p class="text-slate-700 leading-relaxed">{{ extracted.audit_summary.executive_summary }}</p>
+        </div>
+        {% endif %}
+        {% if extracted.audit_summary.key_risks %}
+        <div>
+          <p class="text-xs text-slate-500 mb-1">المخاطر الرئيسية</p>
+          <ul class="space-y-1">
+            {% for risk in extracted.audit_summary.key_risks %}
+            <li class="text-xs text-slate-600 flex gap-2"><span class="text-amber-500">•</span><span>{{ risk }}</span></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        {% if extracted.audit_summary.recommended_actions %}
+        <div>
+          <p class="text-xs text-slate-500 mb-1">الإجراءات الموصى بها</p>
+          <ul class="space-y-1">
+            {% for action in extracted.audit_summary.recommended_actions %}
+            <li class="text-xs text-slate-600 flex gap-2"><span class="text-blue-500">→</span><span>{{ action }}</span></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      {% else %}
+        <p class="text-sm text-slate-400">لم يتم توليد ملخص AI بعد.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION 10 — Recommendations
+  ══════════════════════════════════════════════════════════════ -->
+  {% if audit_report %}
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">📌</span>
+      <h2 class="font-semibold text-slate-700 text-sm">١٠. التوصيات</h2>
+    </div>
+    <div class="p-5">
+      <div class="flex items-center gap-4 flex-wrap">
+        <div class="flex items-center gap-3 px-5 py-4 rounded-xl border-2 flex-1 min-w-[200px]
+          {% if audit_report.recommendation == 'approve' %}border-green-400 bg-green-50
+          {% elif audit_report.recommendation == 'reject' %}border-red-400 bg-red-50
+          {% else %}border-amber-400 bg-amber-50{% endif %}">
+          <span class="text-3xl">
+            {% if audit_report.recommendation == 'approve' %}✅{% elif audit_report.recommendation == 'reject' %}❌{% else %}⚑{% endif %}
+          </span>
+          <div>
+            <p class="font-bold text-slate-800 text-sm">
+              {% if audit_report.recommendation == 'approve' %}موافقة — الفاتورة سليمة
+              {% elif audit_report.recommendation == 'reject' %}رفض — الفاتورة تحتوي على مشاكل حرجة
+              {% else %}مراجعة يدوية مطلوبة{% endif %}
+            </p>
+            {% if audit_report.recommendation_reason %}
+            <p class="text-xs text-slate-500 mt-1">{{ audit_report.recommendation_reason }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION 11 — Audit Trail
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+      <span class="text-base">📜</span>
+      <h2 class="font-semibold text-slate-700 text-sm">١١. سجل التدقيق</h2>
+    </div>
+    <div class="p-5">
+      {% if audit_report and audit_report.audit_trail_json %}
+        <ol class="relative border-s border-slate-200 ms-3 space-y-4">
+          {% for step in audit_report.audit_trail_json %}
+          <li class="ms-4">
+            <div class="absolute -start-1.5 mt-1 w-3 h-3 rounded-full border border-white
+              {% if step.status == 'success' %}bg-green-500{% else %}bg-red-400{% endif %}"></div>
+            <div class="flex items-start gap-2">
+              <div class="flex-1">
+                <p class="text-xs font-semibold text-slate-700">{{ step.title|default:step.event }}</p>
+                {% if step.description %}<p class="text-xs text-slate-500">{{ step.description }}</p>{% endif %}
+              </div>
+              <span class="text-xs text-slate-400 whitespace-nowrap">{{ step.timestamp|slice:":16"|default:"" }}</span>
+            </div>
+          </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <!-- Default audit trail from processing steps -->
+        <ol class="relative border-s border-slate-200 ms-3 space-y-4">
+          <li class="ms-4">
+            <div class="absolute -start-1.5 mt-1 w-3 h-3 rounded-full border border-white bg-green-500"></div>
+            <p class="text-xs font-semibold text-slate-700">رفع المستند</p>
+            <p class="text-xs text-slate-400">{{ document.uploaded_at|date:"Y/m/d H:i" }}</p>
+          </li>
+          {% if evidence %}
+          <li class="ms-4">
+            <div class="absolute -start-1.5 mt-1 w-3 h-3 rounded-full border border-white bg-green-500"></div>
+            <p class="text-xs font-semibold text-slate-700">معالجة OCR ({{ evidence.ocr_engine }})</p>
+            <p class="text-xs text-slate-400">ثقة: {{ evidence.confidence_score }}%</p>
+          </li>
+          {% endif %}
+          {% if extracted %}
+          <li class="ms-4">
+            <div class="absolute -start-1.5 mt-1 w-3 h-3 rounded-full border border-white bg-green-500"></div>
+            <p class="text-xs font-semibold text-slate-700">استخراج بيانات الفاتورة</p>
+            <p class="text-xs text-slate-400">{{ extracted.extraction_completed_at|date:"Y/m/d H:i"|default:"مكتمل" }}</p>
+          </li>
+          {% if extracted.validation_completed_at %}
+          <li class="ms-4">
+            <div class="absolute -start-1.5 mt-1 w-3 h-3 rounded-full border border-white bg-green-500"></div>
+            <p class="text-xs font-semibold text-slate-700">التحقق من البيانات</p>
+            <p class="text-xs text-slate-400">{{ extracted.validation_completed_at|date:"Y/m/d H:i" }}</p>
+          </li>
+          {% endif %}
+          {% if extracted.compliance_checks %}
+          <li class="ms-4">
+            <div class="absolute -start-1.5 mt-1 w-3 h-3 rounded-full border border-white bg-green-500"></div>
+            <p class="text-xs font-semibold text-slate-700">فحص الامتثال</p>
+          </li>
+          {% endif %}
+          {% if extracted.audit_completed_at %}
+          <li class="ms-4">
+            <div class="absolute -start-1.5 mt-1 w-3 h-3 rounded-full border border-white bg-green-500"></div>
+            <p class="text-xs font-semibold text-slate-700">توليد التقرير</p>
+            <p class="text-xs text-slate-400">{{ extracted.audit_completed_at|date:"Y/m/d H:i" }}</p>
+          </li>
+          {% endif %}
+          {% endif %}
+        </ol>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       Bottom Actions
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <a href="{% url 'document_upload' %}" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+      ← رفع مستند آخر
+    </a>
+    <div class="flex gap-2">
+      <a href="{% url 'ocr_evidence_list' %}" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+        كل المستندات
+      </a>
+      {% if audit_report %}
+      <a href="{% url 'audit-report-detail' report_id=audit_report.id %}" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors">
+        عرض التقرير الكامل
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+{% endblock %}

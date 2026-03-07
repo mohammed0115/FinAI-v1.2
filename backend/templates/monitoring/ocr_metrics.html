@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}OCR Metrics - FinAI{% endblock %}
+
+{% block content %}
+<div class="max-w-full mx-auto">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-900">🔍 OCR Performance Metrics</h1>
+            <p class="text-sm text-slate-500 mt-1">Document extraction accuracy and confidence scoring</p>
+        </div>
+    </div>
+
+    <!-- OCR Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Avg Confidence</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ stats.average_confidence }}%</p>
+                </div>
+                <div class="text-4xl">📊</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">High Confidence</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ stats.high_confidence }}</p>
+                </div>
+                <div class="text-4xl">✅</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-yellow-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Medium Confidence</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ stats.medium_confidence }}</p>
+                </div>
+                <div class="text-4xl">⚠️</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-red-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Low Confidence</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ stats.low_confidence }}</p>
+                </div>
+                <div class="text-4xl">❌</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extraction Accuracy by Field -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b border-slate-200">
+            <h3 class="text-lg font-semibold text-slate-900">Extraction Accuracy by Field</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="border-b border-slate-200 bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600">Field</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600">Accuracy</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-600">Trend</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field, accuracy in extraction_accuracy.items %}
+                    <tr class="border-b border-slate-200 hover:bg-slate-50">
+                        <td class="px-6 py-3 font-medium">{{ field|title }}</td>
+                        <td class="px-6 py-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-32 bg-slate-200 rounded-full h-2">
+                                    <div class="bg-blue-500 h-2 rounded-full" style="width: {{ accuracy }}%"></div>
+                                </div>
+                                <span class="font-semibold">{{ accuracy }}%</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-3">
+                            {% if accuracy >= 90 %}
+                            <span class="text-green-600">📈 Excellent</span>
+                            {% elif accuracy >= 75 %}
+                            <span class="text-yellow-600">➡️ Good</span>
+                            {% else %}
+                            <span class="text-red-600">📉 Needs Review</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="px-6 py-8 text-center text-slate-500">No extraction data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-6 text-center">
+        <a href="{% url 'monitoring_dashboard' %}" class="text-blue-600 hover:text-blue-700 font-medium">← Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

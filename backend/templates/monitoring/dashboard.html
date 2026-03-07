@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+
+{% block title %}Monitoring Dashboard - FinAI{% endblock %}
+
+{% block content %}
+<div class="max-w-full mx-auto">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-900">📊 Monitoring Dashboard</h1>
+            <p class="text-sm text-slate-500 mt-1">Real-time processing pipeline metrics & health status</p>
+        </div>
+        <div class="text-right">
+            <div class="text-2xl font-bold" id="health-status">
+                <span class="inline-block px-3 py-1 rounded-full text-white text-xs font-semibold"
+                    id="health-badge" style="background-color: #3b82f6;">⚡ Healthy</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1" id="update-time">Last updated: just now</p>
+        </div>
+    </div>
+
+    <!-- System Alerts -->
+    {% if alerts %}
+    <div class="mb-6 space-y-2">
+        {% for alert in alerts %}
+        <div class="p-4 rounded-lg border-l-4 {% if alert.level == 'critical' %}bg-red-50 border-red-400{% elif alert.level == 'warning' %}bg-yellow-50 border-yellow-400{% else %}bg-blue-50 border-blue-400{% endif %}">
+            <p class="text-sm font-medium {% if alert.level == 'critical' %}text-red-800{% elif alert.level == 'warning' %}text-yellow-800{% else %}text-blue-800{% endif %}">
+                {{ alert.message }}
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- KPI Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- Documents Card -->
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-indigo-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Total Documents</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ doc_stats.total_documents }}</p>
+                    <p class="text-xs text-green-600 mt-1">{{ doc_stats.success_rate }}% success rate</p>
+                </div>
+                <div class="text-4xl">📄</div>
+            </div>
+        </div>
+
+        <!-- OCR Confidence Card -->
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-purple-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Avg OCR Confidence</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ ocr_stats.average_confidence }}%</p>
+                    <p class="text-xs text-slate-600 mt-1">{{ ocr_stats.high_confidence }} high confidence</p>
+                </div>
+                <div class="text-4xl">🔍</div>
+            </div>
+        </div>
+
+        <!-- Processing Queue Card -->
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">In Queue</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ queue_status.pending }}</p>
+                    <p class="text-xs text-slate-600 mt-1">{{ queue_status.processing }} processing</p>
+                </div>
+                <div class="text-4xl">⏳</div>
+            </div>
+        </div>
+
+        <!-- Compliance Issues Card -->
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-red-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Compliance Issues</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ compliance_stats.critical_issues }}</p>
+                    <p class="text-xs text-orange-600 mt-1">{{ compliance_stats.high_issues }} high</p>
+                </div>
+                <div class="text-4xl">⚠️</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Daily Processing Trend -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-slate-900 mb-4">📈 7-Day Processing Trend</h3>
+            <canvas id="processingChart" height="80"></canvas>
+        </div>
+
+        <!-- Document Status Distribution -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-slate-900 mb-4">📊 Document Status Distribution</h3>
+            <div class="space-y-3">
+                {% for status, count in doc_stats.documents_by_status.items %}
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 rounded-full" style="background-color: 
+                            {% if status == 'completed' %}#10b981
+                            {% elif status == 'pending' %}#f59e0b
+                            {% elif status == 'processing' %}#3b82f6
+                            {% elif status == 'failed' %}#ef4444
+                            {% else %}#9ca3af
+                            {% endif %}"></div>
+                        <span class="text-sm font-medium text-slate-700 capitalize">{{ status }}</span>
+                    </div>
+                    <span class="text-lg font-semibold text-slate-900">{{ count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Metrics Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- OCR Performance -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-slate-900 mb-4">🔍 OCR Performance</h3>
+            <div class="space-y-3">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 mb-1">Avg Processing Time</p>
+                    <p class="text-2xl font-bold text-slate-900">{{ ocr_stats.avg_processing_time_ms }}ms</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-500 mb-1">Avg Page Count</p>
+                    <p class="text-2xl font-bold text-slate-900">{{ ocr_stats.avg_page_count }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-500 mb-1">Avg Word Count</p>
+                    <p class="text-2xl font-bold text-slate-900">{{ ocr_stats.avg_word_count }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compliance Summary -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-slate-900 mb-4">⚖️ Compliance Summary</h3>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-slate-600">Total Checks</span>
+                    <span class="font-bold text-slate-900">{{ compliance_stats.total_checks }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-slate-600">Passed</span>
+                    <span class="font-bold text-green-600">{{ compliance_stats.passed_checks }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-slate-600">Failed</span>
+                    <span class="font-bold text-red-600">{{ compliance_stats.failed_checks }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Metrics -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-slate-900 mb-4">⚙️ System Metrics</h3>
+            <div class="space-y-3">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 mb-1">Avg Processing Time</p>
+                    <p class="text-2xl font-bold text-slate-900">{{ doc_stats.avg_processing_time_ms }}ms</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-500 mb-1">Total File Size</p>
+                    <p class="text-2xl font-bold text-slate-900">{{ doc_stats.total_file_size_mb }}MB</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-500 mb-1">Documents/Day</p>
+                    <p class="text-2xl font-bold text-slate-900">{{ daily_stats|length }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation to Detail Pages -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="{% url 'processing_pipeline' %}" class="bg-white rounded-lg shadow p-4 hover:shadow-lg transition cursor-pointer border-l-4 border-indigo-500">
+            <h4 class="font-semibold text-slate-900 mb-1">📋 Processing Pipeline</h4>
+            <p class="text-xs text-slate-500">View detailed processing stages</p>
+        </a>
+        
+        <a href="{% url 'ocr_metrics' %}" class="bg-white rounded-lg shadow p-4 hover:shadow-lg transition cursor-pointer border-l-4 border-purple-500">
+            <h4 class="font-semibold text-slate-900 mb-1">📊 OCR Metrics</h4>
+            <p class="text-xs text-slate-500">Extraction accuracy & performance</p>
+        </a>
+        
+        <a href="{% url 'compliance_report' %}" class="bg-white rounded-lg shadow p-4 hover:shadow-lg transition cursor-pointer border-l-4 border-orange-500">
+            <h4 class="font-semibold text-slate-900 mb-1">📄 Compliance Report</h4>
+            <p class="text-xs text-slate-500">Rule compliance details</p>
+        </a>
+        
+        <a href="{% url 'risk_dashboard' %}" class="bg-white rounded-lg shadow p-4 hover:shadow-lg transition cursor-pointer border-l-4 border-red-500">
+            <h4 class="font-semibold text-slate-900 mb-1">⚠️ Risk Dashboard</h4>
+            <p class="text-xs text-slate-500">Risk assessment trends</p>
+        </a>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<script>
+// Prepare daily stats data
+const dailyStats = {{ daily_stats|safe }};
+const labels = dailyStats.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+const uploadedData = dailyStats.map(d => d.uploaded);
+const processedData = dailyStats.map(d => d.processed);
+const failedData = dailyStats.map(d => d.failed);
+
+// Processing trend chart
+const ctx = document.getElementById('processingChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [
+            {
+                label: 'Uploaded',
+                data: uploadedData,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true,
+            },
+            {
+                label: 'Processed',
+                data: processedData,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4,
+                fill: true,
+            },
+            {
+                label: 'Failed',
+                data: failedData,
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                tension: 0.4,
+                fill: true,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'bottom'
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    color: '#64748b'
+                },
+                grid: {
+                    color: '#e2e8f0'
+                }
+            },
+            x: {
+                ticks: {
+                    color: '#64748b'
+                },
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+});
+
+// Auto-refresh dashboard every 30 seconds
+setInterval(() => {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block title %}تقرير التدقيق الذكي - AI Audit Reports{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="mb-2">
+                <i class="fas fa-robot"></i> تقارير التدقيق الذكية
+                <span class="badge bg-primary">AI Audit Reports</span>
+            </h1>
+            <p class="text-muted">تحليل شامل للفواتير مع الملخصات الذكية والتوصيات بالإجراءات</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <form method="get" class="form-inline">
+                <div class="form-group me-3 mb-2">
+                    <label for="risk_filter" class="form-label me-2">درجة المخاطر:</label>
+                    <select name="risk_level" id="risk_filter" class="form-select" onchange="this.form.submit()">
+                        <option value="">الكل</option>
+                        <option value="low" {% if request.GET.risk_level == 'low' %}selected{% endif %}>منخفضة</option>
+                        <option value="medium" {% if request.GET.risk_level == 'medium' %}selected{% endif %}>متوسطة</option>
+                        <option value="high" {% if request.GET.risk_level == 'high' %}selected{% endif %}>عالية</option>
+                        <option value="critical" {% if request.GET.risk_level == 'critical' %}selected{% endif %}>حرجة</option>
+                    </select>
+                </div>
+                <div class="form-group me-3 mb-2">
+                    <label for="status_filter" class="form-label me-2">الحالة:</label>
+                    <select name="status" id="status_filter" class="form-select" onchange="this.form.submit()">
+                        <option value="">الكل</option>
+                        <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>موافق</option>
+                        <option value="review" {% if request.GET.status == 'review' %}selected{% endif %}>قيد المراجعة</option>
+                        <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>مرفوض</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-success">إجمالي الفواتير</h5>
+                    <p class="display-6">{{ total_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">فواتير حرجة</h5>
+                    <p class="display-6">{{ critical_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">قيد المراجعة</h5>
+                    <p class="display-6">{{ review_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-info">موافق</h5>
+                    <p class="display-6">{{ approved_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports List -->
+    <div class="row">
+        <div class="col-md-12">
+            {% if extracted_data_list %}
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>رقم الفاتورة</th>
+                            <th>الموردة</th>
+                            <th>المبلغ</th>
+                            <th>درجة المخاطر</th>
+                            <th>الحالة</th>
+                            <th>الملخص التنفيذي</th>
+                            <th>المخاطر الرئيسية</th>
+                            <th style="width: 150px;">الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ed in extracted_data_list %}
+                            {% with summary=ed.audit_summary %}
+                        <tr>
+                            <td><strong>{{ ed.invoice_number|default:"N/A" }}</strong></td>
+                            <td>{{ ed.vendor_name|default:"غير محدد" }}</td>
+                            <td>{{ ed.total_amount|default:"0"|floatformat:2 }} {{ ed.currency|default:"SAR" }}</td>
+                            <td>
+                                {% if ed.risk_level == 'critical' %}
+                                    <span class="badge bg-danger">حرجة</span>
+                                {% elif ed.risk_level == 'high' %}
+                                    <span class="badge bg-warning">عالية</span>
+                                {% elif ed.risk_level == 'medium' %}
+                                    <span class="badge bg-info">متوسطة</span>
+                                {% else %}
+                                    <span class="badge bg-success">منخفضة</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if summary.final_status == 'approved' %}
+                                    <span class="badge bg-success">موافق</span>
+                                {% elif summary.final_status == 'review' %}
+                                    <span class="badge bg-warning">قيد المراجعة</span>
+                                {% else %}
+                                    <span class="badge bg-danger">مرفوض</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ summary.executive_summary|truncatewords:15 }}</small>
+                            </td>
+                            <td>
+                                {% if summary.key_risks %}
+                                    <small>{{ summary.key_risks|length }} مخاطر</small>
+                                {% else %}
+                                    <small class="text-muted">لا توجد</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'invoice_audit_report' ed.id %}" class="btn btn-sm btn-primary" title="عرض التقرير الشامل">
+                                    <i class="fas fa-file-pdf"></i> تقرير
+                                </a>
+                            </td>
+                        </tr>
+                            {% endwith %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">الأول</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">السابق</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">التالي</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">الأخير</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <div class="alert alert-info" role="alert">
+                <i class="fas fa-info-circle"></i> لا توجد تقارير تدقيق متاحة حالياً
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f5f5f5;
+        cursor: pointer;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-top: 4px solid #007bff;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+</style>
+{% endblock %}

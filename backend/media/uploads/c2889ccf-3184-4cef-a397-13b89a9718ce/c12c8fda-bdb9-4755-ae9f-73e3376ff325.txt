@@ -1,0 +1,4 @@
+Invoice #77
+Date: 2026-01-28
+Amount: 674 SAR
+VAT: 502 SAR

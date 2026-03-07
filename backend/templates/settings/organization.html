@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_arabic %}إعدادات الشركة{% else %}Company Settings{% endif %} - FinAI{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Breadcrumb -->
+    <div class="text-sm text-slate-500 mb-4">
+        <a href="{% url 'dashboard' %}" class="hover:text-slate-700">{{ t.nav_dashboard }}</a>
+        <span class="mx-2">{% if is_arabic %}←{% else %}→{% endif %}</span>
+        <span class="text-slate-700">{% if is_arabic %}إعدادات الشركة{% else %}Company Settings{% endif %}</span>
+    </div>
+
+    <!-- Header -->
+    <div class="bg-white border border-slate-200 rounded-lg mb-6">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <h1 class="text-xl font-bold text-slate-800">
+                {% if is_arabic %}إعدادات الشركة{% else %}Company Settings{% endif %}
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">
+                {% if is_arabic %}
+                إدارة بيانات الشركة وإعدادات ضريبة القيمة المضافة
+                {% else %}
+                Manage company information and VAT settings
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- VAT Requirements Notice -->
+    <div class="mb-6 p-4 rounded-lg {% if organization.country == 'SA' %}bg-amber-50 border border-amber-200{% else %}bg-slate-50 border border-slate-200{% endif %}">
+        <div class="flex items-start gap-3">
+            {% if organization.country == 'SA' %}
+            <span class="text-amber-600 text-xl">⚠️</span>
+            <div>
+                <h3 class="font-semibold text-amber-800 mb-1">
+                    {% if is_arabic %}متطلبات ضريبة القيمة المضافة للمملكة العربية السعودية{% else %}Saudi Arabia VAT Requirements{% endif %}
+                </h3>
+                <p class="text-sm text-amber-700">
+                    {% if is_arabic %}
+                    رقم ضريبة القيمة المضافة <strong>مطلوب</strong> للشركات في المملكة العربية السعودية.
+                    يجب أن يكون 15 رقماً ويبدأ وينتهي بالرقم 3.
+                    {% else %}
+                    VAT number is <strong>required</strong> for companies in Saudi Arabia.
+                    Must be 15 digits, starting and ending with 3.
+                    {% endif %}
+                </p>
+            </div>
+            {% else %}
+            <span class="text-slate-600 text-xl">ℹ️</span>
+            <div>
+                <h3 class="font-semibold text-slate-700 mb-1">
+                    {% if is_arabic %}متطلبات ضريبة القيمة المضافة{% else %}VAT Requirements{% endif %}
+                </h3>
+                <p class="text-sm text-slate-600">
+                    {% if is_arabic %}
+                    رقم ضريبة القيمة المضافة <strong>اختياري</strong> لـ {{ vat_requirements.name_ar }}.
+                    {% else %}
+                    VAT number is <strong>optional</strong> for {{ vat_requirements.name_en }}.
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Settings Form -->
+    <form method="post" action="{% url 'organization_settings' %}" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Company Information -->
+        <div class="bg-white border border-slate-200 rounded-lg">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="font-semibold text-slate-700">
+                    {% if is_arabic %}معلومات الشركة{% else %}Company Information{% endif %}
+                </h2>
+            </div>
+            <div class="p-4 space-y-4">
+                <!-- Company Name -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-600 mb-1">
+                            {% if is_arabic %}اسم الشركة (بالإنجليزية){% else %}Company Name (English){% endif %} *
+                        </label>
+                        <input type="text" 
+                               name="name" 
+                               value="{{ organization.name }}"
+                               data-testid="company-name-input"
+                               class="w-full px-3 py-2 border border-slate-300 rounded text-sm"
+                               required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-600 mb-1">
+                            {% if is_arabic %}اسم الشركة (بالعربية){% else %}Company Name (Arabic){% endif %}
+                        </label>
+                        <input type="text" 
+                               name="name_ar" 
+                               value="{{ organization.name_ar|default:'' }}"
+                               data-testid="company-name-ar-input"
+                               class="w-full px-3 py-2 border border-slate-300 rounded text-sm"
+                               dir="rtl">
+                    </div>
+                </div>
+                
+                <!-- Country -->
+                <div>
+                    <label class="block text-sm text-slate-600 mb-1">
+                        {% if is_arabic %}البلد{% else %}Country{% endif %} *
+                    </label>
+                    <select name="country" 
+                            data-testid="country-select"
+                            class="w-full px-3 py-2 border border-slate-300 rounded text-sm"
+                            required
+                            onchange="updateVATRequirements(this.value)">
+                        {% for code, name in country_choices %}
+                        <option value="{{ code }}" {% if organization.country == code %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Company Type & Industry -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-600 mb-1">
+                            {% if is_arabic %}نوع الشركة{% else %}Company Type{% endif %}
+                        </label>
+                        <select name="company_type" 
+                                data-testid="company-type-select"
+                                class="w-full px-3 py-2 border border-slate-300 rounded text-sm">
+                            <option value="">{% if is_arabic %}اختر...{% else %}Select...{% endif %}</option>
+                            {% for code, name in company_type_choices %}
+                            <option value="{{ code }}" {% if organization.company_type == code %}selected{% endif %}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-600 mb-1">
+                            {% if is_arabic %}القطاع{% else %}Industry{% endif %}
+                        </label>
+                        <input type="text" 
+                               name="industry" 
+                               value="{{ organization.industry|default:'' }}"
+                               data-testid="industry-input"
+                               class="w-full px-3 py-2 border border-slate-300 rounded text-sm">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- VAT Settings -->
+        <div class="bg-white border border-slate-200 rounded-lg">
+            <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                <h2 class="font-semibold text-slate-700">
+                    {% if is_arabic %}إعدادات ضريبة القيمة المضافة{% else %}VAT Settings{% endif %}
+                </h2>
+                <span id="vat-status-badge" class="badge {% if organization.vat_validation_status == 'valid' %}badge-success{% elif organization.vat_validation_status == 'invalid' %}badge-danger{% else %}badge-neutral{% endif %}">
+                    {{ organization.get_vat_status_display_ar }}
+                </span>
+            </div>
+            <div class="p-4 space-y-4">
+                <!-- VAT Number -->
+                <div>
+                    <label class="block text-sm text-slate-600 mb-1">
+                        {% if is_arabic %}رقم ضريبة القيمة المضافة{% else %}VAT Registration Number{% endif %}
+                        <span id="vat-required-indicator" class="{% if organization.country == 'SA' %}text-red-500{% else %}text-slate-400{% endif %}">
+                            {% if organization.country == 'SA' %}*{% else %}({% if is_arabic %}اختياري{% else %}Optional{% endif %}){% endif %}
+                        </span>
+                    </label>
+                    <input type="text" 
+                           name="vat_number" 
+                           id="vat-number-input"
+                           value="{{ organization.vat_number|default:'' }}"
+                           data-testid="vat-number-input"
+                           class="w-full px-3 py-2 border border-slate-300 rounded text-sm mono"
+                           placeholder="{% if organization.country == 'SA' %}300000000000003{% else %}{% if is_arabic %}أدخل رقم ضريبة القيمة المضافة{% else %}Enter VAT number{% endif %}{% endif %}"
+                           maxlength="20"
+                           {% if organization.country == 'SA' %}required{% endif %}>
+                    <p id="vat-format-hint" class="text-xs text-slate-400 mt-1">
+                        {% if organization.country == 'SA' %}
+                        {% if is_arabic %}يجب أن يكون 15 رقماً، يبدأ وينتهي بـ 3{% else %}Must be 15 digits, starting and ending with 3{% endif %}
+                        {% else %}
+                        {% if is_arabic %}{{ vat_requirements.vat_format }}{% else %}{{ vat_requirements.vat_format_en }}{% endif %}
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <!-- VAT Validation Info -->
+                {% if organization.vat_validated_at %}
+                <div class="p-3 bg-slate-50 rounded text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">
+                            {% if is_arabic %}آخر تحقق:{% else %}Last validated:{% endif %}
+                        </span>
+                        <span class="mono text-slate-700">{{ organization.vat_validated_at|date:"Y/m/d H:i" }}</span>
+                    </div>
+                    {% if organization.vat_validation_message %}
+                    <div class="mt-2 text-slate-600">{{ organization.vat_validation_message }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- ZATCA Status -->
+                <div class="p-3 rounded {% if organization.zatca_enabled %}bg-green-50 border border-green-200{% else %}bg-slate-50 border border-slate-200{% endif %}">
+                    <div class="flex items-center justify-between">
+                        <span class="{% if organization.zatca_enabled %}text-green-700{% else %}text-slate-600{% endif %}">
+                            {% if is_arabic %}حالة التحقق من ZATCA{% else %}ZATCA Verification Status{% endif %}
+                        </span>
+                        <span class="badge {% if organization.zatca_enabled %}badge-success{% else %}badge-neutral{% endif %}">
+                            {% if organization.zatca_enabled %}
+                                {% if is_arabic %}مفعّل - التحقق فقط{% else %}Enabled - Verification Only{% endif %}
+                            {% else %}
+                                {% if is_arabic %}معطّل{% else %}Disabled{% endif %}
+                            {% endif %}
+                        </span>
+                    </div>
+                    <p class="text-xs {% if organization.zatca_enabled %}text-green-600{% else %}text-slate-500{% endif %} mt-1">
+                        {% if organization.zatca_enabled %}
+                            {% if is_arabic %}سيتم التحقق من الفواتير تلقائياً وفقاً لمتطلبات هيئة الزكاة والضريبة والجمارك{% else %}Invoices will be automatically verified against ZATCA requirements{% endif %}
+                        {% else %}
+                            {% if is_arabic %}التحقق من ZATCA غير متاح لهذا البلد{% else %}ZATCA verification is not available for this country{% endif %}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scope Notice -->
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+            <h3 class="font-semibold text-slate-700 mb-2">
+                {% if is_arabic %}ملاحظة مهمة{% else %}Important Note{% endif %}
+            </h3>
+            <ul class="text-sm text-slate-600 space-y-1">
+                <li>• {% if is_arabic %}هذا النظام للتدقيق والتحقق فقط{% else %}This system is for audit and verification only{% endif %}</li>
+                <li>• {% if is_arabic %}لا يتم تقديم أو مصادقة الفواتير{% else %}No invoice submission or clearance{% endif %}</li>
+                <li>• {% if is_arabic %}لا يتم إجراء حسابات ضريبية{% else %}No tax calculations performed{% endif %}</li>
+                <li>• {% if is_arabic %}لا يؤثر على درجات التدقيق{% else %}Does not affect audit scoring{% endif %}</li>
+            </ul>
+        </div>
+        
+        <!-- Submit Button -->
+        <div class="flex items-center justify-end gap-4">
+            <a href="{% url 'dashboard' %}" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">
+                {% if is_arabic %}إلغاء{% else %}Cancel{% endif %}
+            </a>
+            <button type="submit" 
+                    data-testid="save-settings-btn"
+                    class="px-6 py-2 bg-slate-800 text-white rounded hover:bg-slate-700 text-sm">
+                {% if is_arabic %}حفظ الإعدادات{% else %}Save Settings{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Country VAT requirements data
+const countryRequirements = {
+    {% for code, req in all_country_requirements.items %}
+    '{{ code }}': {
+        vatRequired: {{ req.vat_required|yesno:"true,false" }},
+        vatFormat: '{{ req.vat_format }}',
+        vatFormatEn: '{{ req.vat_format_en }}',
+        zatcaApplicable: {{ req.zatca_applicable|yesno:"true,false" }}
+    },
+    {% endfor %}
+};
+
+function updateVATRequirements(country) {
+    const req = countryRequirements[country] || {};
+    const vatInput = document.getElementById('vat-number-input');
+    const vatIndicator = document.getElementById('vat-required-indicator');
+    const vatHint = document.getElementById('vat-format-hint');
+    const isArabic = document.documentElement.lang === 'ar';
+    
+    if (req.vatRequired) {
+        vatInput.required = true;
+        vatIndicator.textContent = '*';
+        vatIndicator.className = 'text-red-500';
+        vatInput.placeholder = '300000000000003';
+    } else {
+        vatInput.required = false;
+        vatIndicator.textContent = isArabic ? '(اختياري)' : '(Optional)';
+        vatIndicator.className = 'text-slate-400';
+        vatInput.placeholder = isArabic ? 'أدخل رقم ضريبة القيمة المضافة' : 'Enter VAT number';
+    }
+    
+    vatHint.textContent = isArabic ? req.vatFormat : req.vatFormatEn;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}المعاملات - FinAI{% endblock %}
+
+{% block content %}
+<div class="max-w-full">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">المعاملات المالية</h1>
+            <p class="text-sm text-slate-500">إجمالي {{ total_count }} معاملة | {{ anomaly_count }} شاذة</p>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+            <span class="px-2 py-1 bg-green-100 text-green-700 rounded">إيرادات: {{ income_total|floatformat:2 }}</span>
+            <span class="px-2 py-1 bg-red-100 text-red-700 rounded">مصروفات: {{ expense_total|floatformat:2 }}</span>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white border border-slate-200 rounded p-3 mb-4">
+        <form method="get" class="flex flex-wrap items-center gap-3">
+            <select name="type" class="text-sm border border-slate-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                <option value="">جميع الأنواع</option>
+                <option value="income" {% if request.GET.type == 'income' %}selected{% endif %}>إيراد</option>
+                <option value="expense" {% if request.GET.type == 'expense' %}selected{% endif %}>مصروف</option>
+                <option value="asset" {% if request.GET.type == 'asset' %}selected{% endif %}>أصل</option>
+                <option value="liability" {% if request.GET.type == 'liability' %}selected{% endif %}>التزام</option>
+            </select>
+            <select name="anomaly" class="text-sm border border-slate-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                <option value="">جميع المعاملات</option>
+                <option value="1" {% if request.GET.anomaly == '1' %}selected{% endif %}>شاذة فقط</option>
+                <option value="0" {% if request.GET.anomaly == '0' %}selected{% endif %}>عادية فقط</option>
+            </select>
+            <input type="date" name="date_from" value="{{ request.GET.date_from }}" class="text-sm border border-slate-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500" placeholder="من تاريخ">
+            <input type="date" name="date_to" value="{{ request.GET.date_to }}" class="text-sm border border-slate-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500" placeholder="إلى تاريخ">
+            <button type="submit" class="px-4 py-1.5 bg-slate-800 text-white text-sm rounded hover:bg-slate-700">تصفية</button>
+            <a href="{% url 'transactions' %}" class="text-sm text-slate-500 hover:text-slate-700">إعادة تعيين</a>
+        </form>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="bg-white border border-slate-200 rounded">
+        <div class="overflow-x-auto">
+            <table class="w-full data-table" data-testid="transactions-table">
+                <thead>
+                    <tr>
+                        <th class="text-right">المرجع</th>
+                        <th class="text-right">التاريخ</th>
+                        <th class="text-right">النوع</th>
+                        <th class="text-right">الفئة</th>
+                        <th class="text-right">الوصف</th>
+                        <th class="text-right">الطرف</th>
+                        <th class="text-left">المبلغ</th>
+                        <th class="text-left">ض.ق.م</th>
+                        <th class="text-center">الحالة</th>
+                        <th class="w-12"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for txn in transactions %}
+                    <tr class="{% if txn.is_anomaly %}bg-red-50{% endif %}">
+                        <td class="mono text-slate-600">{{ txn.reference_number|default:"—" }}</td>
+                        <td class="mono">{{ txn.transaction_date|date:"Y/m/d" }}</td>
+                        <td>
+                            <span class="badge {% if txn.transaction_type == 'income' %}badge-success{% elif txn.transaction_type == 'expense' %}badge-danger{% else %}badge-neutral{% endif %}">
+                            {% if txn.transaction_type == 'income' %}إيراد{% elif txn.transaction_type == 'expense' %}مصروف{% elif txn.transaction_type == 'asset' %}أصل{% elif txn.transaction_type == 'liability' %}التزام{% else %}{{ txn.transaction_type }}{% endif %}
+                            </span>
+                        </td>
+                        <td class="text-slate-500">{{ txn.category|default:"—" }}</td>
+                        <td class="max-w-xs truncate" title="{{ txn.description }}">{{ txn.description|default:"—"|truncatewords:8 }}</td>
+                        <td class="text-slate-500 max-w-xs truncate">{{ txn.vendor_customer|default:"—" }}</td>
+                        <td class="text-left mono font-medium {% if txn.transaction_type == 'expense' %}text-red-600{% elif txn.transaction_type == 'income' %}text-green-600{% endif %}">
+                            {{ txn.amount|floatformat:2 }}
+                        </td>
+                        <td class="text-left mono text-slate-500">{{ txn.vat_amount|floatformat:2|default:"0.00" }}</td>
+                        <td class="text-center">
+                            {% if txn.is_anomaly %}
+                            <span class="badge badge-danger" title="{{ txn.anomaly_type }}">شاذ</span>
+                            {% elif txn.is_reconciled %}
+                            <span class="badge badge-success">مُطابق</span>
+                            {% else %}
+                            <span class="badge badge-neutral">عادي</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'transaction_detail' txn.id %}" class="text-slate-400 hover:text-slate-600">←</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-12 text-slate-400">
+                            لا توجد معاملات
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if transactions.has_other_pages %}
+    <div class="mt-4 flex items-center justify-center gap-2">
+        {% if transactions.has_previous %}
+        <a href="?page={{ transactions.previous_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.anomaly %}&anomaly={{ request.GET.anomaly }}{% endif %}" class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-100">السابق</a>
+        {% endif %}
+        <span class="text-sm text-slate-500">صفحة {{ transactions.number }} من {{ transactions.paginator.num_pages }}</span>
+        {% if transactions.has_next %}
+        <a href="?page={{ transactions.next_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.anomaly %}&anomaly={{ request.GET.anomaly }}{% endif %}" class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-100">التالي</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

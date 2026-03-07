@@ -1,0 +1,7 @@
+# pack-refs with: peeled fully-peeled sorted 
+5845600881ed5115321478d85502c11aa265585c refs/heads/master
+8dd72d9de00e61f0d70ebe775070440edb8ef8c8 refs/remotes/origin/brain
+222fc3434c163a9790bc3749ad66abd52d5fe604 refs/remotes/origin/dependabot/pip/backend/cryptography-46.0.5
+d5310eb1c36fe980032de8124dc0fd095af18a83 refs/remotes/origin/dependabot/pip/backend/protobuf-5.29.6
+9e907a7e818448fdc704e2ab902dfd8b95999d7c refs/remotes/origin/main
+5845600881ed5115321478d85502c11aa265585c refs/remotes/origin/master

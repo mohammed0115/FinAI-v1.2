@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Invoice Analysis Details - FinAI{% endblock %}
+
+{% block content %}
+<div class="space-y-6 p-6">
+    <!-- Back Button & Header -->
+    <div class="flex items-center gap-4 mb-6">
+        <a href="{% url 'invoice_analysis_dashboard' %}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">← Back to Dashboard</a>
+        <div>
+            <h1 class="text-3xl font-bold text-slate-900">Invoice #{{ invoice.invoice_number|default:'N/A' }}</h1>
+            <p class="text-sm text-slate-500 mt-1">Comprehensive 5-Phase Analysis Report</p>
+        </div>
+    </div>
+
+    <!-- Overall Status -->
+    <div class="bg-white rounded-lg border border-slate-200 p-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <p class="text-xs font-medium text-slate-500 mb-2">Vendor</p>
+                <p class="text-lg font-semibold text-slate-900">{{ invoice.vendor_name|default:'Unknown' }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-slate-500 mb-2">Amount</p>
+                <p class="text-lg font-semibold text-slate-900">{{ invoice.total_amount|default:0|floatformat:2 }} {{ currency }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-slate-500 mb-2">Invoice Date</p>
+                <p class="text-lg font-semibold text-slate-900">{{ invoice.invoice_date|date:"Y-m-d"|default:'N/A' }}</p>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-slate-500 mb-2">Due Date</p>
+                <p class="text-lg font-semibold text-slate-900">{{ invoice.due_date|date:"Y-m-d"|default:'N/A' }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase Results Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Phase 1: Extraction Details -->
+        <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b">
+                <h2 class="font-semibold text-slate-900">Phase 1: Data Extraction</h2>
+                <p class="text-xs text-slate-600">OpenAI Vision API Extraction Results</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="space-y-2">
+                    <p class="text-xs font-medium text-slate-500">Confidence Score</p>
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-blue-500" style="width: {{ invoice.confidence }}%"></div>
+                        </div>
+                        <span class="text-sm font-semibold text-slate-900">{{ invoice.confidence }}%</span>
+                    </div>
+                </div>
+                <div class="p-3 bg-blue-50 rounded border border-blue-200">
+                    <p class="text-xs font-medium text-blue-900 mb-1">Extraction Status</p>
+                    <p class="text-xs text-blue-800">{{ invoice.extraction_status|capfirst }}</p>
+                </div>
+                {% if invoice.extraction_error %}
+                    <div class="p-3 bg-red-50 rounded border border-red-200">
+                        <p class="text-xs font-medium text-red-900">Error</p>
+                        <p class="text-xs text-red-800">{{ invoice.extraction_error }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Phase 2: Validation Results -->
+        <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b">
+                <h2 class="font-semibold text-slate-900">Phase 2: Validation</h2>
+                <p class="text-xs text-slate-600">Data Normalization & Validation Status</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex items-center gap-3">
+                    {% if invoice.is_valid %}
+                        <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                            <span class="text-lg text-emerald-600">✓</span>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-emerald-700">Valid Data</p>
+                            <p class="text-xs text-emerald-600">All validation checks passed</p>
+                        </div>
+                    {% else %}
+                        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                            <span class="text-lg text-red-600">✗</span>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-red-700">Invalid Data</p>
+                            <p class="text-xs text-red-600">Validation errors detected</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if validation_errors %}
+                    <div class="p-3 bg-red-50 rounded border border-red-200">
+                        <p class="text-xs font-medium text-red-900 mb-2">Validation Errors ({{ validation_errors|length }})</p>
+                        <ul class="text-xs text-red-800 space-y-1">
+                            {% for error in validation_errors %}
+                                <li>• {{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if validation_warnings %}
+                    <div class="p-3 bg-amber-50 rounded border border-amber-200">
+                        <p class="text-xs font-medium text-amber-900 mb-2">Warnings ({{ validation_warnings|length }})</p>
+                        <ul class="text-xs text-amber-800 space-y-1">
+                            {% for warning in validation_warnings %}
+                                <li>• {{ warning }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Phase 3: Compliance Assessment -->
+        <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b">
+                <h2 class="font-semibold text-slate-900">Phase 3: Compliance & Risk</h2>
+                <p class="text-xs text-slate-600">Compliance Checks & Risk Assessment</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg border border-slate-200">
+                    <div class="flex items-end justify-between mb-2">
+                        <span class="text-xs font-medium text-slate-600">Risk Score</span>
+                        <span class="text-3xl font-bold {% if invoice.risk_score < 30 %}text-emerald-600{% elif invoice.risk_score < 60 %}text-amber-600{% else %}text-red-600{% endif %}">{{ invoice.risk_score }}/100</span>
+                    </div>
+                    <p class="text-xs text-slate-600">Risk Level: 
+                        <span class="font-semibold {% if invoice.risk_level == 'critical' %}text-red-600{% elif invoice.risk_level == 'high' %}text-orange-600{% elif invoice.risk_level == 'medium' %}text-amber-600{% else %}text-emerald-600{% endif %}">
+                            {{ invoice.risk_level|capfirst }}
+                        </span>
+                    </p>
+                </div>
+
+                {% if compliance_checks %}
+                    <div class="space-y-2">
+                        <p class="text-xs font-medium text-slate-600">Compliance Checks</p>
+                        {% for check_name, check_data in compliance_checks.items %}
+                            <div class="p-3 bg-slate-50 rounded border border-slate-200">
+                                <div class="flex items-start justify-between mb-1">
+                                    <p class="text-xs font-medium text-slate-900">{{ check_name|title }}</p>
+                                    <span class="text-xs {% if check_data.passed %}text-emerald-600 font-semibold{% else %}text-red-600 font-semibold{% endif %}">
+                                        {% if check_data.passed %}✓ Pass{% else %}✗ Fail{% endif %}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-600">Status: risk_score={{ check_data.risk_score }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if invoice.audit_summary %}
+                    <div class="p-3 bg-blue-50 rounded border border-blue-200">
+                        <p class="text-xs font-medium text-blue-900 mb-1">Audit Summary</p>
+                        <p class="text-xs text-blue-800">{{ invoice.audit_summary }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Phase 4: Cross-Document Intelligence -->
+        <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-orange-50 to-orange-100 px-6 py-4 border-b">
+                <h2 class="font-semibold text-slate-900">Phase 4: Cross-Document</h2>
+                <p class="text-xs text-slate-600">Duplicates, Anomalies & Vendor Risk</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <!-- Duplicate Detection -->
+                <div class="border-b pb-4">
+                    <p class="text-xs font-medium text-slate-600 mb-2">Duplicate Detection</p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-slate-700">Duplicate Score</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div class="h-full {% if invoice.duplicate_score > 85 %}bg-red-500{% elif invoice.duplicate_score > 70 %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ invoice.duplicate_score }}%"></div>
+                            </div>
+                            <span class="text-sm font-medium">{{ invoice.duplicate_score }}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Anomalies -->
+                <div class="border-b pb-4">
+                    <p class="text-xs font-medium text-slate-600 mb-2">Anomalies</p>
+                    {% if anomaly_flags %}
+                        <ul class="text-xs space-y-1 text-slate-700">
+                            {% for flag in anomaly_flags %}
+                                <li class="flex items-start gap-2">
+                                    <span class="text-amber-500 mt-1">⚠</span>
+                                    <span>{{ flag }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-xs text-emerald-600">No anomalies detected</p>
+                    {% endif %}
+                </div>
+
+                <!-- Vendor Risk -->
+                <div>
+                    <p class="text-xs font-medium text-slate-600 mb-2">Vendor Risk</p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-slate-700">Risk Score</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div class="h-full {% if invoice.vendor_risk_score > 60 %}bg-orange-500{% elif invoice.vendor_risk_score > 30 %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ invoice.vendor_risk_score }}%"></div>
+                            </div>
+                            <span class="text-sm font-medium">{{ invoice.vendor_risk_score }}/100</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Risk Level: 
+                        <span class="font-semibold {% if invoice.vendor_risk_level == 'high' %}text-red-600{% elif invoice.vendor_risk_level == 'medium' %}text-amber-600{% else %}text-emerald-600{% endif %}">
+                            {{ invoice.vendor_risk_level|default:'Unknown'|capfirst }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Extracted Data Details -->
+        <div class="bg-white rounded-lg border border-slate-200 overflow-hidden lg:col-span-2">
+            <div class="bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-4 border-b">
+                <h2 class="font-semibold text-slate-900">Extracted Invoice Data</h2>
+                <p class="text-xs text-slate-600">Normalized & Structured Information</p>
+            </div>
+            <div class="p-6">
+                {% if extracted_data %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Left Column -->
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 mb-1">Vendor Name</p>
+                                <p class="text-sm text-slate-900 font-medium">{{ extracted_data.vendor_name|default:invoice.vendor_name|default:'N/A' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 mb-1">Customer Name</p>
+                                <p class="text-sm text-slate-900 font-medium">{{ extracted_data.customer_name|default:invoice.customer_name|default:'N/A' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 mb-1">Invoice Number</p>
+                                <p class="text-sm text-slate-900 font-medium">{{ extracted_data.invoice_number|default:invoice.invoice_number|default:'N/A' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 mb-1">Currency</p>
+                                <p class="text-sm text-slate-900 font-medium">{{ extracted_data.currency|default:invoice.currency|default:'SAR' }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 mb-1">Issue Date</p>
+                                <p class="text-sm text-slate-900 font-medium">{{ extracted_data.issue_date|default:'N/A' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 mb-1">Due Date</p>
+                                <p class="text-sm text-slate-900 font-medium">{{ extracted_data.due_date|default:'N/A' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 mb-1">Subtotal</p>
+                                <p class="text-sm text-slate-900 font-medium">{{ extracted_data.subtotal|default:'N/A' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 mb-1">Total Amount</p>
+                                <p class="text-lg font-semibold text-slate-900">{{ extracted_data.total_amount|default:invoice.total_amount|default:0|floatformat:2 }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Line Items -->
+                    {% if extracted_data.items %}
+                        <div class="mt-6 pt-6 border-t border-slate-200">
+                            <p class="text-sm font-medium text-slate-900 mb-4">Line Items</p>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs">
+                                    <thead>
+                                        <tr class="border-b border-slate-200 bg-slate-50">
+                                            <th class="px-3 py-2 text-left text-slate-600 font-medium">Description</th>
+                                            <th class="px-3 py-2 text-center text-slate-600 font-medium">Qty</th>
+                                            <th class="px-3 py-2 text-right text-slate-600 font-medium">Unit Price</th>
+                                            <th class="px-3 py-2 text-right text-slate-600 font-medium">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in extracted_data.items %}
+                                            <tr class="border-b border-slate-100">
+                                                <td class="px-3 py-2 text-slate-900">{{ item.description|default:'N/A' }}</td>
+                                                <td class="px-3 py-2 text-center text-slate-700">{{ item.quantity|default:1 }}</td>
+                                                <td class="px-3 py-2 text-right text-slate-700">{{ item.unit_price|default:0|floatformat:2 }}</td>
+                                                <td class="px-3 py-2 text-right font-medium text-slate-900">{{ item.line_total|default:0|floatformat:2 }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-sm text-slate-500">No extracted data available</p>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex gap-3 justify-end">
+        <a href="{% url 'invoice_analysis_dashboard' %}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-medium transition-colors">
+            Back to Dashboard
+        </a>
+    </div>
+
+</div>
+{% endblock %}

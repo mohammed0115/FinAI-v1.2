@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Compliance Report - FinAI{% endblock %}
+
+{% block content %}
+<div class="max-w-full mx-auto">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-900">📋 Compliance Report</h1>
+            <p class="text-sm text-slate-500 mt-1">Audit findings and compliance check status</p>
+        </div>
+    </div>
+
+    <!-- Compliance Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Total Checks</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ stats.total_checks }}</p>
+                </div>
+                <div class="text-4xl">📊</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Passed</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ stats.passed_checks }}</p>
+                </div>
+                <div class="text-4xl">✅</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-red-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">Critical Issues</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ stats.critical_issues }}</p>
+                </div>
+                <div class="text-4xl">🚨</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6 border-t-4 border-orange-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-500 text-sm font-medium">High Issues</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ stats.high_issues }}</p>
+                </div>
+                <div class="text-4xl">⚠️</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compliance by Rule Type -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b border-slate-200">
+                <h3 class="text-lg font-semibold text-slate-900">Compliance by Rule</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    {% for rule, count in by_rule.items %}
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-medium text-slate-700">{{ rule }}</span>
+                            <span class="text-sm font-semibold text-slate-900">{{ count }}</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2">
+                            <div class="bg-blue-500 h-2 rounded-full" style="width: {% widthratio count stats.total_checks 100 %}%"></div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-slate-500">No compliance data available</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Pass Rate -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b border-slate-200">
+                <h3 class="text-lg font-semibold text-slate-900">Compliance Pass Rate</h3>
+            </div>
+            <div class="p-6">
+                <div class="flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="text-5xl font-bold text-green-600">
+                            {% if stats.total_checks > 0 %}
+                                {{ pass_rate|default:"0" }}%
+                            {% else %}
+                                — 
+                            {% endif %}
+                        </div>
+                        <p class="text-slate-500 mt-2">of checks passed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-6 text-center">
+        <a href="{% url 'monitoring_dashboard' %}" class="text-blue-600 hover:text-blue-700 font-medium">← Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

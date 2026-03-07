@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}دليل الحسابات - FinAI{% endblock %}
+
+{% block content %}
+<div class="max-w-full">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">دليل الحسابات</h1>
+            <p class="text-sm text-slate-500">إجمالي {{ accounts_count }} حساب</p>
+        </div>
+    </div>
+
+    <!-- Account Type Summary -->
+    <div class="grid grid-cols-5 gap-3 mb-4">
+        <div class="bg-white border border-slate-200 rounded p-3 text-center">
+            <div class="text-xs text-slate-500">الأصول</div>
+            <div class="text-lg font-bold text-blue-600">{{ summary.asset|floatformat:2 }}</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded p-3 text-center">
+            <div class="text-xs text-slate-500">الالتزامات</div>
+            <div class="text-lg font-bold text-red-600">{{ summary.liability|floatformat:2 }}</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded p-3 text-center">
+            <div class="text-xs text-slate-500">حقوق الملكية</div>
+            <div class="text-lg font-bold text-purple-600">{{ summary.equity|floatformat:2 }}</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded p-3 text-center">
+            <div class="text-xs text-slate-500">الإيرادات</div>
+            <div class="text-lg font-bold text-green-600">{{ summary.revenue|floatformat:2 }}</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded p-3 text-center">
+            <div class="text-xs text-slate-500">المصروفات</div>
+            <div class="text-lg font-bold text-amber-600">{{ summary.expense|floatformat:2 }}</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white border border-slate-200 rounded p-3 mb-4">
+        <form method="get" class="flex flex-wrap items-center gap-3">
+            <select name="type" class="text-sm border border-slate-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                <option value="">جميع الأنواع</option>
+                <option value="asset" {% if request.GET.type == 'asset' %}selected{% endif %}>أصول</option>
+                <option value="liability" {% if request.GET.type == 'liability' %}selected{% endif %}>التزامات</option>
+                <option value="equity" {% if request.GET.type == 'equity' %}selected{% endif %}>حقوق ملكية</option>
+                <option value="revenue" {% if request.GET.type == 'revenue' %}selected{% endif %}>إيرادات</option>
+                <option value="expense" {% if request.GET.type == 'expense' %}selected{% endif %}>مصروفات</option>
+            </select>
+            <input type="text" name="search" value="{{ request.GET.search }}" class="text-sm border border-slate-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500" placeholder="بحث بالاسم أو الكود...">
+            <button type="submit" class="px-4 py-1.5 bg-slate-800 text-white text-sm rounded hover:bg-slate-700">تصفية</button>
+            <a href="{% url 'accounts_list' %}" class="text-sm text-slate-500 hover:text-slate-700">إعادة تعيين</a>
+        </form>
+    </div>
+
+    <!-- Accounts Table -->
+    <div class="bg-white border border-slate-200 rounded">
+        <div class="overflow-x-auto">
+            <table class="w-full data-table" data-testid="accounts-table">
+                <thead>
+                    <tr>
+                        <th class="text-right w-24">الكود</th>
+                        <th class="text-right">اسم الحساب</th>
+                        <th class="text-right">الاسم بالعربية</th>
+                        <th class="text-right w-24">النوع</th>
+                        <th class="text-right">التصنيف الفرعي</th>
+                        <th class="text-left w-32">الرصيد الافتتاحي</th>
+                        <th class="text-left w-32">الرصيد الحالي</th>
+                        <th class="text-center w-20">الحالة</th>
+                        <th class="w-12"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for account in accounts %}
+                    <tr>
+                        <td class="mono text-slate-600 font-medium">{{ account.account_code }}</td>
+                        <td>{{ account.account_name }}</td>
+                        <td class="text-slate-500">{{ account.account_name_ar|default:"—" }}</td>
+                        <td>
+                            <span class="badge {% if account.account_type == 'asset' %}badge-info{% elif account.account_type == 'liability' %}badge-danger{% elif account.account_type == 'equity' %}badge-neutral{% elif account.account_type == 'revenue' %}badge-success{% else %}badge-warning{% endif %}">
+                                {% if account.account_type == 'asset' %}أصل{% elif account.account_type == 'liability' %}التزام{% elif account.account_type == 'equity' %}حقوق ملكية{% elif account.account_type == 'revenue' %}إيراد{% else %}مصروف{% endif %}
+                            </span>
+                        </td>
+                        <td class="text-slate-500 text-xs">{{ account.get_account_subtype_display|default:"—" }}</td>
+                        <td class="text-left mono">{{ account.opening_balance|floatformat:2 }}</td>
+                        <td class="text-left mono font-medium {% if account.current_balance < 0 %}text-red-600{% endif %}">{{ account.current_balance|floatformat:2 }}</td>
+                        <td class="text-center">
+                            {% if account.is_active %}
+                            <span class="badge badge-success">نشط</span>
+                            {% else %}
+                            <span class="badge badge-neutral">غير نشط</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'account_detail' account.id %}" class="text-slate-400 hover:text-slate-600">←</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-12 text-slate-400">
+                            لا توجد حسابات
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if accounts.has_other_pages %}
+    <div class="mt-4 flex items-center justify-center gap-2">
+        {% if accounts.has_previous %}
+        <a href="?page={{ accounts.previous_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-100">السابق</a>
+        {% endif %}
+        <span class="text-sm text-slate-500">صفحة {{ accounts.number }} من {{ accounts.paginator.num_pages }}</span>
+        {% if accounts.has_next %}
+        <a href="?page={{ accounts.next_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-100">التالي</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

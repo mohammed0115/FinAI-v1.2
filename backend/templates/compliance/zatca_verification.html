@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ t.zatca_compliance }} - التحقق من الفواتير{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Breadcrumb -->
+    <div class="text-sm text-slate-500 mb-4">
+        <a href="{% url 'compliance_overview' %}" class="hover:text-slate-700">{{ t.nav_compliance }}</a>
+        <span class="mx-2">{% if is_arabic %}←{% else %}→{% endif %}</span>
+        <span class="text-slate-700">{% if is_arabic %}التحقق من ZATCA{% else %}ZATCA Verification{% endif %}</span>
+    </div>
+
+    <!-- Header with Scope Notice -->
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+        <div class="flex items-start gap-3">
+            <span class="text-amber-600 text-xl">⚠️</span>
+            <div>
+                <h2 class="font-semibold text-amber-800 mb-1">
+                    {% if is_arabic %}نطاق الخدمة: التحقق فقط{% else %}Service Scope: Verification Only{% endif %}
+                </h2>
+                <p class="text-sm text-amber-700">
+                    {% if is_arabic %}
+                    هذه الخدمة للتحقق والتدقيق فقط. لا يتم تقديم أو مصادقة أو توقيع الفواتير. FinAI يحافظ على استقلالية المدقق.
+                    {% else %}
+                    This service is for verification and audit only. No invoices are submitted, cleared, or signed. FinAI maintains auditor independence.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- VAT Number Verification -->
+        <div class="bg-white border border-slate-200 rounded-lg">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="font-semibold text-slate-700">
+                    {% if is_arabic %}التحقق من رقم التسجيل الضريبي{% else %}VAT Number Verification{% endif %}
+                </h2>
+            </div>
+            <div class="p-4">
+                <form method="post" action="{% url 'zatca_verification' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="verification_type" value="vat">
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm text-slate-600 mb-1">
+                            {% if is_arabic %}رقم التسجيل الضريبي (15 رقم){% else %}VAT Registration Number (15 digits){% endif %}
+                        </label>
+                        <input type="text" 
+                               name="vat_number" 
+                               data-testid="vat-number-input"
+                               class="w-full px-3 py-2 border border-slate-300 rounded text-sm mono"
+                               placeholder="300000000000003"
+                               pattern="3\d{13}3"
+                               maxlength="15"
+                               required>
+                        <p class="text-xs text-slate-400 mt-1">
+                            {% if is_arabic %}يجب أن يبدأ وينتهي بالرقم 3{% else %}Must start and end with 3{% endif %}
+                        </p>
+                    </div>
+                    
+                    <button type="submit" 
+                            data-testid="verify-vat-btn"
+                            class="w-full px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700 text-sm">
+                        {{ t.action_verify }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Invoice Structure Verification -->
+        <div class="bg-white border border-slate-200 rounded-lg">
+            <div class="px-4 py-3 border-b border-slate-200">
+                <h2 class="font-semibold text-slate-700">
+                    {% if is_arabic %}التحقق من بنية الفاتورة{% else %}Invoice Structure Verification{% endif %}
+                </h2>
+            </div>
+            <div class="p-4">
+                <form method="post" action="{% url 'zatca_verification' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="verification_type" value="invoice">
+                    
+                    <div class="mb-3">
+                        <label class="block text-sm text-slate-600 mb-1">
+                            {% if is_arabic %}معرف الفاتورة (UUID){% else %}Invoice UUID{% endif %}
+                        </label>
+                        <input type="text" 
+                               name="invoice_uuid" 
+                               data-testid="invoice-uuid-input"
+                               class="w-full px-3 py-2 border border-slate-300 rounded text-sm mono"
+                               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                               required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="block text-sm text-slate-600 mb-1">
+                            {% if is_arabic %}تجزئة الفاتورة (Hash){% else %}Invoice Hash{% endif %}
+                        </label>
+                        <input type="text" 
+                               name="invoice_hash" 
+                               data-testid="invoice-hash-input"
+                               class="w-full px-3 py-2 border border-slate-300 rounded text-sm mono"
+                               placeholder="SHA-256 hash">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm text-slate-600 mb-1">
+                            {% if is_arabic %}محتوى الفاتورة (XML){% else %}Invoice Content (XML){% endif %}
+                        </label>
+                        <textarea name="invoice_xml" 
+                                  data-testid="invoice-xml-input"
+                                  rows="6"
+                                  class="w-full px-3 py-2 border border-slate-300 rounded text-xs mono"
+                                  placeholder="<Invoice>...</Invoice>"
+                                  required></textarea>
+                    </div>
+                    
+                    <button type="submit" 
+                            data-testid="verify-invoice-btn"
+                            class="w-full px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700 text-sm">
+                        {{ t.action_verify }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verification Result -->
+    {% if verification_result %}
+    <div class="mt-6 bg-white border border-slate-200 rounded-lg">
+        <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h2 class="font-semibold text-slate-700">
+                {% if is_arabic %}نتيجة التحقق{% else %}Verification Result{% endif %}
+            </h2>
+            <span class="badge {% if verification_result.valid %}badge-success{% else %}badge-danger{% endif %}">
+                {% if verification_result.valid %}
+                    {% if is_arabic %}صالح{% else %}Valid{% endif %}
+                {% else %}
+                    {% if is_arabic %}غير صالح{% else %}Invalid{% endif %}
+                {% endif %}
+            </span>
+        </div>
+        <div class="p-4">
+            {% if verification_result.valid %}
+            <div class="text-green-700 text-sm mb-3">
+                {{ verification_result.message_ar }}
+            </div>
+            {% else %}
+            <div class="text-red-700 text-sm mb-3">
+                {{ verification_result.error_message_ar|default:verification_result.message_ar }}
+            </div>
+            {% if verification_result.regulatory_reference %}
+            <div class="text-xs text-slate-500 mb-3">
+                {% if is_arabic %}المرجع التنظيمي:{% else %}Regulatory Reference:{% endif %} {{ verification_result.regulatory_reference }}
+            </div>
+            {% endif %}
+            {% endif %}
+            
+            {% if verification_result.checks %}
+            <div class="mt-4">
+                <h3 class="text-sm font-medium text-slate-700 mb-2">
+                    {% if is_arabic %}تفاصيل الفحوصات{% else %}Check Details{% endif %}
+                </h3>
+                <div class="space-y-2">
+                    {% for check in verification_result.checks %}
+                    <div class="flex items-center justify-between text-sm p-2 rounded {% if check.passed %}bg-green-50{% else %}bg-red-50{% endif %}">
+                        <span>{% if is_arabic %}{{ check.name_ar }}{% else %}{{ check.name_en }}{% endif %}</span>
+                        <span class="{% if check.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                            {% if check.passed %}✓{% else %}✗{% endif %}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="mt-4 pt-4 border-t border-slate-200 text-xs text-slate-500">
+                <div class="flex items-center justify-between">
+                    <span>{% if is_arabic %}وقت المعالجة:{% else %}Processing Time:{% endif %} {{ verification_result.processing_time_ms }}ms</span>
+                    <span class="mono">{{ verification_result.audit_hash }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Verifications -->
+    {% if recent_verifications %}
+    <div class="mt-6 bg-white border border-slate-200 rounded-lg">
+        <div class="px-4 py-3 border-b border-slate-200">
+            <h2 class="font-semibold text-slate-700">
+                {% if is_arabic %}عمليات التحقق الأخيرة{% else %}Recent Verifications{% endif %}
+            </h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full data-table">
+                <thead>
+                    <tr>
+                        <th>{% if is_arabic %}النوع{% else %}Type{% endif %}</th>
+                        <th>{% if is_arabic %}المعرف{% else %}ID{% endif %}</th>
+                        <th>{% if is_arabic %}الحالة{% else %}Status{% endif %}</th>
+                        <th>{% if is_arabic %}النتيجة{% else %}Score{% endif %}</th>
+                        <th>{% if is_arabic %}التاريخ{% else %}Date{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in recent_verifications %}
+                    <tr>
+                        <td>{{ v.verification_type }}</td>
+                        <td class="mono text-xs">{{ v.input_identifier|truncatechars:20 }}</td>
+                        <td>
+                            <span class="badge {% if v.is_valid %}badge-success{% else %}badge-danger{% endif %}">
+                                {% if v.is_valid %}{% if is_arabic %}صالح{% else %}Valid{% endif %}{% else %}{% if is_arabic %}غير صالح{% else %}Invalid{% endif %}{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ v.compliance_score }}%</td>
+                        <td class="mono text-xs">{{ v.created_at|date:"Y/m/d H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Scope Documentation -->
+    <div class="mt-6 bg-slate-50 border border-slate-200 rounded-lg p-4">
+        <h3 class="font-semibold text-slate-700 mb-3">
+            {% if is_arabic %}وثائق النطاق{% else %}Scope Documentation{% endif %}
+        </h3>
+        <div class="text-sm text-slate-600 whitespace-pre-wrap">{% if is_arabic %}{{ scope_docs.scope_ar }}{% else %}{{ scope_docs.scope_en }}{% endif %}</div>
+    </div>
+</div>
+{% endblock %}

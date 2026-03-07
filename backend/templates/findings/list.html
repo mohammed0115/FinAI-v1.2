@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block title %}نتائج التدقيق - FinAI{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Risk row indicators - RTL safe */
+    [dir="rtl"] .risk-critical { border-right: 3px solid #ef4444; }
+    [dir="rtl"] .risk-high { border-right: 3px solid #f59e0b; }
+    [dir="ltr"] .risk-critical { border-left: 3px solid #ef4444; }
+    [dir="ltr"] .risk-high { border-left: 3px solid #f59e0b; }
+    
+    /* Filter controls */
+    .filter-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: left 0.5rem center;
+        background-size: 1rem;
+        padding-left: 2rem;
+    }
+    
+    /* Summary badges in header */
+    .summary-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border-radius: 0.375rem;
+    }
+    
+    /* Fixed table layout */
+    .findings-table {
+        table-layout: auto;
+        width: 100%;
+    }
+    .findings-table th,
+    .findings-table td {
+        padding: 0.875rem 0.75rem;
+        white-space: nowrap;
+    }
+    .findings-table .col-title {
+        white-space: normal;
+        min-width: 280px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">نتائج التدقيق</h1>
+            <p class="text-sm text-slate-500 mt-1">جميع الملاحظات والنتائج من عمليات التدقيق</p>
+        </div>
+        
+        <!-- Risk Summary Badges -->
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="summary-badge bg-red-50 text-red-700 border border-red-200">
+                <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                حرج: {{ findings_by_risk.critical|default:0 }}
+            </span>
+            <span class="summary-badge bg-amber-50 text-amber-700 border border-amber-200">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                مرتفع: {{ findings_by_risk.high|default:0 }}
+            </span>
+            <span class="summary-badge bg-blue-50 text-blue-700 border border-blue-200">
+                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                متوسط: {{ findings_by_risk.medium|default:0 }}
+            </span>
+            <span class="summary-badge bg-slate-50 text-slate-600 border border-slate-200">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                منخفض: {{ findings_by_risk.low|default:0 }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="bg-white border border-slate-200 rounded-lg p-4">
+        <form method="get" class="flex flex-wrap items-center gap-4">
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-medium text-slate-500 whitespace-nowrap">مستوى الخطر:</label>
+                <select name="risk_level" class="filter-select text-sm border border-slate-200 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400 min-w-[140px]">
+                    <option value="">جميع المستويات</option>
+                    <option value="critical" {% if request.GET.risk_level == 'critical' %}selected{% endif %}>حرج</option>
+                    <option value="high" {% if request.GET.risk_level == 'high' %}selected{% endif %}>مرتفع</option>
+                    <option value="medium" {% if request.GET.risk_level == 'medium' %}selected{% endif %}>متوسط</option>
+                    <option value="low" {% if request.GET.risk_level == 'low' %}selected{% endif %}>منخفض</option>
+                </select>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-medium text-slate-500 whitespace-nowrap">النوع:</label>
+                <select name="finding_type" class="filter-select text-sm border border-slate-200 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400 min-w-[130px]">
+                    <option value="">جميع الأنواع</option>
+                    <option value="compliance" {% if request.GET.finding_type == 'compliance' %}selected{% endif %}>امتثال</option>
+                    <option value="accuracy" {% if request.GET.finding_type == 'accuracy' %}selected{% endif %}>دقة</option>
+                    <option value="completeness" {% if request.GET.finding_type == 'completeness' %}selected{% endif %}>اكتمال</option>
+                    <option value="documentation" {% if request.GET.finding_type == 'documentation' %}selected{% endif %}>توثيق</option>
+                    <option value="internal_control" {% if request.GET.finding_type == 'internal_control' %}selected{% endif %}>رقابة داخلية</option>
+                </select>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-medium text-slate-500 whitespace-nowrap">الحالة:</label>
+                <select name="status" class="filter-select text-sm border border-slate-200 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400 min-w-[130px]">
+                    <option value="">جميع الحالات</option>
+                    <option value="unresolved" {% if request.GET.status == 'unresolved' %}selected{% endif %}>غير محلول</option>
+                    <option value="resolved" {% if request.GET.status == 'resolved' %}selected{% endif %}>محلول</option>
+                </select>
+            </div>
+            
+            <div class="flex items-center gap-2 mr-auto">
+                <button type="submit" class="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-md hover:bg-slate-700 transition-colors">
+                    تصفية
+                </button>
+                <a href="{% url 'audit_findings_list' %}" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors">
+                    إعادة تعيين
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Findings Table -->
+    <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="findings-table data-table" data-testid="findings-table">
+                <thead>
+                    <tr>
+                        <th class="text-right" style="width: 80px;">الرقم</th>
+                        <th class="text-center" style="width: 85px;">المستوى</th>
+                        <th class="text-right col-title">العنوان</th>
+                        <th class="text-right" style="width: 80px;">النوع</th>
+                        <th class="text-left" style="width: 110px;">الأثر المالي</th>
+                        <th class="text-center" style="width: 95px;">الحالة</th>
+                        <th class="text-right" style="width: 95px;">التاريخ</th>
+                        <th style="width: 45px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for finding in findings %}
+                    <tr class="{% if finding.risk_level == 'critical' %}risk-critical{% elif finding.risk_level == 'high' %}risk-high{% endif %} cursor-pointer hover:bg-slate-50 transition-colors"
+                        onclick="window.location='{% url 'audit_finding_detail' finding.id %}'"
+                        data-testid="finding-row-{{ finding.finding_number }}">
+                        <td class="mono text-slate-600 font-medium">{{ finding.finding_number }}</td>
+                        <td class="text-center">
+                            <span class="badge {% if finding.risk_level == 'critical' %}badge-danger{% elif finding.risk_level == 'high' %}badge-warning{% elif finding.risk_level == 'medium' %}badge-info{% else %}badge-neutral{% endif %}">
+                                {% if finding.risk_level == 'critical' %}حرج{% elif finding.risk_level == 'high' %}مرتفع{% elif finding.risk_level == 'medium' %}متوسط{% else %}منخفض{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="text-truncate-2">
+                                <span class="text-slate-800 font-medium" data-testid="finding-link-{{ finding.finding_number }}">
+                                    {{ finding.title_ar }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="text-slate-500 text-sm">
+                            {% if finding.finding_type == 'compliance' %}امتثال{% elif finding.finding_type == 'accuracy' %}دقة{% elif finding.finding_type == 'completeness' %}اكتمال{% elif finding.finding_type == 'documentation' %}توثيق{% elif finding.finding_type == 'internal_control' %}رقابة{% else %}{{ finding.finding_type }}{% endif %}
+                        </td>
+                        <td class="text-left">
+                            {% if finding.financial_impact %}
+                            <span class="mono font-medium text-slate-700">{{ finding.financial_impact|floatformat:0 }}</span>
+                            <span class="text-slate-400 text-xs">ر.س</span>
+                            {% else %}
+                            <span class="text-slate-300">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if finding.is_resolved %}
+                            <span class="badge badge-success">محلول</span>
+                            {% else %}
+                            <span class="badge badge-warning">قيد المتابعة</span>
+                            {% endif %}
+                        </td>
+                        <td class="mono text-slate-500 text-sm">{{ finding.created_at|date:"Y/m/d" }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'audit_finding_detail' finding.id %}" 
+                               class="inline-flex items-center justify-center w-7 h-7 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                               onclick="event.stopPropagation();">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                                </svg>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-16">
+                            <div class="flex flex-col items-center gap-3">
+                                <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <p class="text-slate-400 text-sm">لا توجد نتائج تدقيق</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if findings.has_other_pages %}
+    <div class="flex items-center justify-center gap-3 py-2">
+        {% if findings.has_previous %}
+        <a href="?page={{ findings.previous_page_number }}{% if request.GET.risk_level %}&risk_level={{ request.GET.risk_level }}{% endif %}{% if request.GET.finding_type %}&finding_type={{ request.GET.finding_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+           class="px-4 py-2 text-sm font-medium border border-slate-200 rounded-md text-slate-600 hover:bg-slate-50 transition-colors">
+            السابق
+        </a>
+        {% endif %}
+        
+        <span class="px-4 py-2 text-sm text-slate-500 bg-slate-50 rounded-md">
+            صفحة {{ findings.number }} من {{ findings.paginator.num_pages }}
+        </span>
+        
+        {% if findings.has_next %}
+        <a href="?page={{ findings.next_page_number }}{% if request.GET.risk_level %}&risk_level={{ request.GET.risk_level }}{% endif %}{% if request.GET.finding_type %}&finding_type={{ request.GET.finding_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+           class="px-4 py-2 text-sm font-medium border border-slate-200 rounded-md text-slate-600 hover:bg-slate-50 transition-colors">
+            التالي
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

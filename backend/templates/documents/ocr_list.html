@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}أدلة التعرف الضوئي - FinAI{% endblock %}
+
+{% block content %}
+<div class="max-w-full">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">أدلة التعرف الضوئي (OCR)</h1>
+            <p class="text-sm text-slate-500">إجمالي {{ total_count }} سجل | النص المستخرج هو دليل تدقيق فقط</p>
+        </div>
+        <a href="{% url 'document_upload' %}" class="px-4 py-2 bg-slate-800 text-white text-sm rounded hover:bg-slate-700">
+            رفع مستند جديد
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white border border-slate-200 rounded p-3 mb-4">
+        <form method="get" class="flex flex-wrap items-center gap-3">
+            <select name="confidence" class="text-sm border border-slate-300 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                <option value="">جميع مستويات الثقة</option>
+                <option value="high" {% if request.GET.confidence == 'high' %}selected{% endif %}>مرتفعة</option>
+                <option value="medium" {% if request.GET.confidence == 'medium' %}selected{% endif %}>متوسطة</option>
+                <option value="low" {% if request.GET.confidence == 'low' %}selected{% endif %}>منخفضة</option>
+                <option value="very_low" {% if request.GET.confidence == 'very_low' %}selected{% endif %}>ضعيفة جداً</option>
+            </select>
+            <button type="submit" class="px-4 py-1.5 bg-slate-800 text-white text-sm rounded hover:bg-slate-700">تصفية</button>
+            <a href="{% url 'ocr_evidence_list' %}" class="text-sm text-slate-500 hover:text-slate-700">إعادة تعيين</a>
+        </form>
+    </div>
+
+    <!-- Evidence Table -->
+    <div class="bg-white border border-slate-200 rounded">
+        <div class="overflow-x-auto">
+            <table class="w-full data-table" data-testid="ocr-evidence-table">
+                <thead>
+                    <tr>
+                        <th class="text-right">المستند</th>
+                        <th class="text-right">اللغة</th>
+                        <th class="text-center">خط يدوي</th>
+                        <th class="text-center">الثقة</th>
+                        <th class="text-left">الكلمات</th>
+                        <th class="text-right">التاريخ</th>
+                        <th class="w-16"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for evidence in evidence_records %}
+                    <tr>
+                        <td>
+                            <div class="text-slate-700 font-medium">{{ evidence.document.file_name|truncatechars:25 }}</div>
+                            <div class="text-xs text-slate-400">{{ evidence.document.get_document_type_display }}</div>
+                        </td>
+                        <td class="text-slate-500">
+                            {% if evidence.language_used == 'ar' %}عربي{% elif evidence.language_used == 'en' %}إنجليزي{% else %}مختلط{% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if evidence.is_handwritten %}
+                            <span class="badge badge-info">نعم</span>
+                            {% else %}
+                            <span class="badge badge-neutral">لا</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge {% if evidence.confidence_level == 'high' %}badge-success{% elif evidence.confidence_level == 'medium' %}badge-warning{% elif evidence.confidence_level == 'low' %}badge-danger{% else %}badge-neutral{% endif %}">
+                                {{ evidence.confidence_score }}%
+                            </span>
+                        </td>
+                        <td class="text-left mono">{{ evidence.word_count }}</td>
+                        <td class="mono text-slate-500">{{ evidence.extracted_at|date:"Y/m/d H:i" }}</td>
+                        <td>
+                            <a href="{% url 'ocr_evidence_detail' evidence.id %}" class="text-slate-400 hover:text-slate-600">←</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-12 text-slate-400">
+                            لا توجد سجلات تعرف ضوئي
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if evidence_records.has_other_pages %}
+    <div class="mt-4 flex items-center justify-center gap-2">
+        {% if evidence_records.has_previous %}
+        <a href="?page={{ evidence_records.previous_page_number }}{% if request.GET.confidence %}&confidence={{ request.GET.confidence }}{% endif %}" class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-100">السابق</a>
+        {% endif %}
+        <span class="text-sm text-slate-500">صفحة {{ evidence_records.number }} من {{ evidence_records.paginator.num_pages }}</span>
+        {% if evidence_records.has_next %}
+        <a href="?page={{ evidence_records.next_page_number }}{% if request.GET.confidence %}&confidence={{ request.GET.confidence }}{% endif %}" class="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-100">التالي</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
