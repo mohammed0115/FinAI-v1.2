@@ -33,6 +33,17 @@ class User(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
     organization = models.ForeignKey('Organization', on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
     login_method = models.CharField(max_length=64, null=True, blank=True)
+
+    # Social Login Fields
+    google_id = models.CharField(max_length=128, null=True, blank=True, unique=True)
+    facebook_id = models.CharField(max_length=128, null=True, blank=True, unique=True)
+    social_provider = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        choices=[('google', 'Google'), ('facebook', 'Facebook'), ('email', 'Email')],
+    )
+
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

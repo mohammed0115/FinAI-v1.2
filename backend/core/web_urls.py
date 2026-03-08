@@ -1,4 +1,8 @@
 from django.urls import path
+from .social_auth_views import (
+    google_login, google_callback,
+    facebook_login, facebook_callback,
+)
 from .web_views import (
     # Auth
     login_view, logout_view,
@@ -32,6 +36,14 @@ urlpatterns = [
     # Auth
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
+
+    # Social Auth — Google
+    path('auth/google/', google_login, name='google_login'),
+    path('auth/google/callback/', google_callback, name='google_callback'),
+
+    # Social Auth — Facebook
+    path('auth/facebook/', facebook_login, name='facebook_login'),
+    path('auth/facebook/callback/', facebook_callback, name='facebook_callback'),
     
     # Language Toggle
     path('toggle-language/', toggle_language_view, name='toggle_language'),
