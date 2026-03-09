@@ -5,84 +5,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tadgeeg - تسجيل الدخول</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        * { font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; }
-        .mono { font-family: 'IBM Plex Mono', monospace; }
-        
+        * { font-family: 'Cairo', 'Manrope', sans-serif; }
+        .mono { font-family: 'Manrope', 'Cairo', sans-serif; }
+
         .gradient-bg {
-            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #f5f3ff 100%);
+            background-color: #eef2f7;
+            background-image: linear-gradient(#e6ebf3 1px, transparent 1px),
+                              linear-gradient(90deg, #e6ebf3 1px, transparent 1px);
+            background-size: 48px 48px;
+            position: relative;
+            overflow-x: hidden;
         }
-        
+        .gradient-bg::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(900px 600px at 80% 20%, rgba(66, 116, 255, 0.14), transparent 60%),
+                radial-gradient(800px 600px at 20% 80%, rgba(19, 200, 200, 0.12), transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .page-shell { position: relative; z-index: 1; }
+
         .gradient-text {
-            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #ec4899 100%);
+            background: linear-gradient(135deg, #2b6ae6 0%, #17c1c3 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        
+
         .progress-gradient-blue {
-            background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+            background: linear-gradient(90deg, #2b6ae6 0%, #5aa9ff 100%);
         }
         .progress-gradient-green {
-            background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
+            background: linear-gradient(90deg, #22c55e 0%, #7ce7a4 100%);
         }
         .progress-gradient-purple {
-            background: linear-gradient(90deg, #a855f7 0%, #c084fc 100%);
+            background: linear-gradient(90deg, #7c3aed 0%, #b794f4 100%);
         }
-        .progress-gradient-yellow {
-            background: linear-gradient(90deg, #eab308 0%, #facc15 100%);
+
+        .auth-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(203, 213, 225, 0.7);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 30px 80px rgba(15, 23, 42, 0.12);
+            backdrop-filter: blur(10px);
         }
-        
-        .card-shadow {
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+
+        .tab-switcher {
+            background: rgba(241, 245, 249, 0.9);
+            border: 1px solid rgba(226, 232, 240, 0.9);
         }
-        
+
         .btn-gradient {
-            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            background: linear-gradient(90deg, #2b6ae6 0%, #1cc6c2 100%);
+            box-shadow: 0 12px 30px rgba(43, 106, 230, 0.25);
         }
         .btn-gradient:hover {
-            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+            background: linear-gradient(90deg, #275fd0 0%, #18b4b1 100%);
         }
-        
-        .feature-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-        }
-        
+
         .input-field {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         .input-field:focus {
-            border-color: #0891b2;
-            box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+            border-color: #5aa9ff;
+            box-shadow: 0 0 0 4px rgba(90, 169, 255, 0.2);
         }
-        
-        .logo-upload {
-            border: 2px dashed #d1d5db;
-            transition: border-color 0.2s, background-color 0.2s;
+
+        .stat-bar {
+            height: 8px;
+            background: #e6ebf3;
+            border-radius: 999px;
+            overflow: hidden;
         }
-        .logo-upload:hover {
-            border-color: #0891b2;
-            background-color: #f0fdfa;
+        .stat-bar-fill {
+            height: 100%;
+            border-radius: 999px;
         }
-        
-        .stat-number {
-            color: #1e293b; /* أزرق غامق/رمادي غامق */
-            font-size: 2.5rem;
-            font-weight: bold;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 1px 0 #fff;
-            letter-spacing: 1px;
-            opacity: 1 !important;
-            background: none !important;
+        .kpi-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 10px 14px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #1f2937;
+        }
+
+        .social-btn {
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        }
+        .social-btn:hover {
+            border-color: #cbd5f5;
+            background: #f8fafc;
         }
     </style>
 </head>
 <body class="min-h-screen gradient-bg">
-    <div class="min-h-screen flex">
+    <div class="page-shell min-h-screen flex">
         <!-- Left Side - Branding & Features -->
         <div class="hidden lg:flex lg:w-1/2 flex-col p-8 relative overflow-hidden">
             <!-- Language Toggle -->
@@ -109,7 +139,7 @@
             
             <!-- Main Heading -->
             <div class="mb-12">
-                <h1 class="text-4xl font-bold text-slate-800 leading-tight mb-2">
+                <h1 class="text-5xl lg:text-6xl font-bold text-slate-900 leading-snug mb-4">
                     <span class="gradient-text">منصة تدقيق المالي الذكية</span>
                 </h1>
                 <p class="text-slate-600 mt-6 leading-relaxed">
@@ -120,124 +150,40 @@
             </div>
             
             <!-- Stats Section -->
-            <div class="bg-white rounded-2xl p-6 card-shadow mb-8">
-                <div class="grid grid-cols-2 gap-6">
-                    <!-- Active Users -->
-                    <div class="border-l border-slate-100 pl-4">
-                        <div class="text-3xl font-bold text-slate-800 mono">+500</div>
-                        <div class="text-sm text-slate-500">مستخدم نشط</div>
+            <div class="mt-10 space-y-6">
+                <div>
+                    <div class="flex items-center justify-between text-sm text-slate-600 mb-2">
+                        <span>قوة معالجة AI</span>
+                        <span class="mono text-slate-800">94%</span>
                     </div>
-                    
-                    <!-- AI Processing -->
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs text-slate-500">قوة معالجة AI</span>
-                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                            </svg>
-                        </div>
-                        <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div class="h-full progress-gradient-blue rounded-full" style="width: 85%"></div>
-                        </div>
-                    </div>
-                    
-                    <!-- Uptime -->
-                    <div class="border-l border-slate-100 pl-4">
-                        <div class="text-3xl font-bold text-slate-800 mono">99.9%</div>
-                        <div class="text-sm text-slate-500">وقت التشغيل</div>
-                    </div>
-                    
-                    <!-- Automation -->
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs text-slate-500">الأتمتة</span>
-                            <span class="text-xs font-semibold text-slate-700">97%</span>
-                        </div>
-                        <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div class="h-full progress-gradient-green rounded-full" style="width: 97%"></div>
-                        </div>
+                    <div class="stat-bar">
+                        <div class="stat-bar-fill progress-gradient-blue" style="width: 94%"></div>
                     </div>
                 </div>
-                
-                <!-- Security Score -->
-                <div class="mt-4 pt-4 border-t border-slate-100">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs text-slate-500">درجة الأمان</span>
-                        <span class="text-xs font-semibold text-emerald-600">ممتاز</span>
+                <div>
+                    <div class="flex items-center justify-between text-sm text-slate-600 mb-2">
+                        <span>الأتمتة</span>
+                        <span class="mono text-slate-800">97%</span>
                     </div>
-                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div class="h-full progress-gradient-purple rounded-full" style="width: 92%"></div>
+                    <div class="stat-bar">
+                        <div class="stat-bar-fill progress-gradient-green" style="width: 97%"></div>
                     </div>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between text-sm text-slate-600 mb-2">
+                        <span>درجة الأمان</span>
+                        <span class="mono text-slate-800">92%</span>
+                    </div>
+                    <div class="stat-bar">
+                        <div class="stat-bar-fill progress-gradient-purple" style="width: 92%"></div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 pt-2">
+                    <div class="kpi-card">99.9% وقت التشغيل</div>
+                    <div class="kpi-card">+500 مستخدم نشط</div>
                 </div>
             </div>
-            
-            <!-- Feature Cards -->
-            <div class="grid grid-cols-2 gap-4">
-                <div class="feature-card bg-white rounded-xl p-4 card-shadow text-center">
-                    <div class="w-12 h-12 mx-auto mb-3 bg-blue-50 rounded-xl flex items-center justify-center">
-                        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
-                    </div>
-                    <div class="font-semibold text-slate-800 text-sm">تحليلات AI</div>
-                    <div class="text-xs text-slate-500">رؤى تنبؤية</div>
-                </div>
-                
-                <div class="feature-card bg-white rounded-xl p-4 card-shadow text-center">
-                    <div class="w-12 h-12 mx-auto mb-3 bg-purple-50 rounded-xl flex items-center justify-center">
-                        <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                        </svg>
-                    </div>
-                    <div class="font-semibold text-slate-800 text-sm">متوافق مع الخليج</div>
-                    <div class="text-xs text-slate-500">ZATCA & الزكاة</div>
-                </div>
-                
-                <div class="feature-card bg-white rounded-xl p-4 card-shadow text-center">
-                    <div class="w-12 h-12 mx-auto mb-3 bg-amber-50 rounded-xl flex items-center justify-center">
-                        <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                        </svg>
-                    </div>
-                    <div class="font-semibold text-slate-800 text-sm">OCR/HDR</div>
-                    <div class="text-xs text-slate-500">استخراج ذكي</div>
-                </div>
-                
-                <div class="feature-card bg-white rounded-xl p-4 card-shadow text-center">
-                    <div class="w-12 h-12 mx-auto mb-3 bg-emerald-50 rounded-xl flex items-center justify-center">
-                        <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
-                        </svg>
-                    </div>
-                    <div class="font-semibold text-slate-800 text-sm">متعدد اللغات</div>
-                    <div class="text-xs text-slate-500">العربية والإنجليزية</div>
-                </div>
-            </div>
-            
-            <!-- Additional Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 my-8">
-                <div class="flex flex-col items-center bg-white/80 rounded-2xl shadow px-6 py-5">
-                    <svg class="w-8 h-8 text-cyan-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-2.21 1.79-4 4-4s4 1.79 4 4-1.79 4-4 4-4-1.79-4-4zm0 0c0-2.21-1.79-4-4-4s-4 1.79-4 4 1.79 4 4 4 4-1.79 4-4z"/></svg>
-                    <span class="font-semibold text-slate-800">GCC Compliant</span>
-                    <span class="text-xs text-slate-500 mt-1">ZATCA & VAT Ready</span>
-                </div>
-                <div class="flex flex-col items-center bg-white/80 rounded-2xl shadow px-6 py-5">
-                    <svg class="w-8 h-8 text-purple-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m4 0h-1v4h-1m-4 0h-1v-4h-1"/></svg>
-                    <span class="font-semibold text-slate-800">AI Analytics</span>
-                    <span class="text-xs text-slate-500 mt-1">Predictive Insights</span>
-                </div>
-                <div class="flex flex-col items-center bg-white/80 rounded-2xl shadow px-6 py-5">
-                    <svg class="w-8 h-8 text-amber-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h8M12 8v8"/></svg>
-                    <span class="font-semibold text-slate-800">Multilingual</span>
-                    <span class="text-xs text-slate-500 mt-1">Arabic & English</span>
-                </div>
-                <div class="flex flex-col items-center bg-white/80 rounded-2xl shadow px-6 py-5">
-                    <svg class="w-8 h-8 text-yellow-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553 2.276A2 2 0 0121 14.118V17a2 2 0 01-2 2H5a2 2 0 01-2-2v-2.882a2 2 0 01.447-1.342L8 10m7 0V7a5 5 0 00-10 0v3"/></svg>
-                    <span class="font-semibold text-slate-800">OCR/HDR</span>
-                    <span class="text-xs text-slate-500 mt-1">Smart Extraction</span>
-                </div>
-            </div>
-            
+
             <!-- Footer -->
             <footer class="text-center text-xs text-slate-400 py-4">
                 © 2026 GSC-Tadgeeg. All rights reserved for GetSolution Co.
@@ -245,10 +191,10 @@
         </div>
         
         <!-- Right Side - Login/Register Form -->
-        <div class="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 bg-white">
-            <div class="w-full max-w-md">
+        <div class="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
+            <div class="auth-card w-full max-w-md">
                 <!-- Tab Switcher -->
-                <div class="flex bg-slate-100 rounded-xl p-1 mb-8" id="tabSwitcher">
+                <div class="tab-switcher flex rounded-2xl p-1 mb-8" id="tabSwitcher">
                     <button onclick="showTab('login')" id="loginTab" class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all bg-white text-slate-800 shadow-sm">
                         تسجيل الدخول
                     </button>
@@ -335,7 +281,7 @@
                     <div class="grid grid-cols-1 gap-3">
                         <!-- Google Button -->
                         <a href="{% url 'google_login' %}"
-                           class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all text-xs sm:text-sm font-medium text-slate-700 shadow-sm"
+                           class="social-btn flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all text-xs sm:text-sm font-medium text-slate-700"
                            title="تسجيل الدخول عبر Google">
                             <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
                                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -415,7 +361,7 @@
                     <!-- Social Register Buttons -->
                     <div class="grid grid-cols-1 gap-3">
                         <a href="{% url 'google_login' %}"
-                           class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all text-xs sm:text-sm font-medium text-slate-700 shadow-sm"
+                           class="social-btn flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all text-xs sm:text-sm font-medium text-slate-700"
                            title="التسجيل عبر Google">
                             <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
                                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
