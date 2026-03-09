@@ -1,15 +1,39 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 import uuid
 
 class UserManager(BaseUserManager):
+    def _build_placeholder_organization(self, email, name=''):
+        display_name = (name or email.split('@')[0] or 'User').strip()
+        org_name = f'Placeholder Company ({display_name})'
+        return Organization.objects.db_manager(self._db).create(
+            name=org_name,
+            name_ar=org_name,
+            country='AE',
+            currency='AED',
+            company_type='sme',
+            vat_applicable=False,
+            vat_validation_status='not_required',
+            vat_validation_message='Auto-created placeholder organization during sign-up.',
+            zatca_enabled=False,
+            zatca_verification_scope='disabled',
+        )
+
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError('Users must have an email address')
         email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
+        with transaction.atomic(using=self._db):
+            organization = extra_fields.get('organization')
+            if organization is None:
+                extra_fields['organization'] = self._build_placeholder_organization(
+                    email=email,
+                    name=extra_fields.get('name', ''),
+                )
+
+            user = self.model(email=email, **extra_fields)
+            user.set_password(password)
+            user.save(using=self._db)
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):

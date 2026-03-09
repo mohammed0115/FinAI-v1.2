@@ -98,6 +98,8 @@ class GoogleOAuthTestCase(TestCase):
         self.assertEqual(user.google_id, 'google_123456')
         self.assertEqual(user.social_provider, 'google')
         self.assertTrue(user.is_active)
+        self.assertIsNotNone(user.organization)
+        self.assertEqual(user.organization.country, 'AE')
     
     @patch('core.social_auth_views.http_requests.post')
     @patch('core.social_auth_views.http_requests.get')
@@ -184,6 +186,7 @@ class GoogleOAuthTestCase(TestCase):
 
 
 @override_settings(
+    FACEBOOK_LOGIN_ENABLED=True,
     FACEBOOK_APP_ID='dummy_facebook_app_id',
     FACEBOOK_APP_SECRET='dummy_facebook_app_secret',
 )
@@ -261,6 +264,8 @@ class FacebookOAuthTestCase(TestCase):
         self.assertEqual(user.facebook_id, '987654321')
         self.assertEqual(user.social_provider, 'facebook')
         self.assertTrue(user.is_active)
+        self.assertIsNotNone(user.organization)
+        self.assertEqual(user.organization.country, 'AE')
     
     @patch('core.social_auth_views.http_requests.get')
     def test_facebook_callback_success_existing_user(self, mock_get):
@@ -359,6 +364,8 @@ class UserCreationTestCase(TestCase):
         self.assertEqual(user.google_id, 'google_new_123')
         self.assertEqual(user.social_provider, 'google')
         self.assertTrue(user.is_active)
+        self.assertIsNotNone(user.organization)
+        self.assertEqual(user.organization.country, 'AE')
     
     def test_get_or_create_existing_user_link(self):
         """Test linking social ID to existing user"""
@@ -436,6 +443,7 @@ class UserCreationTestCase(TestCase):
 @override_settings(
     GOOGLE_CLIENT_ID='dummy_client_id',
     GOOGLE_CLIENT_SECRET='dummy_client_secret',
+    FACEBOOK_LOGIN_ENABLED=True,
     FACEBOOK_APP_ID='dummy_facebook_app_id',
     FACEBOOK_APP_SECRET='dummy_facebook_app_secret',
 )

@@ -74,7 +74,7 @@ def register_view(request):
             with transaction.atomic():
                 org = None
                 if company_name:
-                    # Create Organization only if provided (optional for later onboarding)
+                    # Create the real organization when company details are available.
                     org = Organization.objects.create(
                         name=company_name,
                         name_ar=company_name,
@@ -82,12 +82,7 @@ def register_view(request):
                         country='SA',
                     )
 
-                # Save logo if provided
-                if org and company_logo:
-                    org.logo = company_logo
-                    org.save()
-
-                # Create Admin User
+                # Create the user. If `org` is None, the manager creates a placeholder organization.
                 user = User.objects.create_user(
                     email=email,
                     password=password,
@@ -97,6 +92,9 @@ def register_view(request):
                     social_provider='email',
                     login_method='email',
                 )
+                if company_logo and user.organization:
+                    user.organization.logo = company_logo
+                    user.organization.save()
 
                 messages.success(request, 'تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول')
                 return redirect('login')
