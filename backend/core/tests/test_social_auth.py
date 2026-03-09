@@ -10,7 +10,7 @@ Run tests:
 import json
 from unittest.mock import patch, Mock
 
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.conf import settings
@@ -18,6 +18,10 @@ from django.conf import settings
 User = get_user_model()
 
 
+@override_settings(
+    GOOGLE_CLIENT_ID='dummy_client_id',
+    GOOGLE_CLIENT_SECRET='dummy_client_secret',
+)
 class GoogleOAuthTestCase(TestCase):
     """Tests for Google OAuth2 flow"""
     
@@ -179,6 +183,10 @@ class GoogleOAuthTestCase(TestCase):
         self.assertEqual(response.url, reverse('login'))
 
 
+@override_settings(
+    FACEBOOK_APP_ID='dummy_facebook_app_id',
+    FACEBOOK_APP_SECRET='dummy_facebook_app_secret',
+)
 class FacebookOAuthTestCase(TestCase):
     """Tests for Facebook OAuth2 flow"""
     
@@ -425,6 +433,12 @@ class UserCreationTestCase(TestCase):
         self.assertIn('id', str(context.exception).lower())
 
 
+@override_settings(
+    GOOGLE_CLIENT_ID='dummy_client_id',
+    GOOGLE_CLIENT_SECRET='dummy_client_secret',
+    FACEBOOK_APP_ID='dummy_facebook_app_id',
+    FACEBOOK_APP_SECRET='dummy_facebook_app_secret',
+)
 class SessionSecurityTestCase(TestCase):
     """Tests for session and CSRF security"""
     

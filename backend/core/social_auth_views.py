@@ -28,6 +28,19 @@ logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Helpers
+
+def _resolve_redirect_uri(request, provider, callback_view_name):
+    """
+    Resolve OAuth redirect URI for a provider.
+
+    Priority:
+      1) <PROVIDER>_REDIRECT_URI from settings (e.g., GOOGLE_REDIRECT_URI)
+      2) request.build_absolute_uri(reverse(callback_view_name))
+    """
+    override = getattr(settings, f'{provider.upper()}_REDIRECT_URI', '')
+    if override:
+        return override
+    return request.build_absolute_uri(reverse(callback_view_name))
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _get_or_create_social_user(email, name, provider, provider_id):
@@ -111,7 +124,8 @@ def google_login(request):
     request.session['oauth_state'] = state
     request.session.set_expiry(600)  # State expires in 10 minutes
 
-    callback_url = request.build_absolute_uri(reverse('google_callback'))
+    callback_url = _resolve_redirect_uri(request, 'google', 'google_callback')
+    request.session['google_oauth_redirect_uri'] = callback_url
 
     params = {
         'client_id': client_id,
@@ -154,7 +168,9 @@ def google_callback(request):
         messages.error(request, 'خدمة Google OAuth غير مكوّنة. يرجى التواصل مع الدعم')
         return redirect('login')
     
-    callback_url = request.build_absolute_uri(reverse('google_callback'))
+    callback_url = request.session.pop('google_oauth_redirect_uri', None)
+    if not callback_url:
+        callback_url = _resolve_redirect_uri(request, 'google', 'google_callback')
 
     # Exchange code for token
     try:
@@ -169,7 +185,15 @@ def google_callback(request):
             },
             timeout=10,
         )
-        token_resp.raise_for_status()
+        try:
+            token_resp.raise_for_status()
+        except http_requests.exceptions.HTTPError as exc:
+            logger.error(
+                'Google token exchange failed: %s | status=%s body=%s',
+                exc, token_resp.status_code, token_resp.text,
+            )
+            messages.error(request, 'فشل تبادل البيانات مع Google. يرجى المحاولة مجدداً')
+            return redirect('login')
         token_data = token_resp.json()
     except http_requests.exceptions.RequestException as exc:
         logger.error(f'Google token exchange failed: {exc}', exc_info=True)
@@ -248,6 +272,11 @@ FACEBOOK_SCOPES = 'email,public_profile'
 
 def facebook_login(request):
     """Redirect user to Facebook's OAuth consent page."""
+    if not getattr(settings, 'FACEBOOK_LOGIN_ENABLED', False):
+        logger.info('Facebook login disabled')
+        messages.error(request, 'تسجيل الدخول عبر Facebook متوقف مؤقتًا')
+        return redirect('login')
+
     app_id = getattr(settings, 'FACEBOOK_APP_ID', '')
     if not app_id:
         logger.warning('Facebook login attempted but FACEBOOK_APP_ID not configured')
@@ -258,7 +287,8 @@ def facebook_login(request):
     request.session['oauth_state'] = state
     request.session.set_expiry(600)  # State expires in 10 minutes
 
-    callback_url = request.build_absolute_uri(reverse('facebook_callback'))
+    callback_url = _resolve_redirect_uri(request, 'facebook', 'facebook_callback')
+    request.session['facebook_oauth_redirect_uri'] = callback_url
 
     params = {
         'client_id': app_id,
@@ -274,6 +304,11 @@ def facebook_login(request):
 
 def facebook_callback(request):
     """Handle Facebook's OAuth callback."""
+    if not getattr(settings, 'FACEBOOK_LOGIN_ENABLED', False):
+        logger.info('Facebook callback blocked because login is disabled')
+        messages.error(request, 'تسجيل الدخول عبر Facebook متوقف مؤقتًا')
+        return redirect('login')
+
     # CSRF state check
     state = request.GET.get('state')
     session_state = request.session.pop('oauth_state', None)
@@ -299,7 +334,9 @@ def facebook_callback(request):
         messages.error(request, 'خدمة Facebook OAuth غير مكوّنة. يرجى التواصل مع الدعم')
         return redirect('login')
     
-    callback_url = request.build_absolute_uri(reverse('facebook_callback'))
+    callback_url = request.session.pop('facebook_oauth_redirect_uri', None)
+    if not callback_url:
+        callback_url = _resolve_redirect_uri(request, 'facebook', 'facebook_callback')
 
     # Exchange code for token
     try:
@@ -313,7 +350,15 @@ def facebook_callback(request):
             },
             timeout=10,
         )
-        token_resp.raise_for_status()
+        try:
+            token_resp.raise_for_status()
+        except http_requests.exceptions.HTTPError as exc:
+            logger.error(
+                'Facebook token exchange failed: %s | status=%s body=%s',
+                exc, token_resp.status_code, token_resp.text,
+            )
+            messages.error(request, 'فشل تبادل البيانات مع Facebook. يرجى المحاولة مجدداً')
+            return redirect('login')
         token_data = token_resp.json()
     except http_requests.exceptions.RequestException as exc:
         logger.error(f'Facebook token exchange failed: {exc}', exc_info=True)

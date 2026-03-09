@@ -26,6 +26,7 @@ from .web_views import (
     # Settings
     toggle_language_view, organization_settings_view,
 )
+from .views.auth_views import register_view
 from .views.document_views import process_pending_documents, reprocess_with_ai_view, pipeline_result_view
 from .monitoring_views import (
     monitoring_dashboard_view, processing_pipeline_view,
@@ -35,6 +36,7 @@ from .monitoring_views import (
 urlpatterns = [
     # Auth
     path('login/', login_view, name='login'),
+    path('register/', register_view, name='register'),
     path('logout/', logout_view, name='logout'),
 
     # Social Auth — Google

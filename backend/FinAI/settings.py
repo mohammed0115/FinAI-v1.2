@@ -213,9 +213,12 @@ AUTHENTICATION_BACKENDS = [
 # ── Social Login (Google & Facebook OAuth2) ───────────────────────────────────
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', '')
 
 FACEBOOK_APP_ID = os.environ.get('FACEBOOK_APP_ID', '')
 FACEBOOK_APP_SECRET = os.environ.get('FACEBOOK_APP_SECRET', '')
+FACEBOOK_REDIRECT_URI = os.environ.get('FACEBOOK_REDIRECT_URI', '')
+FACEBOOK_LOGIN_ENABLED = os.environ.get('FACEBOOK_LOGIN_ENABLED', 'false').lower() in ('1', 'true', 'yes', 'on')
 
 # File Upload Settings
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB (GCC requirement)
