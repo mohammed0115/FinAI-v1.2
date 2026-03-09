@@ -9,6 +9,7 @@ __pycache__
 *$py.class
 *.so
 .Python
+.env
 env/
 venv/
 ENV/
@@ -108,4 +109,4 @@ yarn-error.log
 
 # Other
 .DS_Store
-README.md
+

@@ -10,6 +10,8 @@ RECAPTCHA_SECRET_KEY = os.environ.get('RECAPTCHA_SECRET_KEY', '')
 # Load environment variables from .env file
 from dotenv import load_dotenv
 env_file_path = os.path.join(BASE_DIR, '.env')
+# load_dotenv(os.path.join(BASE_DIR, '.env'))
+
 load_dotenv(dotenv_path=env_file_path)
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-finai-dev-key-change-in-production')
@@ -210,15 +212,20 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # Default Django backend
 ]
 
+# GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+# GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+# GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
 # ── Social Login (Google & Facebook OAuth2) ───────────────────────────────────
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
-GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', '')
-
-FACEBOOK_APP_ID = os.environ.get('FACEBOOK_APP_ID', '')
-FACEBOOK_APP_SECRET = os.environ.get('FACEBOOK_APP_SECRET', '')
-FACEBOOK_REDIRECT_URI = os.environ.get('FACEBOOK_REDIRECT_URI', '')
-FACEBOOK_LOGIN_ENABLED = os.environ.get('FACEBOOK_LOGIN_ENABLED', 'false').lower() in ('1', 'true', 'yes', 'on')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://www.tadgeeg.com/auth/google/callback/')
+os.environ.setdefault('GOOGLE_CLIENT_ID', GOOGLE_CLIENT_ID)
+os.environ.setdefault('GOOGLE_CLIENT_SECRET', GOOGLE_CLIENT_SECRET)
+os.environ.setdefault('GOOGLE_REDIRECT_URI', GOOGLE_REDIRECT_URI)
+# FACEBOOK_APP_ID = os.environ.get('FACEBOOK_APP_ID', '')
+# FACEBOOK_APP_SECRET = os.environ.get('FACEBOOK_APP_SECRET', '')
+# FACEBOOK_REDIRECT_URI = os.environ.get('FACEBOOK_REDIRECT_URI', '')
+# FACEBOOK_LOGIN_ENABLED = os.environ.get('FACEBOOK_LOGIN_ENABLED', 'false').lower() in ('1', 'true', 'yes', 'on')
 
 # File Upload Settings
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB (GCC requirement)
@@ -226,17 +233,29 @@ ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/t
 
 # Cookie settings for proxy environments
 # Use 'None' for SameSite to allow cross-site requests with Secure cookies
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
 
 USE_X_FORWARDED_HOST = False
-# SECURE_PROXY_SSL_HEADER = None
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
 
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# CSRF_COOKIE_SECURE = False
+# SESSION_COOKIE_SECURE = False
+
+# CSRF_COOKIE_SAMESITE = 'Lax'
+# SESSION_COOKIE_SAMESITE = 'Lax'
+
+# USE_X_FORWARDED_HOST = False
+# # SECURE_PROXY_SSL_HEADER = None
+
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # STATIC_URL = "/static/"
 # STATIC_ROOT = "/home/u163153443/public_html/static"
 
