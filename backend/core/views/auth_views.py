@@ -21,6 +21,7 @@ def login_view(request):
         
         user = authenticate(request, email=email, password=password)
         if user is not None:
+            User.objects.ensure_organization_setup(user)
             auth_login(request, user)
             return redirect('dashboard')
         else:
@@ -72,32 +73,33 @@ def register_view(request):
 
         try:
             with transaction.atomic():
-                org = None
-                if company_name:
-                    # Create the real organization when company details are available.
-                    org = Organization.objects.create(
-                        name=company_name,
-                        name_ar=company_name,
-                        vat_number=tax_number or None,
-                        country='SA',
-                    )
-
-                # Create the user. If `org` is None, the manager creates a placeholder organization.
                 user = User.objects.create_user(
                     email=email,
                     password=password,
                     name=full_name,
-                    organization=org,
                     role='admin',
                     social_provider='email',
                     login_method='email',
+                    organization_name=company_name,
+                    organization_member_role='owner',
                 )
+
+                if company_name and user.organization:
+                    user.organization.name = company_name
+                    user.organization.name_ar = company_name
+
+                if tax_number and user.organization:
+                    user.organization.vat_number = tax_number
+
                 if company_logo and user.organization:
                     user.organization.logo = company_logo
+
+                if user.organization:
                     user.organization.save()
 
-                messages.success(request, 'تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول')
-                return redirect('login')
+                auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                messages.success(request, 'تم إنشاء الحساب بنجاح')
+                return redirect('dashboard')
 
         except Exception as e:
             messages.error(request, f"حدث خطأ أثناء إنشاء الحساب: {str(e)}")

@@ -35,6 +35,7 @@ def login_view(request):
         user = authenticate(request, email=email, password=password)
         
         if user is not None:
+            User.objects.ensure_organization_setup(user)
             auth_login(request, user)
             return redirect('dashboard')
         else:

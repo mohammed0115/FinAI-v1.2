@@ -70,6 +70,7 @@ def _get_or_create_social_user(email, name, provider, provider_id):
     user = User.objects.filter(**filter_kwargs).first()
     if user:
         logger.info(f'Found existing user {user.email} by {provider}_id')
+        User.objects.ensure_organization_setup(user, organization_name=name)
         return user
 
     # 2. Try to find by email (link existing account)
@@ -82,6 +83,7 @@ def _get_or_create_social_user(email, name, provider, provider_id):
         if not user.login_method:
             user.login_method = provider
         user.save(update_fields=[f'{provider}_id', 'social_provider', 'login_method'])
+        User.objects.ensure_organization_setup(user, organization_name=name)
         return user
 
     # 3. Create new account
@@ -90,9 +92,12 @@ def _get_or_create_social_user(email, name, provider, provider_id):
         email=email,
         password=None,  # unusable password — social-only account
         name=name or email.split('@')[0],
+        role='admin',
         social_provider=provider,
         login_method=provider,
         is_active=True,
+        organization_name=name,
+        organization_member_role='owner',
     )
     setattr(user, f'{provider}_id', provider_id)
     user.save(update_fields=[f'{provider}_id'])

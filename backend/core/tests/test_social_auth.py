@@ -15,6 +15,8 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.conf import settings
 
+from core.models import OrganizationMember
+
 User = get_user_model()
 
 
@@ -95,11 +97,15 @@ class GoogleOAuthTestCase(TestCase):
         
         # Check user was created
         user = User.objects.get(email='newuser@gmail.com')
+        membership = OrganizationMember.objects.get(user=user, organization=user.organization)
         self.assertEqual(user.google_id, 'google_123456')
         self.assertEqual(user.social_provider, 'google')
         self.assertTrue(user.is_active)
+        self.assertEqual(user.role, 'admin')
         self.assertIsNotNone(user.organization)
         self.assertEqual(user.organization.country, 'AE')
+        self.assertEqual(user.organization.created_by, user)
+        self.assertEqual(membership.role, 'owner')
     
     @patch('core.social_auth_views.http_requests.post')
     @patch('core.social_auth_views.http_requests.get')
@@ -261,11 +267,15 @@ class FacebookOAuthTestCase(TestCase):
         
         # Check user was created
         user = User.objects.get(email='newuser@facebook.com')
+        membership = OrganizationMember.objects.get(user=user, organization=user.organization)
         self.assertEqual(user.facebook_id, '987654321')
         self.assertEqual(user.social_provider, 'facebook')
         self.assertTrue(user.is_active)
+        self.assertEqual(user.role, 'admin')
         self.assertIsNotNone(user.organization)
         self.assertEqual(user.organization.country, 'AE')
+        self.assertEqual(user.organization.created_by, user)
+        self.assertEqual(membership.role, 'owner')
     
     @patch('core.social_auth_views.http_requests.get')
     def test_facebook_callback_success_existing_user(self, mock_get):
@@ -364,8 +374,14 @@ class UserCreationTestCase(TestCase):
         self.assertEqual(user.google_id, 'google_new_123')
         self.assertEqual(user.social_provider, 'google')
         self.assertTrue(user.is_active)
+        self.assertEqual(user.role, 'admin')
         self.assertIsNotNone(user.organization)
         self.assertEqual(user.organization.country, 'AE')
+        self.assertEqual(user.organization.created_by, user)
+        self.assertEqual(
+            OrganizationMember.objects.get(user=user, organization=user.organization).role,
+            'owner',
+        )
     
     def test_get_or_create_existing_user_link(self):
         """Test linking social ID to existing user"""

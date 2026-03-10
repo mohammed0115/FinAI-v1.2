@@ -1,39 +1,109 @@
-from django.db import models, transaction
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+import re
 import uuid
 
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.db import models, transaction
+
 class UserManager(BaseUserManager):
-    def _build_placeholder_organization(self, email, name=''):
-        display_name = (name or email.split('@')[0] or 'User').strip()
-        org_name = f'Placeholder Company ({display_name})'
-        return Organization.objects.db_manager(self._db).create(
+    @staticmethod
+    def _format_organization_label(email, name='', organization_name=''):
+        raw_label = (organization_name or name or email.split('@')[0] or 'New User').strip()
+        raw_label = re.sub(r'[_\-.]+', ' ', raw_label)
+        raw_label = re.sub(r'\s+', ' ', raw_label).strip()
+
+        if raw_label.isascii():
+            raw_label = raw_label.title()
+
+        return raw_label or 'New User'
+
+    def _provision_organization(self, user, organization_name=''):
+        display_label = self._format_organization_label(
+            email=user.email,
+            name=user.name or '',
+            organization_name=organization_name,
+        )
+        org_name = f'{display_label} Organization'
+
+        organization = Organization.objects.db_manager(self._db).create(
             name=org_name,
             name_ar=org_name,
+            created_by=user,
             country='AE',
             currency='AED',
             company_type='sme',
             vat_applicable=False,
             vat_validation_status='not_required',
-            vat_validation_message='Auto-created placeholder organization during sign-up.',
+            vat_validation_message='Auto-created organization during sign-up.',
             zatca_enabled=False,
             zatca_verification_scope='disabled',
         )
 
+        return organization
+
+    def _ensure_membership(self, user, organization, role):
+        precedence = {'member': 1, 'admin': 2, 'owner': 3}
+        member, created = OrganizationMember.objects.db_manager(self._db).get_or_create(
+            user=user,
+            organization=organization,
+            defaults={'role': role},
+        )
+
+        if not created and precedence.get(role, 0) > precedence.get(member.role, 0):
+            member.role = role
+            member.save(update_fields=['role'])
+
+        return member
+
+    def ensure_organization_setup(self, user, organization_name='', membership_role=None):
+        with transaction.atomic(using=self._db):
+            organization = user.organization
+            update_fields = []
+
+            if organization is None:
+                organization = self._provision_organization(user, organization_name=organization_name)
+                user.organization = organization
+                update_fields.append('organization')
+
+            effective_role = membership_role
+            if effective_role is None:
+                if organization.created_by_id == user.id:
+                    effective_role = 'owner'
+                elif user.role == 'admin':
+                    effective_role = 'admin'
+                else:
+                    effective_role = 'member'
+
+            self._ensure_membership(user, organization, effective_role)
+
+            if effective_role == 'owner' and user.role != 'admin':
+                user.role = 'admin'
+                update_fields.append('role')
+
+            if update_fields:
+                user.save(using=self._db, update_fields=update_fields)
+
+            return organization
+
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError('Users must have an email address')
-        email = self.normalize_email(email)
-        with transaction.atomic(using=self._db):
-            organization = extra_fields.get('organization')
-            if organization is None:
-                extra_fields['organization'] = self._build_placeholder_organization(
-                    email=email,
-                    name=extra_fields.get('name', ''),
-                )
 
-            user = self.model(email=email, **extra_fields)
+        email = self.normalize_email(email)
+        organization = extra_fields.pop('organization', None)
+        organization_name = extra_fields.pop('organization_name', '')
+        organization_member_role = extra_fields.pop('organization_member_role', None)
+
+        with transaction.atomic(using=self._db):
+            user = self.model(email=email, organization=organization, **extra_fields)
             user.set_password(password)
             user.save(using=self._db)
+
+            self.ensure_organization_setup(
+                user,
+                organization_name=organization_name,
+                membership_role=organization_member_role,
+            )
+
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
@@ -121,6 +191,13 @@ class Organization(models.Model):
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    created_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_organizations',
+    )
     name = models.CharField(max_length=255, help_text='اسم الشركة')
     name_ar = models.CharField(max_length=255, null=True, blank=True, help_text='اسم الشركة بالعربية')
     logo = models.ImageField(upload_to='org_logos/', null=True, blank=True, help_text='شعار الشركة')
@@ -203,6 +280,34 @@ class Organization(models.Model):
             'not_required': 'غير مطلوب',
         }
         return status_ar.get(self.vat_validation_status, self.vat_validation_status)
+
+
+class OrganizationMember(models.Model):
+    ROLE_CHOICES = [
+        ('owner', 'Owner'),
+        ('admin', 'Admin'),
+        ('member', 'Member'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='organization_memberships')
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='memberships')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'organization_members'
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'organization'], name='uniq_user_org_membership'),
+        ]
+        indexes = [
+            models.Index(fields=['organization']),
+            models.Index(fields=['user']),
+            models.Index(fields=['role']),
+        ]
+
+    def __str__(self):
+        return f'{self.user.email} -> {self.organization.name} ({self.role})'
 
 class AuditLog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

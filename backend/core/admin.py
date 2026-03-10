@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Organization, AuditLog, Configuration
+from .models import User, Organization, OrganizationMember, AuditLog, Configuration
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -27,10 +27,18 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
-    list_display = ['name', 'country', 'company_type', 'currency', 'vat_rate', 'created_at']
+    list_display = ['name', 'created_by', 'country', 'company_type', 'currency', 'vat_rate', 'created_at']
     list_filter = ['country', 'company_type']
     search_fields = ['name', 'tax_id']
     readonly_fields = ['id', 'created_at', 'updated_at']
+
+
+@admin.register(OrganizationMember)
+class OrganizationMemberAdmin(admin.ModelAdmin):
+    list_display = ['user', 'organization', 'role', 'created_at']
+    list_filter = ['role', 'created_at']
+    search_fields = ['user__email', 'organization__name']
+    readonly_fields = ['id', 'created_at']
 
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
