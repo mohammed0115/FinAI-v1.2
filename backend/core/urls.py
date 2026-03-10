@@ -1,7 +1,8 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import UserViewSet, OrganizationViewSet, AuditLogViewSet, ConfigurationViewSet
-from .monitoring_views import MonitoringViewSet
+
+from core.api.viewsets import AuditLogViewSet, ConfigurationViewSet, OrganizationViewSet, UserViewSet
+from core.monitoring_views import MonitoringViewSet
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet)

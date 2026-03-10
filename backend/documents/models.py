@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from core.models import User, Organization
 import uuid
@@ -37,6 +38,7 @@ class Document(models.Model):
     file_size = models.IntegerField()  # in bytes
     storage_key = models.CharField(max_length=500)
     storage_url = models.TextField()
+    content_hash = models.CharField(max_length=64, null=True, blank=True)
     document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPE_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, null=True, blank=True)
@@ -68,13 +70,17 @@ class ExtractedData(models.Model):
     document = models.OneToOneField(Document, on_delete=models.CASCADE, related_name='extracted_data')
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='extracted_data')
     vendor_name = models.CharField(max_length=255, null=True, blank=True)
+    vendor_tax_id = models.CharField(max_length=50, null=True, blank=True)
     customer_name = models.CharField(max_length=255, null=True, blank=True)
+    customer_tax_id = models.CharField(max_length=50, null=True, blank=True)
     invoice_number = models.CharField(max_length=100, null=True, blank=True)
     invoice_date = models.DateTimeField(null=True, blank=True)
     due_date = models.DateTimeField(null=True, blank=True)
+    subtotal_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
     total_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     tax_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=10, null=True, blank=True)
+    raw_json = models.JSONField(null=True, blank=True)
     items_json = models.JSONField(null=True, blank=True)  # Line items
     raw_text_ar = models.TextField(null=True, blank=True)
     raw_text_en = models.TextField(null=True, blank=True)
@@ -182,6 +188,325 @@ class ExtractedData(models.Model):
             'details_ar': 'لم يتم تحديد مستوى المخاطر',
             'details_en': 'Risk level not determined'
         })
+
+
+class Vendor(models.Model):
+    """Vendor master data scoped per tenant organization."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='vendors'
+    )
+    name = models.CharField(max_length=255)
+    commercial_registration = models.CharField(max_length=100, null=True, blank=True)
+    vat_number = models.CharField(max_length=20, null=True, blank=True)
+    address = models.TextField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_vendors'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'vendors'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['organization', 'vat_number'],
+                condition=models.Q(vat_number__isnull=False) & ~models.Q(vat_number=''),
+                name='uniq_vendor_org_vat',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['organization']),
+            models.Index(fields=['vat_number']),
+            models.Index(fields=['name']),
+        ]
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.vat_number or 'no-vat'})"
+
+
+class InvoiceRecord(models.Model):
+    """Normalized invoice record used by the ingestion layer."""
+
+    APPROVAL_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='invoice_records'
+    )
+    document = models.ForeignKey(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='invoice_records'
+    )
+    extracted_data = models.OneToOneField(
+        'ExtractedData',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invoice_record'
+    )
+    vendor = models.ForeignKey(
+        Vendor,
+        on_delete=models.PROTECT,
+        related_name='invoice_records'
+    )
+    customer_organization = models.ForeignKey(
+        Organization,
+        on_delete=models.PROTECT,
+        related_name='customer_invoice_records'
+    )
+    customer_name = models.CharField(max_length=255, null=True, blank=True)
+    customer_vat_number = models.CharField(max_length=20, null=True, blank=True)
+    invoice_number = models.CharField(max_length=100, null=True, blank=True)
+    issue_date = models.DateField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    currency = models.CharField(max_length=10, default='SAR')
+    subtotal_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    vat_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    total_amount = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    cost_center = models.CharField(max_length=100, null=True, blank=True)
+    accounting_account = models.ForeignKey(
+        'Account',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invoice_records'
+    )
+    budget = models.ForeignKey(
+        'FinancialBudget',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invoice_records'
+    )
+    approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='pending')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_invoice_records'
+    )
+    raw_json = models.JSONField(default=dict, blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_invoice_records'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'invoice_records'
+        indexes = [
+            models.Index(fields=['organization']),
+            models.Index(fields=['vendor']),
+            models.Index(fields=['invoice_number']),
+            models.Index(fields=['issue_date']),
+            models.Index(fields=['total_amount']),
+            models.Index(fields=['approval_status']),
+        ]
+        ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            previous = type(self).objects.filter(pk=self.pk).first()
+            if previous and previous.approval_status == 'approved':
+                immutable_fields = [
+                    'document_id',
+                    'vendor_id',
+                    'customer_organization_id',
+                    'customer_name',
+                    'customer_vat_number',
+                    'invoice_number',
+                    'issue_date',
+                    'due_date',
+                    'currency',
+                    'subtotal_amount',
+                    'vat_amount',
+                    'total_amount',
+                    'cost_center',
+                    'accounting_account_id',
+                    'budget_id',
+                    'raw_json',
+                ]
+                for field_name in immutable_fields:
+                    if getattr(previous, field_name) != getattr(self, field_name):
+                        raise ValidationError('Approved invoices cannot be modified.')
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.invoice_number or 'draft'} - {self.vendor.name}"
+
+
+class InvoiceLineItem(models.Model):
+    """Normalized line item rows for future price and anomaly analysis."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invoice = models.ForeignKey(
+        InvoiceRecord,
+        on_delete=models.CASCADE,
+        related_name='line_items'
+    )
+    line_number = models.PositiveIntegerField(default=1)
+    description = models.CharField(max_length=500)
+    quantity = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    unit_price = models.DecimalField(max_digits=18, decimal_places=6, default=0)
+    line_total = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    raw_json = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'invoice_line_items'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['invoice', 'line_number'],
+                name='uniq_invoice_line_number',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['invoice']),
+            models.Index(fields=['description']),
+        ]
+        ordering = ['line_number']
+
+    def save(self, *args, **kwargs):
+        if self.invoice_id and self.invoice.approval_status == 'approved':
+            if self.pk is None:
+                raise ValidationError('Approved invoices cannot be modified.')
+            previous = type(self).objects.filter(pk=self.pk).first()
+            if previous and (
+                previous.description != self.description
+                or previous.quantity != self.quantity
+                or previous.unit_price != self.unit_price
+                or previous.line_total != self.line_total
+            ):
+                raise ValidationError('Approved invoices cannot be modified.')
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.invoice.invoice_number or self.invoice_id} #{self.line_number}"
+
+
+class AuditSession(models.Model):
+    """Tracks the ordered audit workflow for one document processing run."""
+
+    SOURCE_CHOICES = [
+        ('web_upload', 'Web Upload'),
+        ('api_upload', 'API Upload'),
+        ('background_task', 'Background Task'),
+        ('ocr_signal', 'OCR Signal'),
+        ('re_audit', 'Re-Audit'),
+    ]
+
+    STATUS_CHOICES = [
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('published', 'Published'),
+        ('failed', 'Failed'),
+    ]
+
+    STAGE_CHOICES = [
+        ('upload_file', 'Upload File'),
+        ('create_audit_session', 'Create AuditSession'),
+        ('save_document', 'Save Document'),
+        ('ai_extraction', 'AI Extraction'),
+        ('normalization', 'Normalization'),
+        ('validation', 'Validation'),
+        ('compliance_engine', 'Compliance Engine'),
+        ('risk_score', 'Risk Score'),
+        ('findings', 'Findings'),
+        ('ai_executive_summary', 'AI Executive Summary'),
+        ('publish_to_dashboard', 'Publish to Dashboard'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='audit_sessions',
+    )
+    started_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='started_audit_sessions',
+    )
+    source = models.CharField(max_length=30, choices=SOURCE_CHOICES, default='web_upload')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='processing')
+    current_stage = models.CharField(max_length=40, choices=STAGE_CHOICES, default='create_audit_session')
+    file_name = models.CharField(max_length=500, null=True, blank=True)
+    content_hash = models.CharField(max_length=64, null=True, blank=True)
+    document = models.ForeignKey(
+        Document,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_sessions',
+    )
+    extracted_data = models.ForeignKey(
+        ExtractedData,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_sessions',
+    )
+    invoice_record = models.ForeignKey(
+        InvoiceRecord,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_sessions',
+    )
+    vendor = models.ForeignKey(
+        Vendor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_sessions',
+    )
+    customer_name = models.CharField(max_length=255, null=True, blank=True)
+    customer_tax_id = models.CharField(max_length=50, null=True, blank=True)
+    stages_json = models.JSONField(default=dict, blank=True)
+    dashboard_payload = models.JSONField(default=dict, blank=True)
+    last_error = models.TextField(null=True, blank=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'audit_sessions'
+        indexes = [
+            models.Index(fields=['organization']),
+            models.Index(fields=['status']),
+            models.Index(fields=['source']),
+            models.Index(fields=['current_stage']),
+            models.Index(fields=['document']),
+        ]
+        ordering = ['-started_at']
+
+    def __str__(self):
+        return f"{self.file_name or self.id} - {self.status}"
 
 class Account(models.Model):
     """Chart of Accounts - Double-entry bookkeeping support"""

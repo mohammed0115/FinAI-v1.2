@@ -20,8 +20,8 @@ import shutil
 
 from core.models import Organization
 from documents.models import Document
-from documents.ocr_service import document_ocr_service
 from documents.models import OCREvidence
+from documents.services.audit_workflow_service import invoice_audit_workflow_service
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ def save_document_file(organization, uploaded_file, file_content=None):
     return storage_key, storage_url, file_path
 
 
-def create_document_record(organization, user, file_name, file_content, file_type, upload_source='single'):
+def create_document_record(organization, user, file_name, file_content, file_type, upload_source='single', content_hash=None):
     """
     Create a Document record with audit trail
     
@@ -94,7 +94,7 @@ def create_document_record(organization, user, file_name, file_content, file_typ
     Returns: Document instance
     """
     # Generate audit hash
-    audit_hash = generate_file_hash(file_content)
+    audit_hash = content_hash or generate_file_hash(file_content)
     
     # Create temp file-like object for save
     class FileWrapper:
@@ -133,6 +133,7 @@ def create_document_record(organization, user, file_name, file_content, file_typ
         file_size=len(file_content),
         storage_key=storage_key,
         storage_url=storage_url,
+        content_hash=audit_hash,
         document_type='other',
         status='pending',
         language=None,
@@ -145,118 +146,24 @@ def create_document_record(organization, user, file_name, file_content, file_typ
     return document, file_path, audit_hash
 
 
-def process_document_ocr(document, file_path, language, is_handwritten, user, organization):
+def process_document_ocr(document, file_path, language, is_handwritten, user, organization, audit_session=None):
     """
-    Process a document using OpenAI Vision only (no Tesseract).
+    Process a document using the canonical audit workflow.
     Returns: (success, message, ocr_evidence)
     """
-    import time as _time
     try:
-        document.status = 'processing'
-        document.save()
-
-        file_ext = os.path.splitext(file_path)[1].lower()
-        t_start = _time.time()
-
-        # --- OpenAI Vision extraction (only engine) ---
-        structured_json = {}
-        confidence = 0
-        ocr_engine = 'openai_vision'
-        raw_text = ''
-
-        from core.openai_invoice_extraction_service import get_openai_extraction_service
-        openai_svc = get_openai_extraction_service()
-        if not openai_svc.client:
-            raise Exception('OpenAI API key not configured. Cannot process without OpenAI Vision.')
-
-        ai_result = openai_svc.extract_invoice(file_path)
-        if not ai_result.get('extraction_success'):
-            error_msg = ai_result.get('error', 'OpenAI Vision extraction failed')
-            raise Exception(error_msg)
-
-        raw_items = ai_result.get('items', [])
-        items = []
-        for item in raw_items:
-            items.append({
-                'description': item.get('description') or item.get('product') or '',
-                'quantity': item.get('quantity', 0),
-                'unit_price': item.get('unit_price', 0),
-                'discount': item.get('discount', 0),
-                'line_total': item.get('line_total') or item.get('total') or 0,
-            })
-        structured_json = {
-            'invoice_number': ai_result.get('invoice_number'),
-            'issue_date': ai_result.get('issue_date'),
-            'due_date': ai_result.get('due_date'),
-            'vendor_name': ai_result.get('vendor_name'),
-            'vendor_tax_id': ai_result.get('vendor_tax_id'),
-            'customer_name': ai_result.get('customer_name'),
-            'customer_tax_id': ai_result.get('customer_tax_id'),
-            'items': items,
-            'subtotal': ai_result.get('subtotal'),
-            'tax_amount': ai_result.get('tax_amount'),
-            'tax_rate': ai_result.get('tax_rate'),
-            'discount_amount': ai_result.get('discount_amount'),
-            'total_amount': ai_result.get('total_amount'),
-            'currency': ai_result.get('currency', 'SAR'),
-            'language_detected': ai_result.get('language_detected'),
-            'is_mathematically_correct': ai_result.get('is_mathematically_correct'),
-        }
-        confidence = ai_result.get('confidence') or 85
-        raw_text = str(structured_json)
-        processing_ms = int((_time.time() - t_start) * 1000)
-        logger.info(f'OpenAI Vision extraction succeeded for {document.id}: conf={confidence}')
-
-        # Confidence level label
-        if confidence >= 80:
-            confidence_level = 'high'
-        elif confidence >= 50:
-            confidence_level = 'medium'
-        else:
-            confidence_level = 'low'
-
-        # Create OCR evidence record
-        ocr_evidence = OCREvidence.objects.create(
+        workflow_result = invoice_audit_workflow_service.process_document(
             document=document,
-            organization=organization,
-            raw_text=raw_text,
-            text_ar='',
-            text_en='',
-            confidence_score=confidence,
-            confidence_level=confidence_level,
-            page_count=1,
-            word_count=len(raw_text.split()),
-            ocr_engine=ocr_engine,
-            ocr_version='gpt-4o-mini',
-            language_used=language,
+            file_path=file_path,
+            actor=user,
+            language=language,
             is_handwritten=is_handwritten,
-            processing_time_ms=processing_ms,
-            extracted_invoice_number=structured_json.get('invoice_number'),
-            extracted_vat_number=structured_json.get('vendor_tax_id'),
-            extracted_total=structured_json.get('total_amount'),
-            extracted_tax=structured_json.get('tax_amount'),
-            structured_data_json=structured_json,
-            evidence_hash='',
-            extracted_by=user,
+            source='web_upload',
+            audit_session=audit_session,
         )
-        
-        # Update document status
-        document.status = 'completed'
-        document.processed_at = timezone.now()
-        document.save()
-        
-        # Trigger post-OCR pipeline (extraction, compliance, risk scoring, AI summary)
-        try:
-            from core.post_ocr_pipeline import process_ocr_evidence
-            extracted_data = process_ocr_evidence(ocr_evidence)
-            if extracted_data:
-                logger.info(f"Post-OCR pipeline completed for {document.id}")
-            else:
-                logger.warning(f"Post-OCR pipeline failed for {document.id}")
-        except Exception as e:
-            logger.warning(f"Post-OCR pipeline error: {e}")
-        
-        return True, f'درجة الثقة: {confidence}%', ocr_evidence
+
+        confidence = workflow_result.ocr_evidence.confidence_score if workflow_result.ocr_evidence else 0
+        return True, f'درجة الثقة: {confidence}%', workflow_result.ocr_evidence
         
     except Exception as e:
         logger.error(f"OCR processing error for {document.id}: {e}")
@@ -359,6 +266,14 @@ def handle_single_upload(request, user, organization, document_type, language, i
         # Read file content
         file_content = uploaded_file.read()
         file_type = CONTENT_TYPE_MAP.get(ext, 'application/octet-stream')
+        audit_hash = generate_file_hash(file_content)
+        audit_session = invoice_audit_workflow_service.start_session(
+            organization=organization,
+            actor=user,
+            file_name=uploaded_file.name,
+            content_hash=audit_hash,
+            source='web_upload',
+        )
         
         # Create document record
         document, file_path, audit_hash = create_document_record(
@@ -367,7 +282,8 @@ def handle_single_upload(request, user, organization, document_type, language, i
             file_name=uploaded_file.name,
             file_content=file_content,
             file_type=file_type,
-            upload_source='single'
+            upload_source='single',
+            content_hash=audit_hash,
         )
         
         # Update document type
@@ -378,7 +294,7 @@ def handle_single_upload(request, user, organization, document_type, language, i
         
         # Process OCR immediately for single uploads
         success, message, ocr_evidence = process_document_ocr(
-            document, file_path, language, is_handwritten, user, organization
+            document, file_path, language, is_handwritten, user, organization, audit_session=audit_session
         )
         
         if success:
@@ -429,6 +345,16 @@ def handle_multi_upload(request, user, organization, document_type, language, is
             # Read file content
             file_content = uploaded_file.read()
             file_type = CONTENT_TYPE_MAP.get(ext, 'application/octet-stream')
+            audit_hash = generate_file_hash(file_content)
+            audit_session = None
+            if process_ocr == 'immediate' and len(uploaded_files) <= 10:
+                audit_session = invoice_audit_workflow_service.start_session(
+                    organization=organization,
+                    actor=user,
+                    file_name=uploaded_file.name,
+                    content_hash=audit_hash,
+                    source='web_upload',
+                )
             
             # Create document record
             document, file_path, audit_hash = create_document_record(
@@ -437,7 +363,8 @@ def handle_multi_upload(request, user, organization, document_type, language, is
                 file_name=uploaded_file.name,
                 file_content=file_content,
                 file_type=file_type,
-                upload_source='multi'
+                upload_source='multi',
+                content_hash=audit_hash,
             )
             
             # Update document metadata
@@ -449,7 +376,7 @@ def handle_multi_upload(request, user, organization, document_type, language, is
             # Process OCR based on user preference
             if process_ocr == 'immediate' and len(uploaded_files) <= 10:
                 success, message, ocr_evidence = process_document_ocr(
-                    document, file_path, language, is_handwritten, user, organization
+                    document, file_path, language, is_handwritten, user, organization, audit_session=audit_session
                 )
                 if success:
                     results['success'].append({

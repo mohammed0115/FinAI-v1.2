@@ -196,10 +196,11 @@ class DataValidationService:
             'invoice_number': cls.validate_invoice_number(extracted_data.invoice_number),
             'vendor': cls.validate_vendor(
                 extracted_data.vendor_name,
-                None  # TIN not available in ExtractedData
+                extracted_data.vendor_tax_id,
             ),
             'customer': cls.validate_customer(
                 extracted_data.customer_name,
+                extracted_data.customer_tax_id,
             ),
             'items': cls.validate_line_items(extracted_data.items_json or []),
             'total_match': cls.validate_total_match(

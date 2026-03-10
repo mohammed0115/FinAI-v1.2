@@ -4,10 +4,27 @@ Django signals for automatic processing
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from documents.models import OCREvidence, ExtractedData
+from documents.domain_signals import invoice_persisted
+from documents.models import AuditSession, OCREvidence, ExtractedData
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(invoice_persisted)
+def trigger_initial_invoice_audit(sender, invoice, extracted_data, actor=None, **kwargs):
+    """Start the deterministic ingestion audit procedures after persistence."""
+    try:
+        from documents.services.ingestion_audit_service import invoice_ingestion_audit_service
+
+        return invoice_ingestion_audit_service.run_initial_checks(
+            invoice=invoice,
+            extracted_data=extracted_data,
+            actor=actor,
+        )
+    except Exception as exc:
+        logger.error("Error while running ingestion audit procedures: %s", exc, exc_info=True)
+        return None
 
 
 @receiver(post_save, sender=OCREvidence)
@@ -16,6 +33,10 @@ def trigger_post_ocr_pipeline(sender, instance, created, **kwargs):
     Automatically trigger post-OCR pipeline when OCREvidence is created
     """
     if not created:
+        return
+
+    if AuditSession.objects.filter(document=instance.document, status='processing').exists():
+        logger.info("Skipping OCREvidence signal for document %s because a canonical audit session is running", instance.document_id)
         return
     
     try:
@@ -39,6 +60,10 @@ def auto_generate_audit_report(sender, instance: ExtractedData, created: bool, *
     
     if not created:
         # Only generate on creation, not on updates
+        return
+
+    if AuditSession.objects.filter(document=instance.document, status='processing').exists():
+        logger.info("Skipping auto report generation for document %s because a canonical audit session is running", instance.document_id)
         return
     
     try:

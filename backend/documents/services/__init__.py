@@ -12,6 +12,9 @@ from .audit_report_service import (
     RiskScoringService,
     RecommendationService,
 )
+from .audit_workflow_service import invoice_audit_workflow_service
+from .ingestion_audit_service import invoice_ingestion_audit_service
+from .ingestion_persistence_service import invoice_ingestion_persistence_service
 from .openai_service import OpenAIService
 
 __all__ = [
@@ -21,5 +24,8 @@ __all__ = [
     'AnomalyDetectionService',
     'RiskScoringService',
     'RecommendationService',
+    'invoice_audit_workflow_service',
+    'invoice_ingestion_audit_service',
+    'invoice_ingestion_persistence_service',
     'OpenAIService',
 ]

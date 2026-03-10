@@ -1,135 +1,140 @@
-"""
-Transaction and Account Views - وجهات المعاملات والحسابات
-"""
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Sum, Q
+from django.db.models import Q, Sum
+from django.shortcuts import get_object_or_404
 
-from documents.models import Transaction, Account
-
-
-@login_required
-def transactions_view(request):
-    """قائمة المعاملات"""
-    user = request.user
-    organization = user.organization
-    
-    transactions = Transaction.objects.filter(organization=organization)
-    
-    # Filters
-    transaction_type = request.GET.get('type')
-    is_anomaly = request.GET.get('anomaly')
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
-    
-    if transaction_type:
-        transactions = transactions.filter(transaction_type=transaction_type)
-    if is_anomaly is not None and is_anomaly != '':
-        transactions = transactions.filter(is_anomaly=is_anomaly == 'true')
-    if date_from:
-        transactions = transactions.filter(transaction_date__gte=date_from)
-    if date_to:
-        transactions = transactions.filter(transaction_date__lte=date_to)
-    
-    transactions = transactions.order_by('-transaction_date')
-    
-    # Pagination
-    paginator = Paginator(transactions, 30)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    # Stats
-    all_transactions = Transaction.objects.filter(organization=organization)
-    stats = {
-        'total': all_transactions.count(),
-        'income': all_transactions.filter(transaction_type='income').aggregate(total=Sum('amount'))['total'] or 0,
-        'expense': all_transactions.filter(transaction_type='expense').aggregate(total=Sum('amount'))['total'] or 0,
-        'anomalies': all_transactions.filter(is_anomaly=True).count(),
-    }
-    
-    context = {
-        'transactions': page_obj,
-        'stats': stats,
-        'current_type': transaction_type,
-        'current_anomaly': is_anomaly,
-        'date_from': date_from,
-        'date_to': date_to,
-    }
-    
-    return render(request, 'transactions.html', context)
+from core.views.base import OrganizationTemplateView
+from documents.models import Account, Transaction
 
 
-@login_required
-def transaction_detail_view(request, transaction_id):
-    """تفاصيل المعاملة"""
-    user = request.user
-    organization = user.organization
-    
-    transaction = get_object_or_404(Transaction, id=transaction_id, organization=organization)
-    
-    context = {
-        'transaction': transaction,
-    }
-    
-    return render(request, 'transactions_detail.html', context)
+class TransactionsPageView(OrganizationTemplateView):
+    template_name = 'transactions.html'
+
+    def get_queryset(self):
+        organization = self.get_organization()
+        queryset = Transaction.objects.filter(organization=organization)
+
+        transaction_type = self.request.GET.get('type')
+        is_anomaly = self.request.GET.get('anomaly')
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+
+        if transaction_type:
+            queryset = queryset.filter(transaction_type=transaction_type)
+        if is_anomaly not in (None, ''):
+            queryset = queryset.filter(is_anomaly=is_anomaly == 'true')
+        if date_from:
+            queryset = queryset.filter(transaction_date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(transaction_date__lte=date_to)
+
+        return queryset.order_by('-transaction_date')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        organization = self.get_organization()
+        queryset = self.get_queryset()
+        all_transactions = Transaction.objects.filter(organization=organization)
+
+        paginator = Paginator(queryset, 30)
+        page_obj = paginator.get_page(self.request.GET.get('page'))
+
+        context.update(
+            {
+                'transactions': page_obj,
+                'stats': {
+                    'total': all_transactions.count(),
+                    'income': all_transactions.filter(transaction_type='income').aggregate(total=Sum('amount'))['total'] or 0,
+                    'expense': all_transactions.filter(transaction_type='expense').aggregate(total=Sum('amount'))['total'] or 0,
+                    'anomalies': all_transactions.filter(is_anomaly=True).count(),
+                },
+                'current_type': self.request.GET.get('type'),
+                'current_anomaly': self.request.GET.get('anomaly'),
+                'date_from': self.request.GET.get('date_from'),
+                'date_to': self.request.GET.get('date_to'),
+            }
+        )
+        return context
 
 
-@login_required
-def accounts_list_view(request):
-    """قائمة الحسابات - دليل الحسابات"""
-    user = request.user
-    organization = user.organization
-    
-    accounts = Account.objects.filter(organization=organization)
-    
-    # Filter by type
-    account_type = request.GET.get('type')
-    if account_type:
-        accounts = accounts.filter(account_type=account_type)
-    
-    accounts = accounts.order_by('account_code')
-    
-    # Group by type for summary
-    type_summary = {}
-    for acct in Account.objects.filter(organization=organization):
-        acct_type = acct.account_type
-        if acct_type not in type_summary:
-            type_summary[acct_type] = {'count': 0, 'balance': 0}
-        type_summary[acct_type]['count'] += 1
-        type_summary[acct_type]['balance'] += acct.current_balance or 0
-    
-    # Pagination
-    paginator = Paginator(accounts, 30)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    context = {
-        'accounts': page_obj,
-        'type_summary': type_summary,
-        'current_type': account_type,
-    }
-    
-    return render(request, 'accounts/list.html', context)
+class TransactionDetailPageView(OrganizationTemplateView):
+    template_name = 'transactions_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['transaction'] = get_object_or_404(
+            Transaction,
+            id=self.kwargs['transaction_id'],
+            organization=self.get_organization(),
+        )
+        return context
 
 
-@login_required
-def account_detail_view(request, account_id):
-    """تفاصيل الحساب"""
-    user = request.user
-    organization = user.organization
-    
-    account = get_object_or_404(Account, id=account_id, organization=organization)
-    
-    # Get related transactions
-    transactions = Transaction.objects.filter(
-        Q(debit_account=account) | Q(credit_account=account),
-        organization=organization
-    ).order_by('-transaction_date')[:20]
-    
-    context = {
-        'account': account,
-        'transactions': transactions,
-    }
-    
-    return render(request, 'accounts/detail.html', context)
+class AccountsListPageView(OrganizationTemplateView):
+    template_name = 'accounts/list.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        organization = self.get_organization()
+        accounts = Account.objects.filter(organization=organization)
+
+        account_type = self.request.GET.get('type')
+        if account_type:
+            accounts = accounts.filter(account_type=account_type)
+        accounts = accounts.order_by('account_code')
+
+        type_summary = {}
+        for account in Account.objects.filter(organization=organization):
+            account_summary = type_summary.setdefault(account.account_type, {'count': 0, 'balance': 0})
+            account_summary['count'] += 1
+            account_summary['balance'] += account.current_balance or 0
+
+        paginator = Paginator(accounts, 30)
+        page_obj = paginator.get_page(self.request.GET.get('page'))
+
+        context.update(
+            {
+                'accounts': page_obj,
+                'type_summary': type_summary,
+                'current_type': account_type,
+            }
+        )
+        return context
+
+
+class AccountDetailPageView(OrganizationTemplateView):
+    template_name = 'accounts/detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        organization = self.get_organization()
+        account = get_object_or_404(Account, id=self.kwargs['account_id'], organization=organization)
+        transactions = Transaction.objects.filter(
+            Q(debit_account=account) | Q(credit_account=account),
+            organization=organization,
+        ).order_by('-transaction_date')[:20]
+
+        context.update(
+            {
+                'account': account,
+                'transactions': transactions,
+            }
+        )
+        return context
+
+
+transactions_view = TransactionsPageView.as_view()
+transaction_detail_view = TransactionDetailPageView.as_view()
+accounts_list_view = AccountsListPageView.as_view()
+account_detail_view = AccountDetailPageView.as_view()
+
+
+__all__ = [
+    'TransactionsPageView',
+    'TransactionDetailPageView',
+    'AccountsListPageView',
+    'AccountDetailPageView',
+    'transactions_view',
+    'transaction_detail_view',
+    'accounts_list_view',
+    'account_detail_view',
+]

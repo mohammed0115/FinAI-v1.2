@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Document, ExtractedData, Transaction
+from .models import Document, ExtractedData, InvoiceLineItem, InvoiceRecord, Transaction, Vendor
 
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
@@ -15,6 +15,29 @@ class ExtractedDataAdmin(admin.ModelAdmin):
     list_filter = ['validation_status', 'currency']
     search_fields = ['vendor_name', 'customer_name', 'invoice_number']
     readonly_fields = ['id', 'extracted_at', 'validated_at']
+
+
+@admin.register(Vendor)
+class VendorAdmin(admin.ModelAdmin):
+    list_display = ['name', 'vat_number', 'commercial_registration', 'organization', 'created_at']
+    list_filter = ['organization']
+    search_fields = ['name', 'vat_number', 'commercial_registration']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+
+
+class InvoiceLineItemInline(admin.TabularInline):
+    model = InvoiceLineItem
+    extra = 0
+    readonly_fields = ['id', 'created_at', 'updated_at']
+
+
+@admin.register(InvoiceRecord)
+class InvoiceRecordAdmin(admin.ModelAdmin):
+    list_display = ['invoice_number', 'vendor', 'organization', 'total_amount', 'currency', 'approval_status', 'issue_date']
+    list_filter = ['organization', 'currency', 'approval_status']
+    search_fields = ['invoice_number', 'vendor__name', 'vendor__vat_number', 'document__file_name']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+    inlines = [InvoiceLineItemInline]
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):

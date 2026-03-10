@@ -16,10 +16,13 @@ from .serializers import (
     AccountSerializer, JournalEntrySerializer, JournalEntryLineSerializer,
     ComplianceCheckSerializer, AuditFlagSerializer
 )
+from core.api.base import OrganizationScopedModelViewSet, OrganizationScopedReadOnlyModelViewSet
 from core.ai_service import ai_service
+from documents.services.audit_workflow_service import invoice_audit_workflow_service
 from decimal import Decimal
 import uuid
 import base64
+import hashlib
 import os
 import logging
 import tempfile
@@ -29,22 +32,12 @@ import requests
 logger = logging.getLogger(__name__)
 
 
-class DocumentViewSet(viewsets.ModelViewSet):
+class DocumentViewSet(OrganizationScopedModelViewSet):
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
-    
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'admin':
-            return Document.objects.all()
-        elif user.organization:
-            return Document.objects.filter(organization=user.organization)
-        return Document.objects.none()
-    
-    def perform_create(self, serializer):
-        serializer.save(uploaded_by=self.request.user)
+    actor_save_field = 'uploaded_by'
     
     @staticmethod
     def _build_checks_list(raw_checks):
@@ -76,7 +69,15 @@ class DocumentViewSet(viewsets.ModelViewSet):
             'final_status': 'approved' if risk_score < 40 else 'review',
         }
 
-    def _extract_invoice_data(self, document, file_path):
+    @staticmethod
+    def _compute_content_hash(file_obj):
+        position = file_obj.tell() if hasattr(file_obj, 'tell') else 0
+        payload = file_obj.read()
+        if hasattr(file_obj, 'seek'):
+            file_obj.seek(position)
+        return hashlib.md5(payload).hexdigest()
+
+    def _extract_invoice_data(self, document, file_path, audit_session=None, source='api_upload'):
         """
         Complete 5-phase invoice processing pipeline:
         1. Extraction: OpenAI Vision API
@@ -91,6 +92,17 @@ class DocumentViewSet(viewsets.ModelViewSet):
             document: Document instance
             file_path: Full file path to the document
         """
+        result = invoice_audit_workflow_service.process_document(
+            document=document,
+            file_path=file_path,
+            actor=document.uploaded_by,
+            language=document.language or 'mixed',
+            is_handwritten=document.is_handwritten,
+            source=source,
+            audit_session=audit_session,
+        )
+        return result.extracted_data
+
         from core.invoice_processing_pipeline import get_pipeline_manager
         from dateutil import parser as date_parser
         import json
@@ -246,6 +258,16 @@ class DocumentViewSet(viewsets.ModelViewSet):
             )
         
         document_type = request.data.get('document_type', 'other')
+        content_hash = self._compute_content_hash(file)
+        audit_session = None
+        if document_type == 'invoice':
+            audit_session = invoice_audit_workflow_service.start_session(
+                organization=user_organization,
+                actor=request.user,
+                file_name=file.name,
+                content_hash=content_hash,
+                source='api_upload',
+            )
         
         # Save file
         file_name = file.name
@@ -264,6 +286,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             file_size=file.size,
             storage_key=storage_key,
             storage_url=storage_url,
+            content_hash=content_hash,
             document_type=document_type,
             status='pending'
         )
@@ -277,23 +300,19 @@ class DocumentViewSet(viewsets.ModelViewSet):
                     file_path = default_storage.path(storage_path)
                     # Extract invoice if document type is invoice
                     if document_type == 'invoice':
-                        document.status = 'processing'
-                        document.save()
-                        
-                        extracted_data = self._extract_invoice_data(document, file_path)
-                        
-                        # Update document status
-                        if extracted_data:
-                            document.status = 'completed'
-                            document.processed_at = timezone.now()
-                        else:
-                            # Still mark as completed even if extraction failed
-                            # The error is logged but doesn't block the upload
-                            document.status = 'completed'
-                            document.processed_at = timezone.now()
-                        document.save()
+                        extracted_data = self._extract_invoice_data(
+                            document,
+                            file_path,
+                            audit_session=audit_session,
+                            source='api_upload',
+                        )
                 except Exception as path_error:
                     logger.warning(f"Could not get local file path: {path_error}")
+                    if audit_session is not None:
+                        audit_session.status = 'failed'
+                        audit_session.last_error = str(path_error)
+                        audit_session.completed_at = timezone.now()
+                        audit_session.save(update_fields=['status', 'last_error', 'completed_at'])
         except Exception as e:
             # Don't crash the upload if extraction fails
             logger.error(f"Error during post-upload processing: {e}", exc_info=True)
@@ -308,6 +327,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 'invoice_number': extracted_data.invoice_number,
                 'total_amount': float(extracted_data.total_amount) if extracted_data.total_amount else None,
                 'confidence': extracted_data.confidence
+            }
+        if audit_session is not None:
+            response_data['audit_session'] = {
+                'id': str(audit_session.id),
+                'status': audit_session.status,
+                'current_stage': audit_session.current_stage,
             }
         
         return Response(response_data, status=status.HTTP_201_CREATED)
@@ -332,11 +357,21 @@ class DocumentViewSet(viewsets.ModelViewSet):
         
         uploaded_docs = []
         for file in files:
+            content_hash = self._compute_content_hash(file)
             file_name = file.name
             doc_id = str(uuid.uuid4())
             storage_key = f"documents/{user_organization.id}/{doc_id}/{file_name}"
             storage_path = default_storage.save(storage_key, file)
             storage_url = default_storage.url(storage_path)
+            audit_session = None
+            if document_type == 'invoice':
+                audit_session = invoice_audit_workflow_service.start_session(
+                    organization=user_organization,
+                    actor=request.user,
+                    file_name=file_name,
+                    content_hash=content_hash,
+                    source='api_upload',
+                )
             
             document = Document.objects.create(
                 id=doc_id,
@@ -347,6 +382,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 file_size=file.size,
                 storage_key=storage_key,
                 storage_url=storage_url,
+                content_hash=content_hash,
                 document_type=document_type,
                 status='pending'
             )
@@ -357,14 +393,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
                     if hasattr(default_storage, 'path'):
                         try:
                             file_path = default_storage.path(storage_path)
-                            document.status = 'processing'
-                            document.save()
-                            
-                            self._extract_invoice_data(document, file_path)
-                            
-                            document.status = 'completed'
-                            document.processed_at = timezone.now()
-                            document.save()
+                            self._extract_invoice_data(
+                                document,
+                                file_path,
+                                audit_session=audit_session,
+                                source='api_upload',
+                            )
                         except Exception as e:
                             logger.warning(f"Could not extract invoice for batch upload: {e}")
                 except Exception as e:
@@ -383,12 +417,26 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def process(self, request, pk=None):
         """Process document with AI"""
         document = self.get_object()
-        
-        # Update status to processing
-        document.status = 'processing'
-        document.save()
-        
+
         try:
+            file_path = invoice_audit_workflow_service.resolve_document_file_path(document)
+            workflow_result = invoice_audit_workflow_service.process_document(
+                document=document,
+                file_path=file_path,
+                actor=request.user,
+                language=document.language or 'mixed',
+                is_handwritten=document.is_handwritten,
+                source='api_upload',
+            )
+            return Response({
+                'success': True,
+                'audit_session_id': str(workflow_result.audit_session.id),
+                'extracted_data_id': str(workflow_result.extracted_data.id) if workflow_result.extracted_data else None,
+                'invoice_id': str(workflow_result.invoice.id) if workflow_result.invoice else None,
+                'risk_score': workflow_result.extracted_data.risk_score if workflow_result.extracted_data else None,
+                'risk_level': workflow_result.extracted_data.risk_level if workflow_result.extracted_data else None,
+            })
+
             # Get full URL for the image
             image_url = request.build_absolute_uri(document.storage_url)
             
@@ -450,19 +498,37 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=True, methods=['post'])
+    def re_audit(self, request, pk=None):
+        """Re-run the audit workflow using saved invoice/vendor/customer data."""
+        document = self.get_object()
 
-class ExtractedDataViewSet(viewsets.ModelViewSet):
+        try:
+            workflow_result = invoice_audit_workflow_service.rerun_saved_audit(
+                document=document,
+                actor=request.user,
+            )
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'status': workflow_result.audit_session.status,
+            'audit_session_id': str(workflow_result.audit_session.id),
+            'document_id': str(document.id),
+            'invoice_id': str(workflow_result.invoice.id) if workflow_result.invoice else None,
+            'vendor_id': str(workflow_result.invoice.vendor_id) if workflow_result.invoice else None,
+            'customer_name': workflow_result.invoice.customer_name if workflow_result.invoice else None,
+            'customer_tax_id': workflow_result.invoice.customer_vat_number if workflow_result.invoice else None,
+            'risk_score': workflow_result.extracted_data.risk_score if workflow_result.extracted_data else None,
+            'risk_level': workflow_result.extracted_data.risk_level if workflow_result.extracted_data else None,
+            'findings_count': workflow_result.extracted_data.audit_findings.count() if workflow_result.extracted_data else 0,
+        })
+
+
+class ExtractedDataViewSet(OrganizationScopedModelViewSet):
     queryset = ExtractedData.objects.all()
     serializer_class = ExtractedDataSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'admin':
-            return ExtractedData.objects.all()
-        elif user.organization:
-            return ExtractedData.objects.filter(organization=user.organization)
-        return ExtractedData.objects.none()
     
     @action(detail=True, methods=['get'])
     def review(self, request, pk=None):
@@ -706,19 +772,11 @@ class ExtractedDataViewSet(viewsets.ModelViewSet):
 
 
 
-class AccountViewSet(viewsets.ModelViewSet):
+class AccountViewSet(OrganizationScopedModelViewSet):
     """Chart of Accounts management"""
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'admin':
-            return Account.objects.all()
-        elif user.organization:
-            return Account.objects.filter(organization=user.organization)
-        return Account.objects.none()
     
     @action(detail=False, methods=['get'])
     def by_type(self, request):
@@ -776,14 +834,14 @@ class AccountViewSet(viewsets.ModelViewSet):
         })
 
 
-class TransactionViewSet(viewsets.ModelViewSet):
+class TransactionViewSet(OrganizationScopedModelViewSet):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
     permission_classes = [permissions.IsAuthenticated]
+    actor_save_field = 'created_by'
     
     def get_queryset(self):
-        user = self.request.user
-        queryset = Transaction.objects.all() if user.role == 'admin' else Transaction.objects.filter(organization=user.organization)
+        queryset = super().get_queryset()
         
         # Filter by date range
         start_date = self.request.query_params.get('start_date')
@@ -802,9 +860,6 @@ class TransactionViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(is_anomaly=True)
         
         return queryset
-    
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
     
     @action(detail=True, methods=['post'])
     def reconcile(self, request, pk=None):
@@ -846,22 +901,12 @@ class TransactionViewSet(viewsets.ModelViewSet):
         })
 
 
-class JournalEntryViewSet(viewsets.ModelViewSet):
+class JournalEntryViewSet(OrganizationScopedModelViewSet):
     """Journal entry management for double-entry bookkeeping"""
     queryset = JournalEntry.objects.all()
     serializer_class = JournalEntrySerializer
     permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'admin':
-            return JournalEntry.objects.all()
-        elif user.organization:
-            return JournalEntry.objects.filter(organization=user.organization)
-        return JournalEntry.objects.none()
-    
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+    actor_save_field = 'created_by'
     
     @action(detail=True, methods=['post'])
     def post_entry(self, request, pk=None):
@@ -899,15 +944,14 @@ class JournalEntryViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class ComplianceCheckViewSet(viewsets.ModelViewSet):
+class ComplianceCheckViewSet(OrganizationScopedModelViewSet):
     """Compliance checking and scoring"""
     queryset = ComplianceCheck.objects.all()
     serializer_class = ComplianceCheckSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        user = self.request.user
-        queryset = ComplianceCheck.objects.all() if user.role == 'admin' else ComplianceCheck.objects.filter(organization=user.organization)
+        queryset = super().get_queryset()
         
         # Filter by status
         check_status = self.request.query_params.get('status')
@@ -963,15 +1007,14 @@ class ComplianceCheckViewSet(viewsets.ModelViewSet):
         })
 
 
-class AuditFlagViewSet(viewsets.ModelViewSet):
+class AuditFlagViewSet(OrganizationScopedModelViewSet):
     """Audit flags for transaction review"""
     queryset = AuditFlag.objects.all()
     serializer_class = AuditFlagSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        user = self.request.user
-        queryset = AuditFlag.objects.all() if user.role == 'admin' else AuditFlag.objects.filter(organization=user.organization)
+        queryset = super().get_queryset()
         
         # Filter by resolution status
         include_resolved = self.request.query_params.get('include_resolved', 'false').lower() == 'true'
@@ -1032,22 +1075,15 @@ class AuditFlagViewSet(viewsets.ModelViewSet):
 
 
 # Audit Report Views
-class InvoiceAuditReportViewSet(ReadOnlyModelViewSet):
+class InvoiceAuditReportViewSet(OrganizationScopedReadOnlyModelViewSet):
     """
     API ViewSet for Audit Reports
     
     Provides endpoints to retrieve and view comprehensive invoice audit reports.
     """
+    queryset = InvoiceAuditReport.objects.all()
     serializer_class = None  # We'll use custom serialization
     permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'admin':
-            return InvoiceAuditReport.objects.all()
-        elif user.organization:
-            return InvoiceAuditReport.objects.filter(organization=user.organization)
-        return InvoiceAuditReport.objects.none()
     
     def list(self, request, *args, **kwargs):
         """List all audit reports with summary information"""

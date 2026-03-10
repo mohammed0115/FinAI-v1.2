@@ -37,7 +37,8 @@ def run_ocr_pipeline(self, document_id: str, language: str = "ara+eng",
     Called after upload; document status is set to 'processing' before dispatch.
     On completion sets status to 'completed' or 'pending_review' / 'failed'.
     """
-    from documents.models import Document, ExtractedData
+    from documents.models import Document
+    from documents.services.audit_workflow_service import invoice_audit_workflow_service
 
     try:
         document = Document.objects.select_related('organization', 'uploaded_by').get(pk=document_id)
@@ -46,10 +47,7 @@ def run_ocr_pipeline(self, document_id: str, language: str = "ara+eng",
         return {"status": "not_found"}
 
     # Resolve physical file path
-    file_path = document.storage_url
-    if not os.path.isabs(file_path):
-        from django.conf import settings
-        file_path = os.path.join(settings.MEDIA_ROOT, file_path)
+    file_path = invoice_audit_workflow_service.resolve_document_file_path(document)
 
     if not os.path.exists(file_path):
         logger.error("run_ocr_pipeline: file missing at %s", file_path)
@@ -58,9 +56,15 @@ def run_ocr_pipeline(self, document_id: str, language: str = "ara+eng",
         return {"status": "file_missing"}
 
     try:
-        from documents.views import DocumentViewSet
-        view = DocumentViewSet()
-        extracted = view._extract_invoice_data(document, file_path)
+        workflow_result = invoice_audit_workflow_service.process_document(
+            document=document,
+            file_path=file_path,
+            actor=document.uploaded_by,
+            language=language,
+            is_handwritten=is_handwritten,
+            source='background_task',
+        )
+        extracted = workflow_result.extracted_data
 
         confidence = extracted.confidence if extracted else 0
         if extracted and confidence < 40:
