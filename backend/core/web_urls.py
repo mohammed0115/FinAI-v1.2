@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .social_auth_views import facebook_callback, facebook_login, google_callback, google_login
-from .views.auth_views import LoginPageView, LogoutPageView, RegisterPageView
+from .views.auth_views import LandingPageView, LoginPageView, LogoutPageView, RegisterPageView
 from .views.compliance_views import ComplianceOverviewPageView, ZATCAVerificationPageView
 from .views.document_page_views import (
     DocumentUploadPageView,
@@ -41,6 +41,7 @@ from .views.dashboard_views import DashboardPageView
 
 
 urlpatterns = [
+    path('', LandingPageView.as_view(), name='landing'),
     path('login/', LoginPageView.as_view(), name='login'),
     path('register/', RegisterPageView.as_view(), name='register'),
     path('logout/', LogoutPageView.as_view(), name='logout'),
@@ -49,7 +50,7 @@ urlpatterns = [
     path('auth/facebook/', facebook_login, name='facebook_login'),
     path('auth/facebook/callback/', facebook_callback, name='facebook_callback'),
     path('toggle-language/', ToggleLanguageView.as_view(), name='toggle_language'),
-    path('', DashboardPageView.as_view(), name='dashboard'),
+    path('dashboard/', DashboardPageView.as_view(), name='dashboard'),
     path('compliance/', ComplianceOverviewPageView.as_view(), name='compliance_overview'),
     path('compliance/zatca-verify/', ZATCAVerificationPageView.as_view(), name='zatca_verification'),
     path('findings/', AuditFindingsListPageView.as_view(), name='audit_findings_list'),

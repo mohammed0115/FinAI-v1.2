@@ -39,6 +39,17 @@ class LoginPageView(OrganizationActionView):
         return render(request, self.template_name)
 
 
+class LandingPageView(OrganizationActionView):
+    template_name = 'landing.html'
+    require_authentication = False
+    require_organization = False
+
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect('dashboard')
+        return render(request, self.template_name)
+
+
 class RegisterPageView(OrganizationActionView):
     template_name = 'login.html'
     require_authentication = False
@@ -87,15 +98,18 @@ class LogoutPageView(OrganizationActionView):
 
 
 login_view = LoginPageView.as_view()
+landing_view = LandingPageView.as_view()
 register_view = RegisterPageView.as_view()
 logout_view = LogoutPageView.as_view()
 
 
 __all__ = [
     'LoginPageView',
+    'LandingPageView',
     'RegisterPageView',
     'LogoutPageView',
     'login_view',
+    'landing_view',
     'register_view',
     'logout_view',
 ]

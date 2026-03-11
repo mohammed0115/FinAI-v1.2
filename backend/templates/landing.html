@@ -1,0 +1,218 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ html_lang|default:'ar' }}" dir="{{ direction|default:'rtl' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tadgeeg - منصة التدقيق المالي الذكية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Cairo', 'Inter', sans-serif; }
+        body {
+            background:
+                radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 28%),
+                radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.10), transparent 32%),
+                #f8fafc;
+        }
+        .hero-gradient {
+            background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 55%, #8b5cf6 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            backdrop-filter: blur(10px);
+        }
+        .soft-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+        }
+        .section-title {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="text-slate-900">
+    <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/80">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-white shadow-lg border border-slate-200 flex items-center justify-center">
+                    <img src="{% static 'img/icon.png' %}" alt="Tadgeeg" class="w-10 h-10 object-contain">
+                </div>
+                <div>
+                    <div class="text-xl font-extrabold text-slate-900 italic">Tadgeeg <span class="font-semibold">for Financial Audit</span></div>
+                    <div class="text-sm text-slate-500">منصة التدقيق المالي الذكية</div>
+                </div>
+            </a>
+
+            <div class="flex items-center gap-3">
+                <form method="post" action="{% url 'toggle_language' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+                        {% if current_lang == 'ar' %}EN{% else %}عربي{% endif %}
+                    </button>
+                </form>
+                <a href="{% url 'login' %}" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors">تسجيل الدخول</a>
+                <a href="{% url 'register' %}" class="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors">ابدأ الآن</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="max-w-7xl mx-auto px-6 pt-10 pb-16 lg:pt-16 lg:pb-20">
+            <div class="hero-gradient rounded-[32px] overflow-hidden text-white shadow-2xl shadow-blue-900/15">
+                <div class="grid lg:grid-cols-2 gap-10 items-center px-6 py-10 sm:px-10 lg:px-14 lg:py-14">
+                    <div dir="rtl">
+                        <div class="inline-flex items-center gap-2 rounded-full bg-white/12 border border-white/15 px-4 py-2 text-sm font-semibold mb-5">
+                            <span>🚀</span>
+                            <span>معتمد من ZATCA ومتوافق مع الفاتورة الإلكترونية</span>
+                        </div>
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-5">
+                            منصة التدقيق المالي
+                            <span class="block text-cyan-200">بالذكاء الاصطناعي</span>
+                        </h1>
+                        <p class="text-base sm:text-lg leading-8 text-blue-50/95 max-w-2xl mb-8">
+                            ارفع الفواتير، استخرج البيانات، اكتشف المخاطر، وولّد تقارير تدقيق احترافية قابلة للتنزيل من منصة واحدة مصممة خصيصاً للشركات في الخليج.
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-3 mb-8">
+                            <a href="{% url 'register' %}" class="px-6 py-3.5 rounded-2xl bg-white text-slate-900 font-bold text-center shadow-lg hover:bg-slate-100 transition-colors">ابدأ تجربتك المجانية</a>
+                            <a href="{% url 'login' %}" class="px-6 py-3.5 rounded-2xl border border-white/25 bg-white/10 font-bold text-center hover:bg-white/15 transition-colors">تسجيل الدخول</a>
+                        </div>
+                        <div class="flex flex-wrap gap-3 text-sm">
+                            <span class="px-3 py-1.5 rounded-full bg-white/10 border border-white/10">بدون بطاقة ائتمان</span>
+                            <span class="px-3 py-1.5 rounded-full bg-white/10 border border-white/10">إعداد سريع</span>
+                            <span class="px-3 py-1.5 rounded-full bg-white/10 border border-white/10">حماية AES-256</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4" dir="rtl">
+                        <div class="glass-card rounded-3xl p-5 col-span-2">
+                            <div class="text-sm text-blue-100 mb-2">أداء المنصة</div>
+                            <div class="text-3xl font-extrabold mb-5">1.2M+ فاتورة معالجة</div>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex items-center justify-between text-sm mb-2">
+                                        <span>دقة الاستخراج</span>
+                                        <span>98%</span>
+                                    </div>
+                                    <div class="h-2 rounded-full bg-white/15 overflow-hidden"><div class="h-full w-[98%] bg-cyan-300 rounded-full"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex items-center justify-between text-sm mb-2">
+                                        <span>أتمتة التدقيق</span>
+                                        <span>95%</span>
+                                    </div>
+                                    <div class="h-2 rounded-full bg-white/15 overflow-hidden"><div class="h-full w-[95%] bg-emerald-300 rounded-full"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex items-center justify-between text-sm mb-2">
+                                        <span>موثوقية النظام</span>
+                                        <span>99.9%</span>
+                                    </div>
+                                    <div class="h-2 rounded-full bg-white/15 overflow-hidden"><div class="h-full w-[99%] bg-fuchsia-300 rounded-full"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-card rounded-3xl p-5 text-center">
+                            <div class="text-3xl font-extrabold">24/7</div>
+                            <div class="text-sm text-blue-100 mt-2">دعم فني وتشغيلي</div>
+                        </div>
+                        <div class="glass-card rounded-3xl p-5 text-center">
+                            <div class="text-3xl font-extrabold">6</div>
+                            <div class="text-sm text-blue-100 mt-2">دول خليجية مدعومة</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="max-w-7xl mx-auto px-6 pb-16 lg:pb-20" dir="rtl">
+            <div class="text-center mb-10">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold mb-4">
+                    <span>✨</span>
+                    <span>لماذا Tadgeeg؟</span>
+                </div>
+                <h2 class="text-3xl lg:text-4xl font-extrabold section-title mb-4">كل ما تحتاجه لتدقيق الفواتير في مكان واحد</h2>
+                <p class="text-slate-600 max-w-3xl mx-auto leading-8">صفحة هبوط مستقلة قبل تسجيل الدخول، بينما تبقى صفحات الدخول والتسجيل كما هي دون أي تعديل تصميمي.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-5">
+                <div class="soft-card rounded-3xl p-6">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center text-2xl mb-4">🧠</div>
+                    <h3 class="font-bold text-lg mb-2">استخراج ذكي للبيانات</h3>
+                    <p class="text-sm text-slate-600 leading-7">استخراج أرقام الفواتير، المورد، العميل، البنود، والإجماليات بدقة عالية للغة العربية والإنجليزية.</p>
+                </div>
+                <div class="soft-card rounded-3xl p-6">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl mb-4">✅</div>
+                    <h3 class="font-bold text-lg mb-2">Checklist تدقيق واضح</h3>
+                    <p class="text-sm text-slate-600 leading-7">فحوصات تحقق مفصلة مع حالة كل عنصر، وملاحظات واضحة تساعد فريقك على اتخاذ القرار بسرعة.</p>
+                </div>
+                <div class="soft-card rounded-3xl p-6">
+                    <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center text-2xl mb-4">📄</div>
+                    <h3 class="font-bold text-lg mb-2">تقارير PDF قابلة للتنزيل</h3>
+                    <p class="text-sm text-slate-600 leading-7">إنشاء تقارير تدقيق احترافية ومنظمة، تدعم العربية، وجاهزة للمشاركة والتنزيل مباشرة.</p>
+                </div>
+                <div class="soft-card rounded-3xl p-6">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl mb-4">🛡️</div>
+                    <h3 class="font-bold text-lg mb-2">امتثال خليجي</h3>
+                    <p class="text-sm text-slate-600 leading-7">مصمم ليناسب بيئات الأعمال الخليجية مع دعم لامتثال ZATCA والتحقق الضريبي والضبط المحاسبي.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="max-w-7xl mx-auto px-6 pb-16 lg:pb-20" dir="rtl">
+            <div class="grid lg:grid-cols-2 gap-6 items-stretch">
+                <div class="soft-card rounded-3xl p-8">
+                    <h3 class="text-2xl font-extrabold mb-6">مؤشرات رئيسية</h3>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="rounded-2xl bg-slate-50 border border-slate-200 p-5 text-center">
+                            <div class="text-3xl font-extrabold text-blue-700">98%</div>
+                            <div class="text-sm text-slate-500 mt-2">دقة استخراج البيانات</div>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 border border-slate-200 p-5 text-center">
+                            <div class="text-3xl font-extrabold text-purple-700">95%</div>
+                            <div class="text-sm text-slate-500 mt-2">أتمتة أعمال التدقيق</div>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 border border-slate-200 p-5 text-center">
+                            <div class="text-3xl font-extrabold text-emerald-700">1.2M+</div>
+                            <div class="text-sm text-slate-500 mt-2">مستند تمت معالجته</div>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 border border-slate-200 p-5 text-center">
+                            <div class="text-3xl font-extrabold text-amber-700">6</div>
+                            <div class="text-sm text-slate-500 mt-2">دول خليجية مدعومة</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hero-gradient rounded-3xl p-8 text-white shadow-xl">
+                    <h3 class="text-2xl font-extrabold mb-4">ابدأ من هنا</h3>
+                    <p class="text-blue-50 leading-8 mb-6">هذه الصفحة أصبحت هي الواجهة التعريفية قبل تسجيل الدخول. أما صفحات `login` و`register` فبقيت كما كانت بدون دمج التصميم الجديد داخلها.</p>
+                    <div class="space-y-3 mb-8">
+                        <div class="flex items-center gap-3"><span class="text-xl">•</span><span>اعرض قيمة المنصة للعميل قبل الدخول</span></div>
+                        <div class="flex items-center gap-3"><span class="text-xl">•</span><span>وجّه المستخدم إلى تسجيل الدخول أو إنشاء الحساب</span></div>
+                        <div class="flex items-center gap-3"><span class="text-xl">•</span><span>حافظ على فصل صفحة الهبوط عن صفحات المصادقة</span></div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <a href="{% url 'register' %}" class="px-5 py-3 rounded-2xl bg-white text-slate-900 font-bold text-center hover:bg-slate-100 transition-colors">إنشاء حساب</a>
+                        <a href="{% url 'login' %}" class="px-5 py-3 rounded-2xl border border-white/20 bg-white/10 font-bold text-center hover:bg-white/15 transition-colors">الدخول للحساب</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="border-t border-slate-200 bg-white/70 backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-slate-500" dir="rtl">
+            <div>© 2026 Tadgeeg for Financial Audit. All rights reserved.</div>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'login' %}" class="hover:text-slate-800">تسجيل الدخول</a>
+                <a href="{% url 'register' %}" class="hover:text-slate-800">إنشاء حساب</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

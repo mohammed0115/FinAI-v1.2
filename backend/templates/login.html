@@ -109,51 +109,6 @@
             border-color: #cbd5f5;
             background: #f8fafc;
         }
-
-        .auth-banner {
-            position: relative;
-            overflow: hidden;
-            border-radius: 24px;
-            padding: 22px;
-            margin-bottom: 24px;
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.98) 0%, rgba(124, 58, 237, 0.96) 52%, rgba(168, 85, 247, 0.94) 100%);
-            box-shadow: 0 20px 45px rgba(79, 70, 229, 0.22);
-        }
-        .auth-banner::before {
-            content: "";
-            position: absolute;
-            width: 220px;
-            height: 220px;
-            border-radius: 999px;
-            top: -120px;
-            left: -70px;
-            background: rgba(255, 255, 255, 0.12);
-            filter: blur(4px);
-        }
-        .auth-banner::after {
-            content: "";
-            position: absolute;
-            width: 200px;
-            height: 200px;
-            border-radius: 999px;
-            bottom: -130px;
-            right: -50px;
-            background: rgba(34, 211, 238, 0.16);
-        }
-        .auth-banner-content {
-            position: relative;
-            z-index: 1;
-        }
-        .auth-banner-chip {
-            background: rgba(255, 255, 255, 0.14);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            color: rgba(255, 255, 255, 0.96);
-        }
-        .auth-banner-stat {
-            background: rgba(255, 255, 255, 0.14);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            backdrop-filter: blur(8px);
-        }
     </style>
 </head>
 <body class="min-h-screen gradient-bg">
@@ -238,51 +193,6 @@
         <!-- Right Side - Login/Register Form -->
         <div class="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
             <div class="auth-card w-full max-w-md">
-                <!-- Figma Banner -->
-                <div class="auth-banner text-white">
-                    <div class="auth-banner-content" dir="rtl">
-                        <div class="flex items-start justify-between gap-4 mb-5">
-                            <div>
-                                <div class="inline-flex items-center gap-2 auth-banner-chip rounded-full px-3 py-1 text-xs font-semibold mb-3">
-                                    <span>🚀</span>
-                                    <span>معتمد من ZATCA</span>
-                                </div>
-                                <h2 class="text-2xl sm:text-3xl font-bold leading-tight mb-2">
-                                    منصة التدقيق المالي
-                                    <span class="block text-cyan-200">بالذكاء الاصطناعي</span>
-                                </h2>
-                                <p class="text-sm sm:text-base text-blue-50/90 leading-7">
-                                    ابدأ رفع الفواتير ومراجعتها وتحليلها من شاشة واحدة مع أتمتة ذكية وامتثال ضريبي فوري.
-                                </p>
-                            </div>
-                            <div class="hidden sm:flex w-14 h-14 rounded-2xl bg-white/15 border border-white/15 items-center justify-center shadow-lg shrink-0">
-                                <img src="/static/img/icon.png" alt="FinAI Logo" class="w-10 h-10 object-contain" />
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-3 mb-4 text-center">
-                            <div class="auth-banner-stat rounded-2xl px-3 py-3">
-                                <div class="text-lg sm:text-xl font-bold">98%</div>
-                                <div class="text-[11px] sm:text-xs text-blue-100 mt-1">دقة الاستخراج</div>
-                            </div>
-                            <div class="auth-banner-stat rounded-2xl px-3 py-3">
-                                <div class="text-lg sm:text-xl font-bold">95%</div>
-                                <div class="text-[11px] sm:text-xs text-blue-100 mt-1">أتمتة التدقيق</div>
-                            </div>
-                            <div class="auth-banner-stat rounded-2xl px-3 py-3">
-                                <div class="text-lg sm:text-xl font-bold">24/7</div>
-                                <div class="text-[11px] sm:text-xs text-blue-100 mt-1">دعم فني</div>
-                            </div>
-                        </div>
-
-                        <div class="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-blue-50/95">
-                            <span class="auth-banner-chip rounded-full px-3 py-1">بدون بطاقة ائتمان</span>
-                            <span class="auth-banner-chip rounded-full px-3 py-1">إعداد في دقائق</span>
-                            <span class="auth-banner-chip rounded-full px-3 py-1">حماية AES-256</span>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Tab Switcher -->
                 <div class="tab-switcher flex rounded-2xl p-1 mb-8" id="tabSwitcher">
                     <button onclick="showTab('login')" id="loginTab" class="flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all bg-white text-slate-800 shadow-sm">
