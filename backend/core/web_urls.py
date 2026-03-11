@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .social_auth_views import facebook_callback, facebook_login, google_callback, google_login
+from documents.dashboard_views import audit_report_detail, download_audit_report_pdf
 from .views.auth_views import LandingPageView, LoginPageView, LogoutPageView, RegisterPageView
 from .views.compliance_views import ComplianceOverviewPageView, ZATCAVerificationPageView
 from .views.document_page_views import (
@@ -64,6 +65,8 @@ urlpatterns = [
     path('reports/', ReportsListPageView.as_view(), name='reports_list'),
     path('report/arabic/', ArabicReportPageView.as_view(), name='arabic_report'),
     path('report/pdf/', DownloadPdfReportView.as_view(), name='download_pdf_report'),
+    path('audit-report/<uuid:report_id>/', audit_report_detail, name='web_audit_report_detail'),
+    path('audit-report/<uuid:report_id>/pdf/', download_audit_report_pdf, name='web_audit_report_download_pdf'),
     path('documents/upload/', DocumentUploadPageView.as_view(), name='document_upload'),
     path('documents/process-pending/', ProcessPendingDocumentsView.as_view(), name='process_pending_documents'),
     path('ocr/', OCREvidenceListPageView.as_view(), name='ocr_evidence_list'),

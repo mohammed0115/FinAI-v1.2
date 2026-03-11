@@ -20,6 +20,15 @@
     </div>
     <div class="flex items-center gap-2 flex-wrap">
       {% if audit_report %}
+      <a href="{% url 'web_audit_report_download_pdf' report_id=audit_report.id %}" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors shadow-sm">
+        <i class="fas fa-file-pdf"></i>
+        تنزيل PDF
+      </a>
+      <a href="{% url 'web_audit_report_detail' report_id=audit_report.id %}" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors shadow-sm">
+        عرض التقرير الكامل
+      </a>
+      {% endif %}
+      {% if audit_report %}
         {% if audit_report.risk_level == 'critical' %}
           <span class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-semibold">⚠ مخاطر حرجة</span>
         {% elif audit_report.risk_level == 'high' %}
@@ -46,6 +55,44 @@
       <a href="{% url 'ocr_evidence_list' %}" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">كل المستندات</a>
     </div>
   </div>
+
+  {% if audit_report and report_presentation %}
+  <div class="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50 shadow-sm">
+    <div class="absolute inset-y-0 start-0 w-1.5 {% if audit_report.risk_level == 'critical' %}bg-red-500{% elif audit_report.risk_level == 'high' %}bg-orange-500{% elif audit_report.risk_level == 'medium' %}bg-amber-400{% else %}bg-emerald-500{% endif %}"></div>
+    <div class="p-5 sm:p-6">
+      <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+        <div class="space-y-3">
+          <div class="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+            <span>📄</span>
+            <span>ملخص التقرير التنفيذي</span>
+          </div>
+          <div>
+            <h2 class="text-lg sm:text-xl font-bold text-slate-900">{{ report_presentation.risk_level_label }} — {{ report_presentation.recommendation_label }}</h2>
+            <p class="text-sm text-slate-600 mt-1 leading-7">{{ report_presentation.ai_summary_display|linebreaksbr }}</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 min-w-full lg:min-w-[340px] lg:max-w-[380px]">
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+            <p class="text-xs text-slate-500 mb-1">درجة المخاطر</p>
+            <p class="text-2xl font-bold text-slate-900">{{ audit_report.risk_score }}/100</p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+            <p class="text-xs text-slate-500 mb-1">درجة التكرار</p>
+            <p class="text-2xl font-bold text-slate-900">{{ audit_report.duplicate_score }}/100</p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+            <p class="text-xs text-slate-500 mb-1">درجة الشذوذ</p>
+            <p class="text-2xl font-bold text-slate-900">{{ audit_report.anomaly_score }}/100</p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+            <p class="text-xs text-slate-500 mb-1">توصية النظام</p>
+            <p class="text-sm font-bold {% if audit_report.recommendation == 'approve' %}text-emerald-700{% elif audit_report.recommendation == 'reject' %}text-red-700{% else %}text-amber-700{% endif %}">{{ report_presentation.recommendation_label }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- ── Pending Review Banner ── -->
   {% if document.status == 'pending_review' %}
@@ -352,8 +399,44 @@
       <h2 class="font-semibold text-slate-700 text-sm">٥. نتائج التحقق</h2>
     </div>
     <div class="p-5">
-      {% if extracted and extracted.compliance_checks %}
-        <!-- List-style compliance_checks from extracted -->
+      {% if report_presentation and report_presentation.checklist_rows %}
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {% for row in report_presentation.checklist_rows %}
+          <div class="rounded-2xl border p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md
+            {% if row.status_key == 'pass' %}border-emerald-200 bg-emerald-50/80
+            {% elif row.status_key == 'warning' %}border-amber-200 bg-amber-50/80
+            {% else %}border-red-200 bg-red-50/80{% endif %}">
+            <div class="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p class="text-sm font-bold text-slate-800">{{ row.label }}</p>
+                <p class="text-xs text-slate-500 mt-1">تم: {{ row.completion_label }}</p>
+              </div>
+              <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl text-lg
+                {% if row.status_key == 'pass' %}bg-emerald-100 text-emerald-700
+                {% elif row.status_key == 'warning' %}bg-amber-100 text-amber-700
+                {% else %}bg-red-100 text-red-700{% endif %}">
+                {% if row.status_key == 'pass' %}✓{% elif row.status_key == 'warning' %}!{% else %}✕{% endif %}
+              </span>
+            </div>
+            <div class="mb-3">
+              <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold
+                {% if row.status_key == 'pass' %}bg-emerald-600 text-white
+                {% elif row.status_key == 'warning' %}bg-amber-500 text-white
+                {% else %}bg-red-600 text-white{% endif %}">{{ row.status_label }}</span>
+            </div>
+            {% if row.notes %}
+            <ul class="space-y-1.5">
+              {% for note in row.notes|slice:":3" %}
+              <li class="text-xs text-slate-600 flex gap-2"><span class="text-slate-400">•</span><span>{{ note }}</span></li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-xs text-slate-400">لا توجد ملاحظات.</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      {% elif extracted and extracted.compliance_checks %}
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {% for check in extracted.compliance_checks %}
           <div class="flex items-start gap-3 p-3 rounded-lg border
@@ -383,21 +466,23 @@
       <h2 class="font-semibold text-slate-700 text-sm">٦. كشف التكرار</h2>
     </div>
     <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-      <div class="text-center p-4 rounded-lg bg-slate-50">
-        <p class="text-2xl font-bold text-slate-600">—</p>
-        <p class="text-xs text-slate-500 mt-1">عدم توفر البيانات</p>
+      <div class="text-center p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm">
+        <p class="text-xs text-slate-500 mb-1">درجة التكرار</p>
+        <p class="text-3xl font-bold {% if audit_report and audit_report.duplicate_score >= 80 %}text-red-600{% elif audit_report and audit_report.duplicate_score >= 30 %}text-amber-600{% else %}text-emerald-600{% endif %}">{% if audit_report %}{{ audit_report.duplicate_score }}{% else %}—{% endif %}</p>
+        <p class="text-xs text-slate-500 mt-1">من 100</p>
       </div>
       <div class="md:col-span-2">
         <p class="text-xs text-slate-500 mb-1">الحالة</p>
-        <span class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
-          {% if audit_report %}
-            {% if audit_report.duplicate_status == 'confirmed_duplicate' %}تكرار مؤكد
-            {% elif audit_report.duplicate_status == 'high_risk' %}خطر تكرار عالٍ
-            {% elif audit_report.duplicate_status == 'medium_risk' %}خطر تكرار متوسط
-            {% elif audit_report.duplicate_status == 'low_risk' %}خطر تكرار منخفض
-            {% else %}لا يوجد تكرار{% endif %}
-          {% else %}عدم توفر البيانات{% endif %}
+        <span class="inline-block px-3 py-1 rounded-full text-xs font-medium {% if audit_report and audit_report.duplicate_score >= 80 %}bg-red-100 text-red-700{% elif audit_report and audit_report.duplicate_score >= 30 %}bg-amber-100 text-amber-700{% else %}bg-emerald-100 text-emerald-700{% endif %}">
+          {% if audit_report and report_presentation %}{{ report_presentation.duplicate_status_label }}{% else %}عدم توفر البيانات{% endif %}
         </span>
+        {% if audit_report and audit_report.duplicate_score >= 80 %}
+        <p class="text-xs text-red-600 mt-2">يوجد احتمال مرتفع جداً بأن الفاتورة مكررة وتحتاج إلى رفض أو مراجعة فورية.</p>
+        {% elif audit_report and audit_report.duplicate_score >= 30 %}
+        <p class="text-xs text-amber-600 mt-2">تم رصد مؤشرات تستدعي التحقق من وجود تكرار محتمل.</p>
+        {% elif audit_report %}
+        <p class="text-xs text-emerald-600 mt-2">لم يتم رصد مؤشرات قوية على وجود تكرار.</p>
+        {% endif %}
         {% if audit_report and audit_report.duplicate_matched_documents_json %}
         <p class="text-xs text-slate-500 mt-2">المستندات المطابقة: {{ audit_report.duplicate_matched_documents_json|length }}</p>
         {% endif %}
@@ -414,27 +499,28 @@
       <h2 class="font-semibold text-slate-700 text-sm">٧. كشف الأنماط غير الطبيعية</h2>
     </div>
     <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-      <div class="text-center p-4 rounded-lg bg-slate-50">
-        <p class="text-2xl font-bold text-slate-600">—</p>
-        <p class="text-xs text-slate-500 mt-1">عدم توفر البيانات</p>
+      <div class="text-center p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm">
+        <p class="text-xs text-slate-500 mb-1">درجة الشذوذ</p>
+        <p class="text-3xl font-bold {% if audit_report and audit_report.anomaly_score >= 70 %}text-red-600{% elif audit_report and audit_report.anomaly_score >= 30 %}text-amber-600{% else %}text-emerald-600{% endif %}">{% if audit_report %}{{ audit_report.anomaly_score }}{% else %}—{% endif %}</p>
+        <p class="text-xs text-slate-500 mt-1">من 100</p>
       </div>
       <div class="md:col-span-2">
         <p class="text-xs text-slate-500 mb-2">الحالة:
           <span class="font-medium text-slate-700">
-            {% if audit_report %}{{ audit_report.anomaly_status|default:"غير محدد" }}
+            {% if audit_report and report_presentation %}{{ report_presentation.anomaly_status_label }}
             {% else %}عدم توفر البيانات{% endif %}
           </span>
         </p>
-        {% if audit_report and audit_report.anomaly_explanation %}
-        <p class="text-xs text-slate-600 bg-slate-50 rounded p-2">{{ audit_report.anomaly_explanation }}</p>
-        {% endif %}
-        {% if audit_report and audit_report.anomaly_reasons_json %}
-        <ul class="mt-2 space-y-1">
-          {% for reason in audit_report.anomaly_reasons_json %}
-          <li class="text-xs text-amber-700 flex gap-2"><span>⚠</span><span>{{ reason.reason }}</span></li>
+        {% if audit_report and report_presentation and report_presentation.anomaly_reasons %}
+        <ul class="mt-2 space-y-1.5">
+          {% for reason in report_presentation.anomaly_reasons %}
+          <li class="text-xs text-amber-700 flex gap-2"><span>⚠</span><span>{{ reason }}</span></li>
           {% endfor %}
         </ul>
-        {% elif extracted and extracted.anomaly_flags %}
+        {% elif audit_report and audit_report.anomaly_explanation %}
+        <p class="text-xs text-slate-600 bg-slate-50 rounded p-2">{{ audit_report.anomaly_explanation }}</p>
+        {% endif %}
+        {% if extracted and extracted.anomaly_flags and not audit_report %}
         <ul class="mt-2 space-y-1">
           {% for flag in extracted.anomaly_flags %}
           <li class="text-xs text-amber-700 flex gap-2"><span>⚠</span><span>{{ flag }}</span></li>
@@ -478,11 +564,11 @@
           </div>
           {% if audit_report.risk_level %}
           <p class="text-xs font-semibold mt-1
-            {% if audit_report.risk_level == 'critical' %}text-red-600
-            {% elif audit_report.risk_level == 'high' %}text-orange-600
-            {% elif audit_report.risk_level == 'medium' %}text-amber-600
-            {% else %}text-green-600{% endif %}">
-            {% if audit_report.risk_level == 'critical' %}حرجة{% elif audit_report.risk_level == 'high' %}عالية{% elif audit_report.risk_level == 'medium' %}متوسطة{% else %}منخفضة{% endif %}
+          {% if audit_report.risk_level == 'critical' %}text-red-600
+          {% elif audit_report.risk_level == 'high' %}text-orange-600
+          {% elif audit_report.risk_level == 'medium' %}text-amber-600
+          {% else %}text-green-600{% endif %}">
+            {% if report_presentation %}{{ report_presentation.risk_level_label }}{% else %}{% if audit_report.risk_level == 'critical' %}حرجة{% elif audit_report.risk_level == 'high' %}عالية{% elif audit_report.risk_level == 'medium' %}متوسطة{% else %}منخفضة{% endif %}{% endif %}
           </p>
           {% else %}
           <p class="text-xs text-slate-400">لا تتوفر البيانات</p>
@@ -491,9 +577,9 @@
         <!-- Risk factors -->
         <div class="flex-1 min-w-0">
           <p class="text-xs font-semibold text-slate-500 mb-2">عوامل المخاطرة</p>
-          {% if audit_report and audit_report.risk_factors_json %}
+          {% if report_presentation and report_presentation.risk_factors %}
           <ul class="space-y-1">
-            {% for factor in audit_report.risk_factors_json %}
+            {% for factor in report_presentation.risk_factors %}
             <li class="text-xs text-slate-600 flex gap-2"><span class="text-red-400">•</span><span>{{ factor }}</span></li>
             {% endfor %}
           </ul>
@@ -520,15 +606,15 @@
       <h2 class="font-semibold text-slate-700 text-sm">٩. ملخص الذكاء الاصطناعي</h2>
     </div>
     <div class="p-5 space-y-4 text-sm">
-      {% if audit_report and audit_report.ai_summary %}
+      {% if audit_report and report_presentation %}
         <div>
           <p class="text-xs text-slate-500 mb-1">الملخص التنفيذي</p>
-          <p class="text-slate-700 leading-relaxed">{{ audit_report.ai_summary }}</p>
+          <p class="text-slate-700 leading-relaxed">{{ report_presentation.ai_summary_display|linebreaksbr }}</p>
         </div>
-        {% if audit_report.ai_findings %}
+        {% if report_presentation.ai_findings_display %}
         <div>
           <p class="text-xs text-slate-500 mb-1">المشكلات والاكتشافات</p>
-          <p class="text-slate-700 leading-relaxed">{{ audit_report.ai_findings }}</p>
+          <p class="text-slate-700 leading-relaxed">{{ report_presentation.ai_findings_display|linebreaksbr }}</p>
         </div>
         {% endif %}
         {% if audit_report.ai_review_required %}
@@ -590,11 +676,11 @@
           </span>
           <div>
             <p class="font-bold text-slate-800 text-sm">
-              {% if audit_report.recommendation == 'approve' %}موافقة — الفاتورة سليمة
-              {% elif audit_report.recommendation == 'reject' %}رفض — الفاتورة تحتوي على مشاكل حرجة
-              {% else %}مراجعة يدوية مطلوبة{% endif %}
+              {% if report_presentation %}{{ report_presentation.recommendation_label }}{% else %}{% if audit_report.recommendation == 'approve' %}موافقة — الفاتورة سليمة{% elif audit_report.recommendation == 'reject' %}رفض — الفاتورة تحتوي على مشاكل حرجة{% else %}مراجعة يدوية مطلوبة{% endif %}{% endif %}
             </p>
-            {% if audit_report.recommendation_reason %}
+            {% if report_presentation %}
+            <p class="text-xs text-slate-500 mt-1">{{ report_presentation.recommendation_reason_display }}</p>
+            {% elif audit_report.recommendation_reason %}
             <p class="text-xs text-slate-500 mt-1">{{ audit_report.recommendation_reason }}</p>
             {% endif %}
           </div>
@@ -613,16 +699,16 @@
       <h2 class="font-semibold text-slate-700 text-sm">١١. سجل التدقيق</h2>
     </div>
     <div class="p-5">
-      {% if audit_report and audit_report.audit_trail_json %}
+      {% if report_presentation and report_presentation.audit_trail %}
         <ol class="relative border-s border-slate-200 ms-3 space-y-4">
-          {% for step in audit_report.audit_trail_json %}
+          {% for step in report_presentation.audit_trail %}
           <li class="ms-4">
             <div class="absolute -start-1.5 mt-1 w-3 h-3 rounded-full border border-white
-              {% if step.status == 'success' %}bg-green-500{% else %}bg-red-400{% endif %}"></div>
+              {% if step.status == 'ناجح' or step.status == 'Success' %}bg-green-500{% else %}bg-amber-400{% endif %}"></div>
             <div class="flex items-start gap-2">
               <div class="flex-1">
-                <p class="text-xs font-semibold text-slate-700">{{ step.title|default:step.event }}</p>
-                {% if step.description %}<p class="text-xs text-slate-500">{{ step.description }}</p>{% endif %}
+                <p class="text-xs font-semibold text-slate-700">{{ step.event }}</p>
+                {% if step.details %}<p class="text-xs text-slate-500">{{ step.details }}</p>{% endif %}
               </div>
               <span class="text-xs text-slate-400 whitespace-nowrap">{{ step.timestamp|slice:":16"|default:"" }}</span>
             </div>
@@ -688,7 +774,10 @@
         كل المستندات
       </a>
       {% if audit_report %}
-      <a href="{% url 'audit-report-detail' report_id=audit_report.id %}" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors">
+      <a href="{% url 'web_audit_report_download_pdf' report_id=audit_report.id %}" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">
+        تنزيل PDF
+      </a>
+      <a href="{% url 'web_audit_report_detail' report_id=audit_report.id %}" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors">
         عرض التقرير الكامل
       </a>
       {% endif %}

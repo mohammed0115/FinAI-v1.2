@@ -21,6 +21,7 @@ import shutil
 from core.models import Organization
 from documents.models import Document
 from documents.models import OCREvidence
+from documents.report_presenter import build_report_presentation
 from documents.services.audit_workflow_service import invoice_audit_workflow_service
 
 logger = logging.getLogger(__name__)
@@ -880,6 +881,11 @@ def pipeline_result_view(request, document_id):
     except Exception:
         pass
 
+    report_presentation = None
+    if audit_report:
+        lang = request.session.get('language', 'ar')
+        report_presentation = build_report_presentation(audit_report, lang=lang)
+
     # Count completed pipeline steps for display
     pipeline_steps = 1  # Upload always done
     if evidence:
@@ -904,6 +910,7 @@ def pipeline_result_view(request, document_id):
         'evidence': evidence,
         'extracted': extracted,
         'audit_report': audit_report,
+        'report_presentation': report_presentation,
         'pipeline_steps': pipeline_steps,
     }
 

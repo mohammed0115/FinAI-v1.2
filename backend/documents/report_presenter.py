@@ -108,6 +108,15 @@ DUPLICATE_STATUSES = {
 }
 
 
+ANOMALY_STATUSES = {
+    'no_anomaly': {'ar': 'لا يوجد شذوذ', 'en': 'No anomaly'},
+    'low_anomaly': {'ar': 'شذوذ منخفض', 'en': 'Low anomaly'},
+    'medium_anomaly': {'ar': 'شذوذ متوسط', 'en': 'Medium anomaly'},
+    'high_anomaly': {'ar': 'شذوذ مرتفع', 'en': 'High anomaly'},
+    'critical_anomaly': {'ar': 'شذوذ حرج', 'en': 'Critical anomaly'},
+}
+
+
 CHECK_LABELS = {
     'invoice_number': {'ar': 'رقم الفاتورة', 'en': 'Invoice Number'},
     'vendor': {'ar': 'بيانات المورد', 'en': 'Vendor Details'},
@@ -226,6 +235,10 @@ def localize_duplicate_status(status: str, lang: str = 'ar') -> str:
     return _localize_choice(DUPLICATE_STATUSES, status, lang, status or '')
 
 
+def localize_anomaly_status(status: str, lang: str = 'ar') -> str:
+    return _localize_choice(ANOMALY_STATUSES, status, lang, status or '')
+
+
 def localize_check_label(check_key: str, lang: str = 'ar') -> str:
     return _localize_choice(CHECK_LABELS, check_key, lang, check_key or '')
 
@@ -327,6 +340,11 @@ def localize_issue(issue: Any, lang: str = 'ar') -> str:
         score = duplicate_factor_match.group(1)
         return f'تم رصد احتمال تكرار (الدرجة: {score})'
 
+    anomalies_score_match = re.match(r'^Anomalies detected \(score: (\d+)\)$', issue_text)
+    if anomalies_score_match:
+        score = anomalies_score_match.group(1)
+        return f'تم رصد شذوذات (الدرجة: {score})'
+
     critical_risk_match = re.match(r'^Critical risk detected \((\d+)/100\)$', issue_text)
     if critical_risk_match:
         score = critical_risk_match.group(1)
@@ -351,6 +369,16 @@ def localize_issue(issue: Any, lang: str = 'ar') -> str:
     if validation_failed_match:
         check_key = validation_failed_match.group(1)
         return f'فشل التحقق: {localize_check_label(check_key, lang)}'
+
+    failed_validation_match = re.match(r'^Failed ([a-z_]+) validation$', issue_text)
+    if failed_validation_match:
+        check_key = failed_validation_match.group(1)
+        return f'فشل في تحقق {localize_check_label(check_key, lang)}'
+
+    warning_validation_match = re.match(r'^Warning in ([a-z_]+) validation$', issue_text)
+    if warning_validation_match:
+        check_key = warning_validation_match.group(1)
+        return f'تحذير في تحقق {localize_check_label(check_key, lang)}'
 
     return issue_text
 
@@ -691,6 +719,7 @@ def build_report_presentation(report, lang: str = 'ar') -> Dict[str, Any]:
         'risk_level_label': localize_risk_level(report.risk_level, lang),
         'recommendation_label': localize_recommendation(report.recommendation, lang),
         'duplicate_status_label': localize_duplicate_status(report.duplicate_status, lang),
+        'anomaly_status_label': localize_anomaly_status(report.anomaly_status, lang),
         'processing_status_label': localize_processing_status(report.processing_status, lang),
         'ai_summary_display': build_ai_summary(report, lang=lang, checklist_rows=checklist_rows),
         'ai_findings_display': build_ai_findings(

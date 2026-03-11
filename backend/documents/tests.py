@@ -169,3 +169,14 @@ class AuditReportPresentationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertTrue(response.content.startswith(b'%PDF'))
+
+    def test_pipeline_result_uses_arabic_report_presentation_and_pdf_action(self):
+        self._set_session_language('ar')
+
+        response = self.client.get(reverse('pipeline_result', args=[self.document.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'تنزيل PDF')
+        self.assertContains(response, 'رقم الفاتورة مفقود')
+        self.assertContains(response, reverse('web_audit_report_download_pdf', args=[self.report.id]))
+        self.assertNotContains(response, 'English AI summary that should not appear on Arabic UI.')
