@@ -5,7 +5,12 @@ from .views import (
     AccountViewSet, JournalEntryViewSet, ComplianceCheckViewSet, AuditFlagViewSet,
     InvoiceAuditReportViewSet
 )
-from .dashboard_views import invoice_analysis_dashboard, invoice_detail, audit_report_detail
+from .dashboard_views import (
+    invoice_analysis_dashboard,
+    invoice_detail,
+    audit_report_detail,
+    download_audit_report_pdf,
+)
 
 router = DefaultRouter()
 router.register(r'documents', DocumentViewSet)
@@ -22,4 +27,5 @@ urlpatterns = [
     path('dashboard/', invoice_analysis_dashboard, name='invoice_analysis_dashboard'),
     path('invoice/<uuid:invoice_id>/', invoice_detail, name='invoice-detail'),
     path('audit-report/<uuid:report_id>/', audit_report_detail, name='audit-report-detail'),
+    path('audit-report/<uuid:report_id>/pdf/', download_audit_report_pdf, name='audit-report-download-pdf'),
 ]

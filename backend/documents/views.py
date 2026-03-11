@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.viewsets import ReadOnlyModelViewSet
+from django.http import HttpResponse
 from django.core.files.storage import default_storage
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
@@ -19,6 +20,8 @@ from .serializers import (
 from core.api.base import OrganizationScopedModelViewSet, OrganizationScopedReadOnlyModelViewSet
 from core.ai_service import ai_service
 from documents.services.audit_workflow_service import invoice_audit_workflow_service
+from documents.pdf_generator import invoice_audit_pdf_generator
+from documents.report_presenter import build_report_presentation
 from decimal import Decimal
 import uuid
 import base64
@@ -1149,6 +1152,9 @@ class InvoiceAuditReportViewSet(OrganizationScopedReadOnlyModelViewSet):
         # Return full report or JSON
         if request.query_params.get('format') == 'json':
             return Response(report.full_report_json or {})
+
+        lang = request.query_params.get('lang') or request.session.get('language', 'ar')
+        presentation = build_report_presentation(report, lang=lang)
         
         # Return formatted report data
         data = {
@@ -1224,32 +1230,52 @@ class InvoiceAuditReportViewSet(OrganizationScopedReadOnlyModelViewSet):
             
             # AI Analysis
             'ai_analysis': {
-                'summary': report.ai_summary,
-                'findings': report.ai_findings,
+                'summary': presentation['ai_summary_display'],
+                'findings': presentation['ai_findings_display'],
                 'review_required': report.ai_review_required,
+                'summary_en': report.ai_summary,
+                'summary_ar': report.ai_summary_ar or presentation['ai_summary_display'],
+                'findings_en': report.ai_findings,
+                'findings_ar': report.ai_findings_ar or presentation['ai_findings_display'],
             },
             
             # Recommendation
             'recommendation': {
                 'action': report.recommendation,
-                'reason': report.recommendation_reason,
+                'label': presentation['recommendation_label'],
+                'reason': presentation['recommendation_reason_display'],
+                'reason_en': report.recommendation_reason,
+                'reason_ar': report.recommendation_reason_ar or presentation['recommendation_reason_display'],
             },
             
             # Audit trail
             'audit_trail': report.audit_trail_json or [],
+
+            # Display helpers
+            'display': {
+                'language': lang,
+                'labels': presentation['labels'],
+                'risk_level': presentation['risk_level_label'],
+                'duplicate_status': presentation['duplicate_status_label'],
+                'processing_status': presentation['processing_status_label'],
+                'checklist_rows': presentation['checklist_rows'],
+                'risk_factors': presentation['risk_factors'],
+                'anomaly_reasons': presentation['anomaly_reasons'],
+            },
         }
         
         return Response(data)
     
     @action(detail=True, methods=['get'])
     def export_pdf(self, request, pk=None):
-        """Export audit report as PDF (placeholder)"""
+        """Export audit report as PDF"""
         try:
             report = self.get_queryset().get(id=pk)
-            return Response({
-                'message': 'PDF export functionality coming soon',
-                'report_number': report.report_number
-            })
+            lang = request.query_params.get('lang') or request.session.get('language', 'ar')
+            pdf_bytes = invoice_audit_pdf_generator.generate(report, lang=lang)
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="audit-report-{report.report_number}.pdf"'
+            return response
         except InvoiceAuditReport.DoesNotExist:
             return Response(
                 {'error': 'Report not found'},

@@ -1,570 +1,357 @@
 {% extends 'base.html' %}
-{% load static %}
 
-{% block title %}تقرير التدقيق الشامل - Comprehensive Audit Report - {{ report.extracted_invoice_number }}{% endblock %}
+{% block title %}{{ labels.title }} - {{ report.extracted_invoice_number|default:report.report_number }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4 mb-5">
-    
-    <!-- Report Header -->
-    <div class="row mb-4">
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="fas fa-file-alt text-primary"></i>
+                {{ labels.title }}
+            </h1>
+            <p class="text-muted mb-0">{{ labels.subtitle }}</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'audit-report-download-pdf' report_id=report.id %}" class="btn btn-danger">
+                <i class="fas fa-file-pdf"></i>
+                {{ labels.download_pdf }}
+            </a>
+            <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i>
+                {{ labels.back }}
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <div class="row g-3 align-items-center">
+                <div class="col-xl-8">
+                    <div class="row g-3 small">
+                        <div class="col-md-6">
+                            <div class="text-muted">{{ labels.report_number }}</div>
+                            <div class="fw-semibold"><code>{{ report.report_number }}</code></div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted">{{ labels.generated }}</div>
+                            <div class="fw-semibold">{{ report.generated_at|date:"Y-m-d H:i" }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4 text-xl-end">
+                    <span class="badge bg-{% if report.risk_level == 'low' %}success{% elif report.risk_level == 'medium' %}warning{% elif report.risk_level == 'high' %}danger{% else %}dark{% endif %} px-3 py-2 mb-2">
+                        {{ labels.risk_level }}: {{ presentation.risk_level_label }}
+                    </span>
+                    <div class="fw-semibold">{{ labels.risk_score }}: {{ report.risk_score }}/100</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0"><i class="fas fa-file"></i> {{ labels.document_information }}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row small mb-0">
+                        <dt class="col-sm-4 text-muted">{{ labels.document_id }}</dt>
+                        <dd class="col-sm-8"><code>{{ report.document.id }}</code></dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.file_name }}</dt>
+                        <dd class="col-sm-8">{{ report.document.file_name|default:labels.no_data }}</dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.upload_date }}</dt>
+                        <dd class="col-sm-8">{{ report.upload_date|date:"Y-m-d H:i"|default:labels.no_data }}</dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.ocr_engine }}</dt>
+                        <dd class="col-sm-8">{{ report.ocr_engine|default:labels.no_data }}</dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.ocr_confidence }}</dt>
+                        <dd class="col-sm-8">{{ report.ocr_confidence_score|default:0 }}%</dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.processing_status }}</dt>
+                        <dd class="col-sm-8">{{ presentation.processing_status_label }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0"><i class="fas fa-receipt"></i> {{ labels.invoice_information }}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row small mb-3">
+                        <dt class="col-sm-4 text-muted">{{ labels.invoice_number }}</dt>
+                        <dd class="col-sm-8">{{ report.extracted_invoice_number|default:labels.no_data }}</dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.issue_date }}</dt>
+                        <dd class="col-sm-8">{{ report.extracted_issue_date|date:"Y-m-d"|default:labels.no_data }}</dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.due_date }}</dt>
+                        <dd class="col-sm-8">{{ report.extracted_due_date|date:"Y-m-d"|default:labels.no_data }}</dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.currency }}</dt>
+                        <dd class="col-sm-8">{{ report.currency|default:labels.no_data }}</dd>
+                    </dl>
+
+                    <h6 class="fw-semibold mb-3">{{ labels.financial_totals }}</h6>
+                    <div class="row g-3 text-center">
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 bg-light h-100">
+                                <div class="text-muted small">{{ labels.subtotal }}</div>
+                                <div class="fw-semibold">{{ report.subtotal_amount|default:labels.no_data }} {{ report.currency }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 bg-light h-100">
+                                <div class="text-muted small">{{ labels.vat }}</div>
+                                <div class="fw-semibold">{{ report.vat_amount|default:labels.no_data }} {{ report.currency }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 bg-light h-100">
+                                <div class="text-muted small">{{ labels.total_amount }}</div>
+                                <div class="fw-semibold">{{ report.total_amount|default:labels.no_data }} {{ report.currency }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0"><i class="fas fa-building"></i> {{ labels.vendor_information }}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row small mb-0">
+                        <dt class="col-sm-4 text-muted">{{ labels.name }}</dt>
+                        <dd class="col-sm-8">{{ report.extracted_vendor_name|default:labels.no_data }}</dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.address }}</dt>
+                        <dd class="col-sm-8">{{ report.extracted_vendor_address|default:labels.no_data }}</dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.tin }}</dt>
+                        <dd class="col-sm-8">{{ report.extracted_vendor_tin|default:labels.no_data }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> {{ labels.customer_information }}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row small mb-0">
+                        <dt class="col-sm-4 text-muted">{{ labels.name }}</dt>
+                        <dd class="col-sm-8">{{ report.extracted_customer_name|default:labels.no_data }}</dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.address }}</dt>
+                        <dd class="col-sm-8">{{ report.extracted_customer_address|default:labels.no_data }}</dd>
+                        <dt class="col-sm-4 text-muted">{{ labels.tin }}</dt>
+                        <dd class="col-sm-8">{{ report.extracted_customer_tin|default:labels.no_data }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
         <div class="col-12">
             <div class="card shadow-sm border-0">
-                <div class="card-body p-4">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h1 class="mb-2">
-                                <i class="fas fa-file-alt text-primary"></i> تقرير التدقيق الشامل
-                                <br><small class="text-muted">Comprehensive Financial Audit Report</small>
-                            </h1>
-                            <p class="text-muted mb-0">
-                                <strong>Report #:</strong> <code>{{ report.report_number }}</code> | 
-                                <strong>Generated:</strong> {{ report.generated_at|date:"Y-m-d H:i" }}
-                            </p>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <span class="badge bg-{% if report.risk_level == 'low' %}success{% elif report.risk_level == 'medium' %}warning{% elif report.risk_level == 'high' %}danger{% else %}dark{% endif %} p-2" style="font-size: 1.1em;">
-                                Risk Level: {{ report.get_risk_level_display|upper }}
-                            </span>
-                            <br><br>
-                            <strong>Risk Score:</strong> <span class="badge bg-primary">{{ report.risk_score }}/100</span>
-                        </div>
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> {{ labels.line_items }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if line_items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>{{ labels.description }}</th>
+                                    <th class="text-center">{{ labels.quantity }}</th>
+                                    <th class="text-center">{{ labels.unit_price }}</th>
+                                    <th class="text-center">{{ labels.discount }}</th>
+                                    <th class="text-center">{{ labels.total }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in line_items %}
+                                <tr>
+                                    <td>{{ item.description }}</td>
+                                    <td class="text-center">{{ item.quantity }}</td>
+                                    <td class="text-center">{{ item.unit_price }}</td>
+                                    <td class="text-center">{{ item.discount }}</td>
+                                    <td class="text-center fw-semibold">{{ item.total }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                    {% else %}
+                    <p class="text-muted mb-0">{{ labels.no_items }}</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Quick Navigation Tabs -->
-    <div class="row mb-4">
         <div class="col-12">
-            <ul class="nav nav-tabs" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link active" data-bs-toggle="tab" href="#document-info">
-                        <i class="fas fa-file"></i> Document
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#invoice-data">
-                        <i class="fas fa-receipt"></i> Invoice Data
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#line-items">
-                        <i class="fas fa-list"></i> Line Items
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#validation">
-                        <i class="fas fa-check-circle"></i> Validation
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#analysis">
-                        <i class="fas fa-chart-bar"></i> Analysis
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#recommendation">
-                        <i class="fas fa-gavel"></i> Recommendation
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="tab-content">
-
-        <!-- Tab 1: Document Information -->
-        <div id="document-info" class="tab-pane fade show active">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-light py-3">
-                            <h5 class="mb-0">
-                                <i class="fas fa-info-circle"></i> معلومات المستند / Document Information
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p><strong>Document ID:</strong><br><code>{{ report.document.id }}</code></p>
-                                    <p><strong>File Name:</strong><br>{{ report.document.file_name }}</p>
-                                    <p><strong>Upload Date:</strong><br>{{ report.upload_date|date:"Y-m-d H:i" }}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>OCR Engine:</strong><br>{{ report.ocr_engine }}</p>
-                                    <p><strong>OCR Confidence:</strong><br>
-                                        <span class="badge bg-info">{{ report.ocr_confidence_score }}%</span>
-                                    </p>
-                                    <p><strong>Processing Status:</strong><br>
-                                        <span class="badge bg-success">{{ report.processing_status }}</span>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0"><i class="fas fa-check-double"></i> {{ labels.validation_checklist }}</h5>
                 </div>
-            </div>
-        </div>
-
-        <!-- Tab 2: Invoice Data -->
-        <div id="invoice-data" class="tab-pane fade">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-light py-3">
-                            <h5 class="mb-0">
-                                <i class="fas fa-receipt"></i> البيانات المستخرجة / Extracted Invoice Data
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p><strong>Invoice Number:</strong><br>{{ report.extracted_invoice_number|default:"N/A" }}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>Issue Date:</strong><br>{{ report.extracted_issue_date|date:"Y-m-d"|default:"N/A" }}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>Due Date:</strong><br>{{ report.extracted_due_date|date:"Y-m-d"|default:"N/A" }}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>Currency:</strong><br>{{ report.currency }}</p>
-                                </div>
-                            </div>
-
-                            <hr>
-
-                            <!-- Vendor Information -->
-                            <h6 class="mt-3 mb-3"><strong><i class="fas fa-building"></i> Vendor Information / معلومات الموردة</strong></h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p><strong>Name:</strong><br>{{ report.extracted_vendor_name|default:"N/A" }}</p>
-                                    <p><strong>TIN/Tax ID:</strong><br><code>{{ report.extracted_vendor_tin|default:"N/A" }}</code></p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>Address:</strong><br>{{ report.extracted_vendor_address|default:"N/A" }}</p>
-                                </div>
-                            </div>
-
-                            <hr>
-
-                            <!-- Customer Information -->
-                            <h6 class="mt-3 mb-3"><strong><i class="fas fa-user"></i> Customer Information / معلومات العميل</strong></h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p><strong>Name:</strong><br>{{ report.extracted_customer_name|default:"N/A" }}</p>
-                                    <p><strong>TIN/Tax ID:</strong><br><code>{{ report.extracted_customer_tin|default:"N/A" }}</code></p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>Address:</strong><br>{{ report.extracted_customer_address|default:"N/A" }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab 3: Line Items -->
-        <div id="line-items" class="tab-pane fade">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-light py-3">
-                            <h5 class="mb-0">
-                                <i class="fas fa-list"></i> تفاصيل البنود / Line Items Details
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            {% if report.line_items_json %}
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Product/Description</th>
-                                            <th>Quantity</th>
-                                            <th>Unit Price</th>
-                                            <th>Discount</th>
-                                            <th>Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for item in report.line_items_json %}
-                                        <tr>
-                                            <td><strong>{{ forloop.counter }}</strong></td>
-                                            <td>{{ item.description|default:"N/A" }}</td>
-                                            <td class="text-end">{{ item.quantity|default:"0" }}</td>
-                                            <td class="text-end">{{ item.unit_price|default:"0" }}</td>
-                                            <td class="text-end">{{ item.discount|default:"0" }}</td>
-                                            <td class="text-end"><strong>{{ item.total|default:"0" }}</strong></td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {% else %}
-                            <p class="text-muted">No line items found</p>
-                            {% endif %}
-
-                            <!-- Financial Totals -->
-                            <hr>
-                            <h6 class="mt-3 mb-3"><strong><i class="fas fa-dollar-sign"></i> Financial Totals / الإجماليات</strong></h6>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <p><strong>Subtotal:</strong><br>
-                                        <span class="badge bg-light text-dark">{{ report.subtotal_amount|default:"N/A" }} {{ report.currency }}</span>
-                                    </p>
-                                </div>
-                                <div class="col-md-4">
-                                    <p><strong>VAT/Tax:</strong><br>
-                                        <span class="badge bg-warning">{{ report.vat_amount|default:"0" }} {{ report.currency }}</span>
-                                    </p>
-                                </div>
-                                <div class="col-md-4">
-                                    <p><strong>Total Amount:</strong><br>
-                                        <span class="badge bg-success" style="font-size: 1.2em;">{{ report.total_amount|default:"N/A" }} {{ report.currency }}</span>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab 4: Validation Results -->
-        <div id="validation" class="tab-pane fade">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-light py-3">
-                            <h5 class="mb-0">
-                                <i class="fas fa-check-double"></i> نتائج التحقق / Validation Results
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            {% if report.validation_results_json %}
-                            <div class="row">
-                                <div class="col-12">
-                                    <p class="text-muted"><i class="fas fa-check-circle text-success"></i> نتائج التحقق متاحة</p>
-                                </div>
-                            </div>
-                            {% else %}
-                            <p class="text-muted">No validation results available</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Compliance Checks Section -->
-            {% if report.compliance_checks_json %}
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-light py-3">
-                            <h5 class="mb-0">
-                                <i class="fas fa-shield-alt"></i> فحوصات الامتثال / Compliance Checks
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            {% for check in report.compliance_checks_json %}
-                            <div class="mb-3 p-3 border rounded">
-                                <h6>{{ check.name|default:"Compliance Check" }}
-                                    <span class="badge {% if check.passed %}bg-success{% else %}bg-danger{% endif %}">
-                                        {{ check.passed|yesno:"PASS,FAIL" }}
-                                    </span>
-                                </h6>
-                                {% if check.finding %}
-                                <p class="text-muted small">{{ check.finding }}</p>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Tab 5: Analysis (Duplicate & Anomaly Detection) -->
-        <div id="analysis" class="tab-pane fade">
-            
-            <!-- Duplicate Detection -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-light py-3">
-                            <h5 class="mb-0">
-                                <i class="fas fa-clone"></i> كشف التكرار / Duplicate Detection
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <p><strong>Duplicate Score:</strong><br>
-                                        <span class="badge bg-{% if report.duplicate_score >= 80 %}danger{% elif report.duplicate_score >= 50 %}warning{% else %}success{% endif %}">
-                                            {{ report.duplicate_score }}/100
-                                        </span>
-                                    </p>
-                                </div>
-                                <div class="col-md-4">
-                                    <p><strong>Status:</strong><br>
-                                        <span class="badge bg-info">{{ report.get_duplicate_status_display }}</span>
-                                    </p>
-                                </div>
-                                <div class="col-md-4">
-                                    <p><strong>Matched Documents:</strong><br>
-                                        <span class="badge bg-secondary">{{ report.duplicate_matched_documents_json|length }}</span>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Anomaly Detection -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-light py-3">
-                            <h5 class="mb-0">
-                                <i class="fas fa-exclamation-triangle"></i> كشف الأنماط غير الطبيعية / Anomaly Detection
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-4">
-                                    <p><strong>Anomaly Score:</strong><br>
-                                        <span class="badge bg-{% if report.anomaly_score >= 70 %}danger{% elif report.anomaly_score >= 50 %}warning{% else %}success{% endif %}">
-                                            {{ report.anomaly_score }}/100
-                                        </span>
-                                    </p>
-                                </div>
-                                <div class="col-md-4">
-                                    <p><strong>Status:</strong><br>
-                                        <span class="badge bg-info">{{ report.get_anomaly_status_display }}</span>
-                                    </p>
-                                </div>
-                                <div class="col-md-4">
-                                    <p><strong>Detected Issues:</strong><br>
-                                        <span class="badge bg-secondary">{{ report.anomaly_reasons_json|length }}</span>
-                                    </p>
-                                </div>
-                            </div>
-
-                            {% if report.anomaly_explanation %}
-                            <hr>
-                            <h6>Explanation:</h6>
-                            <p class="text-muted">{{ report.anomaly_explanation }}</p>
-                            {% endif %}
-
-                            {% if report.anomaly_reasons_json %}
-                            <hr>
-                            <h6>Detected Anomalies:</h6>
-                            <ul>
-                                {% for reason in report.anomaly_reasons_json %}
-                                <li><strong>{{ reason.reason|default:reason }}</strong></li>
-                                {% endfor %}
-                            </ul>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Risk Assessment -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-light py-3">
-                            <h5 class="mb-0">
-                                <i class="fas fa-chart-line"></i> تقييم المخاطر / Risk Assessment
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-4">
-                                    <p><strong>Risk Score:</strong><br>
-                                        <div class="progress">
-                                            <div class="progress-bar bg-{% if report.risk_score >= 80 %}danger{% elif report.risk_score >= 60 %}warning{% else %}success{% endif %}" 
-                                                 role="progressbar" 
-                                                 style="width: {{ report.risk_score }}%;">
-                                                {{ report.risk_score }}%
-                                            </div>
-                                        </div>
-                                    </p>
-                                </div>
-                                <div class="col-md-4">
-                                    <p><strong>Risk Level:</strong><br>
-                                        <span class="badge bg-{% if report.risk_level == 'low' %}success{% elif report.risk_level == 'medium' %}warning{% elif report.risk_level == 'high' %}danger{% else %}dark{% endif %}">
-                                            {{ report.get_risk_level_display|upper }}
-                                        </span>
-                                    </p>
-                                </div>
-                                <div class="col-md-4">
-                                    <p><strong>Risk Factors:</strong><br>
-                                        <span class="badge bg-secondary">{{ report.risk_factors_json|length }}</span>
-                                    </p>
-                                </div>
-                            </div>
-
-                            {% if report.risk_factors_json %}
-                            <hr>
-                            <h6>Risk Factors:</h6>
-                            <ul>
-                                {% for factor in report.risk_factors_json %}
-                                <li>{{ factor }}</li>
-                                {% endfor %}
-                            </ul>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab 6: Recommendation -->
-        <div id="recommendation" class="tab-pane fade">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-light py-3">
-                            <h5 class="mb-0">
-                                <i class="fas fa-gavel"></i> التوصيات / Final Recommendation
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p><strong>Recommendation:</strong></p>
-                                    <div class="p-3 border rounded {% if report.recommendation == 'approve' %}border-success bg-success{% elif report.recommendation == 'reject' %}border-danger bg-danger{% else %}border-warning bg-warning{% endif %} text-white">
-                                        <h5 class="mb-0">
-                                            {% if report.recommendation == 'approve' %}
-                                            <i class="fas fa-check-circle"></i> APPROVE
-                                            {% elif report.recommendation == 'reject' %}
-                                            <i class="fas fa-times-circle"></i> REJECT
-                                            {% else %}
-                                            <i class="fas fa-exclamation-circle"></i> MANUAL REVIEW REQUIRED
-                                            {% endif %}
-                                        </h5>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>Reason:</strong></p>
-                                    <div class="alert alert-info">{{ report.recommendation_reason|default:"No reason specified" }}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- AI Summary Section -->
-            {% if report.ai_summary %}
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-light py-3">
-                            <h5 class="mb-0">
-                                <i class="fas fa-robot"></i> ملخص الذكاء الاصطناعي / AI Summary
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <p>{{ report.ai_summary }}</p>
-                            {% if report.ai_findings %}
-                            <hr>
-                            <h6>Key Findings:</h6>
-                            <p>{{ report.ai_findings }}</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Audit Trail -->
-            {% if report.audit_trail_json %}
-            <div class="row">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-light py-3">
-                            <h5 class="mb-0">
-                                <i class="fas fa-history"></i> سجل التدقيق / Audit Trail
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="timeline">
-                                {% for event in report.audit_trail_json %}
-                                <div class="timeline-item">
-                                    <div class="timeline-marker"></div>
-                                    <div class="timeline-content">
-                                        <h6>{{ event.title|default:event.event }}</h6>
-                                        <p class="text-muted small">{{ event.timestamp }}</p>
-                                        {% if event.description %}
-                                        <p class="small">{{ event.description }}</p>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>{{ labels.check }}</th>
+                                    <th class="text-center">{{ labels.checklist }}</th>
+                                    <th class="text-center">{{ labels.status }}</th>
+                                    <th>{{ labels.notes }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in checklist_rows %}
+                                <tr>
+                                    <td class="fw-semibold">{{ row.label }}</td>
+                                    <td class="text-center">
+                                        {% if row.status_key == 'pass' %}
+                                        <span class="badge bg-success">{{ row.completion_label }}</span>
+                                        {% elif row.status_key == 'warning' %}
+                                        <span class="badge bg-warning text-dark">{{ row.completion_label }}</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">{{ row.completion_label }}</span>
                                         {% endif %}
-                                    </div>
-                                </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-{{ row.badge }}{% if row.badge == 'warning' %} text-dark{% endif %}">{{ row.status_label }}</span>
+                                    </td>
+                                    <td>
+                                        {% if row.notes %}
+                                            <ul class="mb-0 ps-3">
+                                                {% for note in row.notes %}
+                                                <li>{{ note }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <span class="text-muted">{{ labels.no_notes }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
                                 {% endfor %}
-                            </div>
-                        </div>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-            {% endif %}
         </div>
 
-    </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> {{ labels.analysis_summary }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="text-muted small mb-1">{{ labels.duplicate_detection }}</div>
+                        <div class="fw-semibold">{{ presentation.duplicate_status_label }} ({{ report.duplicate_score }}/100)</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="text-muted small mb-1">{{ labels.anomaly_detection }}</div>
+                        <div class="fw-semibold">{{ report.anomaly_score }}/100</div>
+                        {% if anomaly_reasons %}
+                        <ul class="mt-2 mb-0 ps-3 small">
+                            {% for reason in anomaly_reasons %}
+                            <li>{{ reason }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <div class="text-muted small">{{ labels.no_findings }}</div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="text-muted small mb-1">{{ labels.risk_factors }}</div>
+                        {% if risk_factors %}
+                        <ul class="mb-0 ps-3 small">
+                            {% for factor in risk_factors %}
+                            <li>{{ factor }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <div class="text-muted small">{{ labels.no_risk_factors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <!-- Footer -->
-    <div class="row mt-5">
-        <div class="col-12">
-            <div class="card bg-light border-0">
-                <div class="card-body text-center text-muted">
-                    <p class="mb-0">
-                        <small>
-                            Report Generated by FinAI System |
-                            Report #: {{ report.report_number }} |
-                            Generated: {{ report.generated_at|date:"Y-m-d H:i:s" }}
-                        </small>
-                    </p>
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0"><i class="fas fa-robot"></i> {{ labels.ai_analysis }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="fw-semibold mb-2">{{ labels.ai_analysis }}</div>
+                        <div class="small text-body-secondary">{{ presentation.ai_summary_display|linebreaksbr }}</div>
+                    </div>
+                    <hr>
+                    <div>
+                        <div class="fw-semibold mb-2">{{ labels.details }}</div>
+                        <div class="small text-body-secondary">{{ presentation.ai_findings_display|linebreaksbr }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0"><i class="fas fa-gavel"></i> {{ labels.recommendation }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="badge bg-{% if report.recommendation == 'approve' %}success{% elif report.recommendation == 'manual_review' %}warning text-dark{% else %}danger{% endif %} px-3 py-2">
+                            {{ presentation.recommendation_label }}
+                        </span>
+                    </div>
+                    <div class="text-muted small mb-2">{{ labels.recommendation_reason }}</div>
+                    <div class="small">{{ presentation.recommendation_reason_display|linebreaksbr }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0"><i class="fas fa-stream"></i> {{ labels.audit_trail }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if audit_trail %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>{{ labels.timestamp }}</th>
+                                    <th>{{ labels.event }}</th>
+                                    <th>{{ labels.status }}</th>
+                                    <th>{{ labels.details }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in audit_trail %}
+                                <tr>
+                                    <td class="small text-muted">{{ entry.timestamp|default:labels.no_data }}</td>
+                                    <td class="small fw-semibold">{{ entry.event }}</td>
+                                    <td class="small">{{ entry.status|default:labels.no_data }}</td>
+                                    <td class="small">{{ entry.details|default:labels.no_data }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">{{ labels.no_audit_events }}</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-
 </div>
-
-<style>
-    .timeline {
-        position: relative;
-        padding: 20px 0;
-    }
-    
-    .timeline-item {
-        display: flex;
-        margin-bottom: 20px;
-    }
-    
-    .timeline-marker {
-        width: 12px;
-        height: 12px;
-        background: #007bff;
-        border-radius: 50%;
-        margin-top: 5px;
-        margin-right: 20px;
-        flex-shrink: 0;
-    }
-    
-    .timeline-content {
-        flex: 1;
-    }
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}

@@ -24,6 +24,7 @@ from core.models import User, Organization
 import logging
 from django.db.models import Q, Count, Sum
 from .openai_service import OpenAIService
+from documents.report_presenter import build_report_presentation
 
 logger = logging.getLogger(__name__)
 
@@ -722,9 +723,15 @@ class InvoiceAuditReportService:
                 extracted_data=extracted_data,
                 defaults=report_defaults,
             )
+
+            arabic_presentation = build_report_presentation(report, lang='ar')
+            report.ai_summary_ar = arabic_presentation['ai_summary_display']
+            report.ai_findings_ar = arabic_presentation['ai_findings_display']
+            report.recommendation_reason_ar = arabic_presentation['recommendation_reason_display']
+
             # Create full report JSON
             report.full_report_json = self._create_full_report_json(report)
-            report.save(update_fields=['full_report_json'])
+            report.save(update_fields=['ai_summary_ar', 'ai_findings_ar', 'recommendation_reason_ar', 'full_report_json'])
             
             logger.info(f"Audit report generated: {report_number} for document {document.id}")
             
@@ -814,7 +821,9 @@ class InvoiceAuditReportService:
             # AI Analysis
             'ai_analysis': {
                 'summary': report.ai_summary,
+                'summary_ar': report.ai_summary_ar,
                 'findings': report.ai_findings,
+                'findings_ar': report.ai_findings_ar,
                 'review_required': report.ai_review_required,
             },
             
@@ -822,6 +831,7 @@ class InvoiceAuditReportService:
             'recommendation': {
                 'action': report.recommendation,
                 'reason': report.recommendation_reason,
+                'reason_ar': report.recommendation_reason_ar,
             },
             
             # Audit Trail

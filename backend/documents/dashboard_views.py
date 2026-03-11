@@ -3,6 +3,7 @@ Invoice Analysis Dashboard Views
 Displays results from all 5 phases of the invoice processing pipeline
 """
 
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
@@ -12,6 +13,8 @@ import json
 from datetime import datetime, timedelta
 
 from documents.models import ExtractedData, Document
+from documents.pdf_generator import invoice_audit_pdf_generator
+from documents.report_presenter import build_report_presentation
 
 
 @login_required
@@ -297,66 +300,44 @@ def audit_report_detail(request, report_id):
         report = InvoiceAuditReport.objects.get(id=report_id, organization=org)
     except InvoiceAuditReport.DoesNotExist:
         return redirect('invoice_analysis_dashboard')
-    
-    # Parse JSON fields for display
-    validation_results = report.validation_results_json or {}
-    if isinstance(validation_results, str):
-        try:
-            validation_results = json.loads(validation_results)
-        except:
-            validation_results = {}
-    
-    compliance_checks = report.compliance_checks_json or {}
-    if isinstance(compliance_checks, str):
-        try:
-            compliance_checks = json.loads(compliance_checks)
-        except:
-            compliance_checks = {}
-    
-    duplicate_matched_docs = report.duplicate_matched_documents_json or []
-    if isinstance(duplicate_matched_docs, str):
-        try:
-            duplicate_matched_docs = json.loads(duplicate_matched_docs)
-        except:
-            duplicate_matched_docs = []
-    
-    anomaly_reasons = report.anomaly_reasons_json or []
-    if isinstance(anomaly_reasons, str):
-        try:
-            anomaly_reasons = json.loads(anomaly_reasons)
-        except:
-            anomaly_reasons = []
-    
-    risk_factors = report.risk_factors_json or []
-    if isinstance(risk_factors, str):
-        try:
-            risk_factors = json.loads(risk_factors)
-        except:
-            risk_factors = []
-    
-    line_items = report.line_items_json or []
-    if isinstance(line_items, str):
-        try:
-            line_items = json.loads(line_items)
-        except:
-            line_items = []
-    
-    audit_trail = report.audit_trail_json or []
-    if isinstance(audit_trail, str):
-        try:
-            audit_trail = json.loads(audit_trail)
-        except:
-            audit_trail = []
-    
+
+    lang = request.session.get('language', 'ar')
+    presentation = build_report_presentation(report, lang=lang)
+
     context = {
         'report': report,
-        'validation_results': validation_results,
-        'compliance_checks': compliance_checks,
-        'duplicate_matched_documents': duplicate_matched_docs,
-        'anomaly_reasons': anomaly_reasons,
-        'risk_factors': risk_factors,
-        'line_items': line_items,
-        'audit_trail': audit_trail,
+        'presentation': presentation,
+        'labels': presentation['labels'],
+        'line_items': presentation['line_items'],
+        'checklist_rows': presentation['checklist_rows'],
+        'anomaly_reasons': presentation['anomaly_reasons'],
+        'risk_factors': presentation['risk_factors'],
+        'audit_trail': presentation['audit_trail'],
     }
     
     return render(request, 'documents/comprehensive_audit_report.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def download_audit_report_pdf(request, report_id):
+    from documents.models import InvoiceAuditReport
+
+    user = request.user
+    org = user.organization
+
+    if not org:
+        return redirect('login')
+
+    try:
+        report = InvoiceAuditReport.objects.get(id=report_id, organization=org)
+    except InvoiceAuditReport.DoesNotExist:
+        return redirect('invoice_analysis_dashboard')
+
+    lang = request.session.get('language', 'ar')
+    pdf_bytes = invoice_audit_pdf_generator.generate(report, lang=lang)
+    filename = f"audit-report-{report.report_number}.pdf"
+
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
