@@ -12,7 +12,12 @@ from compliance.models import AuditFinding, VATReconciliation, ZATCAInvoice, Zak
 from core.views.base import OrganizationActionView, OrganizationTemplateView
 from documents.models import ExtractedData, OCREvidence, Transaction
 from reports.models import Insight, Report
-from reports.pdf_generator import arabic_pdf_generator
+
+
+def get_arabic_pdf_generator():
+    from reports.pdf_generator import arabic_pdf_generator
+
+    return arabic_pdf_generator
 
 
 class ArabicReportPageView(OrganizationTemplateView):
@@ -101,6 +106,7 @@ class DownloadPdfReportView(OrganizationActionView):
                 for finding in findings
             ]
 
+            arabic_pdf_generator = get_arabic_pdf_generator()
             pdf_bytes = arabic_pdf_generator.generate_report(
                 organization_data=organization_data,
                 compliance_data=compliance_data,

@@ -10,13 +10,18 @@ import logging
 
 from .models import Report, Insight
 from .serializers import ReportSerializer, InsightSerializer
-from .pdf_generator import arabic_pdf_generator
 from documents.models import Transaction
 from compliance.models import (
     AuditFinding, ZATCAInvoice, VATReconciliation, ZakatCalculation
 )
 
 logger = logging.getLogger(__name__)
+
+
+def get_arabic_pdf_generator():
+    from .pdf_generator import arabic_pdf_generator
+
+    return arabic_pdf_generator
 
 class ReportViewSet(viewsets.ModelViewSet):
     queryset = Report.objects.all()
@@ -234,6 +239,7 @@ class ReportViewSet(viewsets.ModelViewSet):
         
         # Generate PDF
         try:
+            arabic_pdf_generator = get_arabic_pdf_generator()
             pdf_bytes = arabic_pdf_generator.generate_report(
                 organization_data=organization_data,
                 compliance_data=compliance_data,

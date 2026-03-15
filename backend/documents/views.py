@@ -19,9 +19,6 @@ from .serializers import (
 )
 from core.api.base import OrganizationScopedModelViewSet, OrganizationScopedReadOnlyModelViewSet
 from core.ai_service import ai_service
-from documents.services.audit_workflow_service import invoice_audit_workflow_service
-from documents.pdf_generator import invoice_audit_pdf_generator
-from documents.report_presenter import build_report_presentation
 from decimal import Decimal
 import uuid
 import base64
@@ -33,6 +30,24 @@ from urllib.parse import urlparse
 import requests
 
 logger = logging.getLogger(__name__)
+
+
+def get_invoice_audit_workflow_service():
+    from documents.services.audit_workflow_service import invoice_audit_workflow_service
+
+    return invoice_audit_workflow_service
+
+
+def get_invoice_audit_pdf_generator():
+    from documents.pdf_generator import invoice_audit_pdf_generator
+
+    return invoice_audit_pdf_generator
+
+
+def get_report_presentation_builder():
+    from documents.report_presenter import build_report_presentation
+
+    return build_report_presentation
 
 
 class DocumentViewSet(OrganizationScopedModelViewSet):
@@ -95,7 +110,8 @@ class DocumentViewSet(OrganizationScopedModelViewSet):
             document: Document instance
             file_path: Full file path to the document
         """
-        result = invoice_audit_workflow_service.process_document(
+        workflow_service = get_invoice_audit_workflow_service()
+        result = workflow_service.process_document(
             document=document,
             file_path=file_path,
             actor=document.uploaded_by,
@@ -264,7 +280,8 @@ class DocumentViewSet(OrganizationScopedModelViewSet):
         content_hash = self._compute_content_hash(file)
         audit_session = None
         if document_type == 'invoice':
-            audit_session = invoice_audit_workflow_service.start_session(
+            workflow_service = get_invoice_audit_workflow_service()
+            audit_session = workflow_service.start_session(
                 organization=user_organization,
                 actor=request.user,
                 file_name=file.name,
@@ -368,7 +385,8 @@ class DocumentViewSet(OrganizationScopedModelViewSet):
             storage_url = default_storage.url(storage_path)
             audit_session = None
             if document_type == 'invoice':
-                audit_session = invoice_audit_workflow_service.start_session(
+                workflow_service = get_invoice_audit_workflow_service()
+                audit_session = workflow_service.start_session(
                     organization=user_organization,
                     actor=request.user,
                     file_name=file_name,
@@ -422,8 +440,9 @@ class DocumentViewSet(OrganizationScopedModelViewSet):
         document = self.get_object()
 
         try:
-            file_path = invoice_audit_workflow_service.resolve_document_file_path(document)
-            workflow_result = invoice_audit_workflow_service.process_document(
+            workflow_service = get_invoice_audit_workflow_service()
+            file_path = workflow_service.resolve_document_file_path(document)
+            workflow_result = workflow_service.process_document(
                 document=document,
                 file_path=file_path,
                 actor=request.user,
@@ -507,7 +526,8 @@ class DocumentViewSet(OrganizationScopedModelViewSet):
         document = self.get_object()
 
         try:
-            workflow_result = invoice_audit_workflow_service.rerun_saved_audit(
+            workflow_service = get_invoice_audit_workflow_service()
+            workflow_result = workflow_service.rerun_saved_audit(
                 document=document,
                 actor=request.user,
             )
@@ -1154,6 +1174,7 @@ class InvoiceAuditReportViewSet(OrganizationScopedReadOnlyModelViewSet):
             return Response(report.full_report_json or {})
 
         lang = request.query_params.get('lang') or request.session.get('language', 'ar')
+        build_report_presentation = get_report_presentation_builder()
         presentation = build_report_presentation(report, lang=lang)
         
         # Return formatted report data
@@ -1272,6 +1293,7 @@ class InvoiceAuditReportViewSet(OrganizationScopedReadOnlyModelViewSet):
         try:
             report = self.get_queryset().get(id=pk)
             lang = request.query_params.get('lang') or request.session.get('language', 'ar')
+            invoice_audit_pdf_generator = get_invoice_audit_pdf_generator()
             pdf_bytes = invoice_audit_pdf_generator.generate(report, lang=lang)
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="audit-report-{report.report_number}.pdf"'

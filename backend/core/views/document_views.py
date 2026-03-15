@@ -3,11 +3,12 @@ Document Views - وجهات المستندات
 Enterprise Document Upload System with Single, Multi-file, and ZIP support
 """
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 import os
@@ -19,10 +20,9 @@ import tempfile
 import shutil
 
 from core.models import Organization
-from documents.models import Document
-from documents.models import OCREvidence
+from core.views.base import build_shell_stats, get_interface_language
+from documents.models import AuditTrail, Document, InvoiceAuditFinding, OCREvidence
 from documents.report_presenter import build_report_presentation
-from documents.services.audit_workflow_service import invoice_audit_workflow_service
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +44,18 @@ CONTENT_TYPE_MAP = {
 
 # Extensions that go through the structured ingestor (CSV/JSON) instead of OCR
 STRUCTURED_EXTENSIONS = {'.csv', '.json'}
+
+
+def get_invoice_audit_pdf_service():
+    from documents.services.invoice_audit_pdf_service import invoice_audit_pdf_service
+
+    return invoice_audit_pdf_service
+
+
+def get_invoice_audit_workflow_service():
+    from documents.services.audit_workflow_service import invoice_audit_workflow_service
+
+    return invoice_audit_workflow_service
 
 
 def generate_file_hash(file_content):
@@ -153,7 +165,8 @@ def process_document_ocr(document, file_path, language, is_handwritten, user, or
     Returns: (success, message, ocr_evidence)
     """
     try:
-        workflow_result = invoice_audit_workflow_service.process_document(
+        workflow_service = get_invoice_audit_workflow_service()
+        workflow_result = workflow_service.process_document(
             document=document,
             file_path=file_path,
             actor=user,
@@ -163,6 +176,9 @@ def process_document_ocr(document, file_path, language, is_handwritten, user, or
             audit_session=audit_session,
         )
 
+        if workflow_result.document.status == 'pending_review':
+            return True, 'تعذر الاستخراج الآلي محلياً، وتم حفظ المستند وتحويله إلى المراجعة اليدوية.', workflow_result.ocr_evidence
+
         confidence = workflow_result.ocr_evidence.confidence_score if workflow_result.ocr_evidence else 0
         return True, f'درجة الثقة: {confidence}%', workflow_result.ocr_evidence
         
@@ -171,6 +187,113 @@ def process_document_ocr(document, file_path, language, is_handwritten, user, or
         document.status = 'failed'
         document.save()
         return False, str(e), None
+
+
+def build_shell_context(organization):
+    return {'stats': build_shell_stats(organization)}
+
+
+def request_expects_json(request):
+    accept = request.headers.get('Accept', '')
+    return (
+        request.headers.get('x-requested-with') == 'XMLHttpRequest'
+        or 'application/json' in accept
+    )
+
+
+def _localized_value(ui_language, arabic_value, english_value):
+    return arabic_value if ui_language == 'ar' else english_value
+
+
+def _localize_checklist_title(title, ui_language):
+    if ui_language != 'ar' or not title:
+        return title
+    labels = {
+        'Invoice Number': 'رقم الفاتورة',
+        'Vendor': 'بيانات المورد',
+        'Customer': 'بيانات العميل',
+        'Items': 'بنود الفاتورة',
+        'Total Match': 'مطابقة الإجماليات',
+        'Vat': 'فحص الضريبة',
+        'Validation Error': 'خطأ تحقق',
+        'Validation Warning': 'تنبيه تحقق',
+    }
+    return labels.get(str(title), title)
+
+
+def _localize_checklist_message(message, ui_language):
+    if ui_language != 'ar' or not message:
+        return message
+    text = str(message)
+    replacements = {
+        'Invoice number is missing': 'رقم الفاتورة مفقود',
+        'Invoice number is unusually short': 'رقم الفاتورة قصير على نحو غير معتاد',
+        'Vendor name is missing': 'اسم المورد مفقود',
+        'Vendor TIN is missing': 'الرقم الضريبي للمورد مفقود',
+        'Vendor TIN appears to be invalid format': 'صيغة الرقم الضريبي للمورد تبدو غير صحيحة',
+        'Customer name is missing': 'اسم العميل مفقود',
+        'Customer TIN is missing': 'الرقم الضريبي للعميل مفقود',
+        'Customer TIN appears to be invalid format': 'صيغة الرقم الضريبي للعميل تبدو غير صحيحة',
+        'No line items found on invoice': 'لم يتم العثور على بنود داخل الفاتورة',
+        'Cannot verify totals without line items': 'لا يمكن التحقق من الإجماليات دون بنود الفاتورة',
+        'VAT amount is missing or zero': 'مبلغ الضريبة مفقود أو يساوي صفراً',
+        'No anomalies detected': 'لم يتم رصد شذوذات',
+    }
+    for source, target in replacements.items():
+        text = text.replace(source, target)
+    text = text.replace('Subtotal mismatch', 'عدم تطابق في الإجمالي قبل الضريبة')
+    text = text.replace('Total mismatch', 'عدم تطابق في الإجمالي النهائي')
+    text = text.replace('Calculated total', 'الإجمالي المحتسب')
+    text = text.replace('does not match stated total', 'لا يطابق الإجمالي المدرج')
+    return text
+
+
+def _build_audit_checklist_rows(validation_rows, compliance_rows, duplicate_entry, anomaly_entry, ui_language):
+    rows = []
+    done_yes = _localized_value(ui_language, 'تم', 'Yes')
+    done_no = _localized_value(ui_language, 'لا', 'No')
+
+    for row in validation_rows:
+        rows.append({
+            'group': _localized_value(ui_language, 'التحقق', 'Validation'),
+            'title': _localize_checklist_title(row.get('title'), ui_language),
+            'done_label': done_yes if row.get('tone') == 'success' else done_no,
+            'status_label': row.get('status_label'),
+            'message': _localize_checklist_message(row.get('message'), ui_language),
+            'tone': row.get('tone'),
+        })
+
+    for row in compliance_rows:
+        rows.append({
+            'group': _localized_value(ui_language, 'الامتثال', 'Compliance'),
+            'title': _localize_checklist_title(row.get('title'), ui_language),
+            'done_label': done_yes if row.get('tone') == 'success' else done_no,
+            'status_label': row.get('status_label'),
+            'message': _localize_checklist_message(row.get('message'), ui_language),
+            'tone': row.get('tone'),
+        })
+
+    if duplicate_entry:
+        rows.append({
+            'group': _localized_value(ui_language, 'التكرار', 'Duplicate'),
+            'title': _localized_value(ui_language, 'كشف التكرار', 'Duplicate detection'),
+            'done_label': done_yes if duplicate_entry.get('tone') == 'success' else done_no,
+            'status_label': duplicate_entry.get('status_label'),
+            'message': duplicate_entry.get('message'),
+            'tone': duplicate_entry.get('tone'),
+        })
+
+    if anomaly_entry:
+        rows.append({
+            'group': _localized_value(ui_language, 'الشذوذ', 'Anomaly'),
+            'title': _localized_value(ui_language, 'كشف الشذوذ', 'Anomaly detection'),
+            'done_label': done_yes if anomaly_entry.get('tone') == 'success' else done_no,
+            'status_label': anomaly_entry.get('status_label'),
+            'message': anomaly_entry.get('message'),
+            'tone': anomaly_entry.get('tone'),
+        })
+
+    return rows
 
 
 @login_required
@@ -183,6 +306,7 @@ def documents_view(request):
     
     context = {
         'documents': documents,
+        **build_shell_context(organization),
     }
     
     return render(request, 'documents/list.html', context)
@@ -228,6 +352,12 @@ def document_upload_view(request):
             messages.error(request, 'لم يتم تحديد ملفات للرفع')
             return redirect('document_upload')
     
+    if request.GET.get('clear_results') == '1':
+        request.session.pop('upload_results', None)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'cleared': True})
+        return redirect('document_upload')
+
     # GET request - show upload form
     recent_documents = Document.objects.filter(
         organization=organization
@@ -237,12 +367,32 @@ def document_upload_view(request):
     total_docs = Document.objects.filter(organization=organization).count()
     pending_docs = Document.objects.filter(organization=organization, status='pending').count()
     processing_docs = Document.objects.filter(organization=organization, status='processing').count()
+    pending_review_docs = Document.objects.filter(organization=organization, status='pending_review').count()
+    completed_docs = Document.objects.filter(
+        organization=organization,
+        status__in=['completed', 'validated'],
+    ).count()
+    upload_results = request.session.get('upload_results') or {}
+    upload_results_summary = {
+        'success_count': len(upload_results.get('success') or []),
+        'failed_count': len(upload_results.get('failed') or []),
+        'skipped_count': len(upload_results.get('skipped') or []),
+    }
+    upload_results_summary['total'] = (
+        upload_results_summary['success_count']
+        + upload_results_summary['failed_count']
+        + upload_results_summary['skipped_count']
+    )
     
     context = {
         'recent_documents': recent_documents,
         'total_docs': total_docs,
         'pending_docs': pending_docs,
         'processing_docs': processing_docs,
+        'pending_review_docs': pending_review_docs,
+        'completed_docs': completed_docs,
+        'upload_results_summary': upload_results_summary,
+        **build_shell_context(organization),
     }
     
     return render(request, 'documents/upload.html', context)
@@ -251,16 +401,23 @@ def document_upload_view(request):
 def handle_single_upload(request, user, organization, document_type, language, is_handwritten):
     """Handle single file upload with immediate OCR processing"""
     uploaded_file = request.FILES['document']
+    expects_json = request_expects_json(request)
     
     # Validate file size
     if uploaded_file.size > settings.MAX_UPLOAD_SIZE:
-        messages.error(request, f'حجم الملف يتجاوز الحد المسموح ({settings.MAX_UPLOAD_SIZE // (1024*1024)}MB)')
+        error_message = f'حجم الملف يتجاوز الحد المسموح ({settings.MAX_UPLOAD_SIZE // (1024*1024)}MB)'
+        if expects_json:
+            return JsonResponse({'success': False, 'message': error_message}, status=400)
+        messages.error(request, error_message)
         return redirect('document_upload')
     
     # Validate file type
     ext = os.path.splitext(uploaded_file.name)[1].lower()
     if ext not in SUPPORTED_EXTENSIONS:
-        messages.error(request, f'نوع الملف غير مدعوم. الأنواع المدعومة: PDF, JPG, PNG, TIFF, TXT, XML')
+        error_message = 'نوع الملف غير مدعوم. الأنواع المدعومة: PDF, JPG, PNG, TIFF, TXT, XML'
+        if expects_json:
+            return JsonResponse({'success': False, 'message': error_message}, status=400)
+        messages.error(request, error_message)
         return redirect('document_upload')
     
     try:
@@ -268,7 +425,8 @@ def handle_single_upload(request, user, organization, document_type, language, i
         file_content = uploaded_file.read()
         file_type = CONTENT_TYPE_MAP.get(ext, 'application/octet-stream')
         audit_hash = generate_file_hash(file_content)
-        audit_session = invoice_audit_workflow_service.start_session(
+        workflow_service = get_invoice_audit_workflow_service()
+        audit_session = workflow_service.start_session(
             organization=organization,
             actor=user,
             file_name=uploaded_file.name,
@@ -299,15 +457,39 @@ def handle_single_upload(request, user, organization, document_type, language, i
         )
         
         if success:
-            messages.success(request, f'تم معالجة المستند بنجاح. {message}')
+            success_message = f'تم معالجة المستند بنجاح. {message}'
+            if expects_json:
+                return JsonResponse({
+                    'success': True,
+                    'message': success_message,
+                    'document_id': str(document.id),
+                    'document_name': document.file_name,
+                    'status': document.status,
+                    'redirect_url': reverse('pipeline_result', kwargs={'document_id': document.id}),
+                    'manual_review_required': document.status == 'pending_review',
+                })
+            messages.success(request, success_message)
             return redirect('pipeline_result', document_id=document.id)
         else:
-            messages.error(request, f'خطأ في معالجة المستند: {message}')
+            error_message = f'خطأ في معالجة المستند: {message}'
+            if expects_json:
+                return JsonResponse({
+                    'success': False,
+                    'message': error_message,
+                    'document_id': str(document.id),
+                    'document_name': document.file_name,
+                    'status': document.status,
+                    'redirect_url': reverse('pipeline_result', kwargs={'document_id': document.id}),
+                }, status=422)
+            messages.error(request, error_message)
             return redirect('pipeline_result', document_id=document.id)
             
     except Exception as e:
         logger.error(f"Single upload error: {e}")
-        messages.error(request, f'خطأ في رفع المستند: {str(e)}')
+        error_message = f'خطأ في رفع المستند: {str(e)}'
+        if expects_json:
+            return JsonResponse({'success': False, 'message': error_message}, status=500)
+        messages.error(request, error_message)
         return redirect('document_upload')
 
 
@@ -349,7 +531,8 @@ def handle_multi_upload(request, user, organization, document_type, language, is
             audit_hash = generate_file_hash(file_content)
             audit_session = None
             if process_ocr == 'immediate' and len(uploaded_files) <= 10:
-                audit_session = invoice_audit_workflow_service.start_session(
+                workflow_service = get_invoice_audit_workflow_service()
+                audit_session = workflow_service.start_session(
                     organization=organization,
                     actor=user,
                     file_name=uploaded_file.name,
@@ -753,6 +936,7 @@ def ocr_evidence_list_view(request):
     
     context = {
         'evidence_list': evidence_page,
+        **build_shell_context(organization),
     }
     
     return render(request, 'documents/ocr_list.html', context)
@@ -799,6 +983,7 @@ def ocr_evidence_detail_view(request, evidence_id):
         'evidence': evidence,
         'extracted_data': extracted_data,
         'scope_docs': scope_docs,
+        **build_shell_context(organization),
     }
 
     return render(request, 'documents/ocr_detail.html', context)
@@ -859,6 +1044,7 @@ def pipeline_result_view(request, document_id):
     """
     user = request.user
     organization = user.organization
+    ui_language = get_interface_language(request)
 
     document = get_object_or_404(Document, id=document_id, organization=organization)
 
@@ -886,8 +1072,10 @@ def pipeline_result_view(request, document_id):
         lang = request.session.get('language', 'ar')
         report_presentation = build_report_presentation(audit_report, lang=lang)
 
-    # Count completed pipeline steps for display
-    pipeline_steps = 1  # Upload always done
+    latest_session = document.audit_sessions.select_related('started_by').first()
+    invoice_record = document.invoice_records.select_related('vendor').first()
+
+    pipeline_steps = 1
     if evidence:
         pipeline_steps = 2
     if extracted:
@@ -898,12 +1086,633 @@ def pipeline_result_view(request, document_id):
             pipeline_steps = 5
         if extracted.audit_completed_at:
             pipeline_steps = 6
-        if extracted.risk_score is not None:
+        if extracted.risk_score:
             pipeline_steps = 7
         if extracted.audit_summary:
             pipeline_steps = 8
     if audit_report:
-        pipeline_steps = 11  # Full report generated
+        pipeline_steps = 11
+
+    def first_value(*values):
+        for value in values:
+            if value is not None and value != '':
+                return value
+        return None
+
+    def normalize_engine_label(raw_value):
+        if not raw_value:
+            return 'OCR'
+        value = str(raw_value).lower()
+        if 'openai' in value:
+            return 'OpenAI Vision'
+        if 'tesseract' in value:
+            return 'Tesseract OCR'
+        if 'structured_csv' in value:
+            return 'CSV Import'
+        if 'structured_json' in value:
+            return 'JSON Import'
+        return str(raw_value).replace('_', ' ').title()
+
+    def prettify_label(value):
+        return str(value).replace('_', ' ').replace('-', ' ').title()
+
+    def tone_for_status(status):
+        value = str(status or '').lower()
+        if value in {'pass', 'completed', 'approved', 'success', 'reused', 'published'}:
+            return 'success'
+        if value in {'warning', 'pending', 'manual_review', 'medium'}:
+            return 'warning'
+        if value in {'fail', 'failed', 'error', 'critical', 'reject', 'high'}:
+            return 'danger'
+        return 'neutral'
+
+    def arabic_status_label(status):
+        labels = {
+            'pass': 'مطابق',
+            'completed': 'مكتمل',
+            'approved': 'معتمد',
+            'success': 'ناجح',
+            'reused': 'معاد الاستخدام',
+            'published': 'منشور',
+            'warning': 'تنبيه',
+            'pending': 'قيد التنفيذ',
+            'manual_review': 'مراجعة يدوية',
+            'fail': 'فشل',
+            'failed': 'فشل',
+            'error': 'خطأ',
+            'critical': 'حرج',
+            'high': 'مرتفع',
+            'medium': 'متوسط',
+            'low': 'منخفض',
+        }
+        return labels.get(str(status or '').lower(), prettify_label(status or 'unknown'))
+
+    def display_timestamp(value):
+        if not value:
+            return None
+        if hasattr(value, 'strftime'):
+            try:
+                return timezone.localtime(value).strftime('%Y/%m/%d %H:%M')
+            except Exception:
+                return value.strftime('%Y/%m/%d %H:%M')
+        return str(value)[:16]
+
+    def summarize_stage_payload(payload):
+        if not isinstance(payload, dict):
+            return None
+        details = []
+        for key, label in (
+            ('provider', 'المحرك'),
+            ('confidence', 'الثقة'),
+            ('invoice_number', 'الفاتورة'),
+            ('errors_count', 'الأخطاء'),
+            ('warnings_count', 'التحذيرات'),
+            ('checks_run', 'فحوص الامتثال'),
+            ('finding_count', 'المخالفات'),
+        ):
+            value = payload.get(key)
+            if value not in (None, '', [], {}, False):
+                if key == 'confidence':
+                    details.append(f'{label}: {value}%')
+                else:
+                    details.append(f'{label}: {value}')
+        return ' • '.join(details) if details else None
+
+    def normalize_line_items(raw_items):
+        normalized = []
+        if not raw_items and invoice_record:
+            raw_items = list(
+                invoice_record.line_items.all().values(
+                    'line_number',
+                    'description',
+                    'quantity',
+                    'unit_price',
+                    'line_total',
+                )
+            )
+        if not isinstance(raw_items, list):
+            return normalized
+        for index, item in enumerate(raw_items, start=1):
+            if not isinstance(item, dict):
+                continue
+            normalized.append({
+                'line_number': item.get('line_number') or index,
+                'description': first_value(
+                    item.get('description'),
+                    item.get('product'),
+                    item.get('name'),
+                    item.get('item'),
+                    f'Line {index}',
+                ),
+                'quantity': first_value(item.get('quantity'), item.get('qty'), 1),
+                'unit_price': first_value(item.get('unit_price'), item.get('price')),
+                'discount': first_value(item.get('discount'), item.get('discount_amount')),
+                'total': first_value(item.get('total'), item.get('line_total'), item.get('amount')),
+            })
+        return normalized
+
+    def normalize_detail_rows(value):
+        rows = []
+        if isinstance(value, dict):
+            for key, entry in value.items():
+                if isinstance(entry, dict):
+                    rows.append({
+                        'title': entry.get('title') or prettify_label(key),
+                        'status': entry.get('status') or entry.get('severity') or 'info',
+                        'status_label': arabic_status_label(entry.get('status') or entry.get('severity') or 'info'),
+                        'tone': tone_for_status(entry.get('status') or entry.get('severity')),
+                        'message': entry.get('message') or entry.get('description') or entry.get('details') or entry.get('value'),
+                    })
+                else:
+                    rows.append({
+                        'title': prettify_label(key),
+                        'status': 'info',
+                        'status_label': arabic_status_label(entry),
+                        'tone': tone_for_status(entry),
+                        'message': str(entry),
+                    })
+        elif isinstance(value, list):
+            for index, entry in enumerate(value, start=1):
+                if isinstance(entry, dict):
+                    status = entry.get('status') or entry.get('severity') or 'info'
+                    rows.append({
+                        'title': first_value(
+                            entry.get('title'),
+                            entry.get('rule_key'),
+                            entry.get('procedure'),
+                            entry.get('check'),
+                            prettify_label(f'item_{index}'),
+                        ),
+                        'status': status,
+                        'status_label': arabic_status_label(status),
+                        'tone': tone_for_status(status),
+                        'message': first_value(
+                            entry.get('message'),
+                            entry.get('description'),
+                            entry.get('reason'),
+                            entry.get('result'),
+                        ),
+                    })
+                else:
+                    rows.append({
+                        'title': prettify_label(f'item_{index}'),
+                        'status': 'info',
+                        'status_label': 'معلومة',
+                        'tone': 'neutral',
+                        'message': str(entry),
+                    })
+        return rows
+
+    def normalize_string_list(value):
+        rows = []
+        if isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict):
+                    rows.append(first_value(item.get('reason'), item.get('message'), item.get('title'), item.get('description')))
+                elif item not in (None, ''):
+                    rows.append(str(item))
+        return [row for row in rows if row]
+
+    risk_level = first_value(
+        getattr(audit_report, 'risk_level', None),
+        getattr(extracted, 'risk_level', None),
+    )
+    risk_labels = {
+        'critical': 'حرجة',
+        'high': 'عالية',
+        'medium': 'متوسطة',
+        'low': 'منخفضة',
+    }
+    recommendation = getattr(audit_report, 'recommendation', None)
+    recommendation_labels = {
+        'approve': 'يوصى بالموافقة',
+        'reject': 'يوصى بالرفض',
+        'manual_review': 'مراجعة يدوية',
+    }
+    duplicate_status_labels = {
+        'confirmed_duplicate': 'تكرار مؤكد',
+        'high_risk': 'خطر تكرار عال',
+        'medium_risk': 'خطر تكرار متوسط',
+        'low_risk': 'خطر تكرار منخفض',
+        'no_duplicate': 'لا يوجد تكرار',
+    }
+    anomaly_status_labels = {
+        'critical_anomaly': 'شذوذ حرج',
+        'high_anomaly': 'شذوذ مرتفع',
+        'medium_anomaly': 'شذوذ متوسط',
+        'low_anomaly': 'شذوذ منخفض',
+        'no_anomaly': 'لا يوجد شذوذ',
+    }
+
+    document_status_labels = {
+        'pending': 'تم الرفع',
+        'processing': 'قيد المعالجة',
+        'completed': 'اكتمل الاستخراج',
+        'validated': 'تم الاعتماد',
+        'pending_review': 'تحتاج مراجعة',
+        'failed': 'فشلت المعالجة',
+    }
+    extraction_status_labels = {
+        'pending': 'بانتظار الاستخراج',
+        'extracted': 'تم الاستخراج',
+        'failed': 'فشل الاستخراج',
+        'pending_review': 'استخراج غير مكتمل',
+    }
+    validation_status_labels = {
+        'pending': 'بانتظار التحقق',
+        'validated': 'تم التحقق',
+        'rejected': 'مرفوض',
+        'corrected': 'تم التصحيح',
+    }
+    review_state_labels = {
+        'required': 'مراجعة بشرية مطلوبة',
+        'reviewed': 'تمت المراجعة',
+        'not_required': 'لا تحتاج مراجعة',
+    }
+    decision_labels = {
+        'approve': 'جاهزة للاعتماد',
+        'reject': 'موصى بالرفض',
+        'manual_review': 'قيد المراجعة اليدوية',
+        'pending': 'قيد التحليل',
+    }
+
+    def tone_for_invoice_state(state):
+        if state in {'validated', 'completed', 'extracted', 'reviewed', 'not_required', 'approve'}:
+            return 'success'
+        if state in {'pending_review', 'manual_review', 'processing', 'pending', 'required'}:
+            return 'warning'
+        if state in {'failed', 'rejected', 'reject'}:
+            return 'danger'
+        return 'neutral'
+
+    stage_label = 'تقرير تدقيق كامل'
+    if not audit_report and extracted:
+        stage_label = 'استخراج وتحليل أولي'
+    elif not extracted and evidence:
+        stage_label = 'نتيجة OCR'
+    elif not evidence:
+        stage_label = 'تم رفع المستند'
+
+    document_status = getattr(document, 'status', None) or 'pending'
+    extraction_status = (
+        getattr(extracted, 'extraction_status', None)
+        or ('extracted' if extracted else 'failed' if document_status == 'failed' else 'pending')
+    )
+    validation_status = (
+        getattr(extracted, 'validation_status', None)
+        or ('validated' if extracted and getattr(extracted, 'is_valid', False) else 'pending')
+    )
+    decision_state = recommendation or (
+        'manual_review'
+        if document_status == 'pending_review'
+        else 'approve'
+        if document_status in {'validated', 'completed'} and extracted
+        else 'pending'
+    )
+    review_state = (
+        'required'
+        if document_status == 'pending_review'
+        else 'reviewed'
+        if getattr(extracted, 'reviewed_at', None)
+        else 'not_required'
+    )
+    invoice_states = [
+        {
+            'key': 'document',
+            'label': document_status_labels.get(document_status, 'حالة غير معروفة'),
+            'tone': tone_for_invoice_state(document_status),
+        },
+        {
+            'key': 'extraction',
+            'label': extraction_status_labels.get(extraction_status, 'حالة استخراج غير معروفة'),
+            'tone': tone_for_invoice_state(extraction_status),
+        },
+        {
+            'key': 'validation',
+            'label': validation_status_labels.get(validation_status, 'حالة تحقق غير معروفة'),
+            'tone': tone_for_invoice_state(validation_status),
+        },
+        {
+            'key': 'review',
+            'label': review_state_labels.get(review_state, 'حالة مراجعة غير معروفة'),
+            'tone': tone_for_invoice_state(review_state),
+        },
+        {
+            'key': 'decision',
+            'label': decision_labels.get(decision_state, 'قرار غير محسوم'),
+            'tone': tone_for_invoice_state(decision_state),
+        },
+    ]
+
+    result_card = {
+        'invoice_number': first_value(
+            getattr(audit_report, 'extracted_invoice_number', None),
+            getattr(extracted, 'invoice_number', None),
+        ),
+        'vendor_name': first_value(
+            getattr(audit_report, 'extracted_vendor_name', None),
+            getattr(extracted, 'vendor_name', None),
+            getattr(invoice_record.vendor, 'name', None) if invoice_record else None,
+        ),
+        'customer_name': first_value(
+            getattr(audit_report, 'extracted_customer_name', None),
+            getattr(extracted, 'customer_name', None),
+            getattr(invoice_record, 'customer_name', None) if invoice_record else None,
+            getattr(organization, 'name', None),
+        ),
+        'vendor_tax_id': first_value(
+            getattr(audit_report, 'extracted_vendor_tin', None),
+            getattr(extracted, 'vendor_tax_id', None),
+        ),
+        'customer_tax_id': first_value(
+            getattr(audit_report, 'extracted_customer_tin', None),
+            getattr(extracted, 'customer_tax_id', None),
+        ),
+        'vendor_address': first_value(
+            getattr(audit_report, 'extracted_vendor_address', None),
+        ),
+        'issue_date': first_value(
+            getattr(audit_report, 'extracted_issue_date', None),
+            getattr(extracted, 'invoice_date', None),
+            getattr(invoice_record, 'issue_date', None) if invoice_record else None,
+        ),
+        'due_date': first_value(
+            getattr(audit_report, 'extracted_due_date', None),
+            getattr(extracted, 'due_date', None),
+            getattr(invoice_record, 'due_date', None) if invoice_record else None,
+        ),
+        'currency': first_value(
+            getattr(audit_report, 'currency', None),
+            getattr(extracted, 'currency', None),
+            getattr(invoice_record, 'currency', None) if invoice_record else None,
+            getattr(organization, 'currency', None),
+            'SAR',
+        ),
+        'total_amount': first_value(
+            getattr(audit_report, 'total_amount', None),
+            getattr(extracted, 'total_amount', None),
+            getattr(invoice_record, 'total_amount', None) if invoice_record else None,
+        ),
+        'subtotal_amount': first_value(
+            getattr(audit_report, 'subtotal_amount', None),
+            getattr(extracted, 'subtotal_amount', None),
+            getattr(invoice_record, 'subtotal_amount', None) if invoice_record else None,
+        ),
+        'tax_amount': first_value(
+            getattr(audit_report, 'vat_amount', None),
+            getattr(extracted, 'tax_amount', None),
+            getattr(invoice_record, 'vat_amount', None) if invoice_record else None,
+        ),
+        'confidence_score': first_value(
+            getattr(audit_report, 'ocr_confidence_score', None),
+            getattr(evidence, 'confidence_score', None),
+            getattr(extracted, 'confidence', None),
+        ),
+        'ocr_engine': first_value(
+            getattr(audit_report, 'ocr_engine', None),
+            getattr(evidence, 'ocr_engine', None),
+            getattr(extracted, 'extraction_provider', None),
+            'OCR',
+        ),
+        'engine_label': normalize_engine_label(
+            first_value(
+                getattr(audit_report, 'ocr_engine', None),
+                getattr(evidence, 'ocr_engine', None),
+                getattr(extracted, 'extraction_provider', None),
+                'OCR',
+            )
+        ),
+        'risk_score': first_value(
+            getattr(audit_report, 'risk_score', None),
+            getattr(extracted, 'risk_score', None),
+        ),
+        'risk_level': risk_level,
+        'risk_label': risk_labels.get(risk_level, 'غير مقيم'),
+        'duplicate_score': getattr(audit_report, 'duplicate_score', None),
+        'duplicate_status_label': duplicate_status_labels.get(
+            getattr(audit_report, 'duplicate_status', None),
+            'غير محدد',
+        ),
+        'anomaly_score': getattr(audit_report, 'anomaly_score', None),
+        'anomaly_status_label': anomaly_status_labels.get(
+            getattr(audit_report, 'anomaly_status', None),
+            'غير محدد',
+        ),
+        'recommendation': recommendation,
+        'recommendation_label': recommendation_labels.get(recommendation, 'لم تصدر توصية بعد'),
+        'has_recommendation': bool(recommendation),
+        'stage_label': stage_label,
+        'report_number': getattr(audit_report, 'report_number', None),
+        'document_status': document_status,
+        'document_status_label': document_status_labels.get(document_status, 'حالة غير معروفة'),
+        'extraction_status': extraction_status,
+        'extraction_status_label': extraction_status_labels.get(extraction_status, 'حالة استخراج غير معروفة'),
+        'validation_status': validation_status,
+        'validation_status_label': validation_status_labels.get(validation_status, 'حالة تحقق غير معروفة'),
+        'review_state': review_state,
+        'review_state_label': review_state_labels.get(review_state, 'حالة مراجعة غير معروفة'),
+        'decision_state': decision_state,
+        'decision_label': decision_labels.get(decision_state, 'قرار غير محسوم'),
+    }
+
+    raw_line_items = first_value(
+        getattr(audit_report, 'line_items_json', None),
+        getattr(extracted, 'items_json', None),
+    )
+    line_items = normalize_line_items(raw_line_items)
+
+    validation_rows = normalize_detail_rows(getattr(audit_report, 'validation_results_json', None))
+    if not validation_rows and extracted:
+        validation_rows.extend([
+            {
+                'title': 'Validation Error',
+                'status': 'fail',
+                'status_label': 'فشل',
+                'tone': 'danger',
+                'message': message,
+            }
+            for message in (extracted.validation_errors or [])
+        ])
+        validation_rows.extend([
+            {
+                'title': 'Validation Warning',
+                'status': 'warning',
+                'status_label': 'تنبيه',
+                'tone': 'warning',
+                'message': message,
+            }
+            for message in (extracted.validation_warnings or [])
+        ])
+
+    for row in validation_rows:
+        row['title'] = _localize_checklist_title(row.get('title'), ui_language)
+        row['message'] = _localize_checklist_message(row.get('message'), ui_language)
+
+    compliance_rows = normalize_detail_rows(
+        first_value(
+            getattr(audit_report, 'compliance_checks_json', None),
+            getattr(extracted, 'compliance_checks', None),
+        )
+    )
+    for row in compliance_rows:
+        row['title'] = _localize_checklist_title(row.get('title'), ui_language)
+        row['message'] = _localize_checklist_message(row.get('message'), ui_language)
+    duplicate_rows = normalize_detail_rows(getattr(audit_report, 'duplicate_matched_documents_json', None))
+    anomaly_rows = normalize_string_list(
+        first_value(
+            getattr(audit_report, 'anomaly_reasons_json', None),
+            getattr(extracted, 'anomaly_flags', None),
+        )
+    )
+    risk_factors = normalize_string_list(
+        first_value(
+            getattr(audit_report, 'risk_factors_json', None),
+            getattr(extracted, 'audit_summary', {}).get('key_risks') if getattr(extracted, 'audit_summary', None) else None,
+        )
+    )
+    recommended_actions = normalize_string_list(
+        (
+            getattr(extracted, 'audit_summary', {}) or {}
+        ).get('recommended_actions') if extracted else None
+    )
+    if ui_language == 'ar' and getattr(audit_report, 'recommendation_reason_ar', None):
+        recommended_actions.insert(0, audit_report.recommendation_reason_ar)
+    elif getattr(audit_report, 'recommendation_reason', None):
+        recommended_actions.insert(0, audit_report.recommendation_reason)
+    elif getattr(audit_report, 'recommendation_reason_ar', None):
+        recommended_actions.insert(0, audit_report.recommendation_reason_ar)
+
+    audit_findings = []
+    if extracted:
+        audit_findings = list(
+            InvoiceAuditFinding.objects.filter(extracted_data=extracted).order_by('-created_at')[:6]
+        )
+
+    extracted_audit_summary = getattr(extracted, 'audit_summary', {}) or {}
+    if ui_language == 'ar':
+        executive_summary = first_value(
+            getattr(audit_report, 'ai_summary_ar', None),
+            extracted_audit_summary.get('executive_summary_ar'),
+            extracted_audit_summary.get('executive_summary'),
+            getattr(audit_report, 'ai_summary', None),
+            extracted_audit_summary.get('executive_summary_en'),
+        )
+        findings_summary = first_value(
+            getattr(audit_report, 'ai_findings_ar', None),
+            extracted_audit_summary.get('ai_findings_ar'),
+            getattr(audit_report, 'ai_findings', None),
+            extracted_audit_summary.get('ai_findings_en'),
+        )
+    else:
+        executive_summary = first_value(
+            getattr(audit_report, 'ai_summary', None),
+            extracted_audit_summary.get('executive_summary_en'),
+            getattr(audit_report, 'ai_summary_ar', None),
+            extracted_audit_summary.get('executive_summary'),
+            extracted_audit_summary.get('executive_summary_ar'),
+        )
+        findings_summary = first_value(
+            getattr(audit_report, 'ai_findings', None),
+            extracted_audit_summary.get('ai_findings_en'),
+            getattr(audit_report, 'ai_findings_ar', None),
+            extracted_audit_summary.get('ai_findings_ar'),
+        )
+
+    duplicate_entry = {
+        'status_label': result_card['duplicate_status_label'],
+        'message': duplicate_rows[0]['message'] if duplicate_rows else _localized_value(ui_language, 'لم يتم العثور على تطابقات مؤكدة.', 'No confirmed duplicate matches were found.'),
+        'tone': 'success' if result_card['duplicate_status_label'] in {'لا يوجد تكرار', 'No Duplicate Detected'} else 'warning',
+    }
+    anomaly_entry = {
+        'status_label': result_card['anomaly_status_label'],
+        'message': anomaly_rows[0] if anomaly_rows else _localized_value(ui_language, 'لم يتم رصد شذوذات مالية جوهرية.', 'No material anomalies were detected.'),
+        'tone': 'success' if result_card['anomaly_status_label'] in {'لا يوجد شذوذ', 'No Anomaly Detected'} else 'warning',
+    }
+    audit_checklist_rows = _build_audit_checklist_rows(
+        validation_rows,
+        compliance_rows,
+        duplicate_entry,
+        anomaly_entry,
+        ui_language,
+    )
+
+    stage_titles = {
+        'upload_document': 'رفع المستند',
+        'ocr_vision_ai': 'OCR / Vision AI',
+        'structured_extraction': 'الاستخراج المنظم',
+        'save_invoice_vendor_customer': 'حفظ الفاتورة والمورد والعميل',
+        'audit_rules_engine': 'محرك قواعد التدقيق',
+        'risk_engine_score': 'محرك المخاطر والدرجة',
+        'findings_cross_document_intelligence': 'الملاحظات والذكاء بين المستندات',
+        'ai_summary_recommendations': 'الملخص والتوصيات',
+        'reviewer_decision': 'قرار المراجع',
+        'dashboard_reports': 'اللوحة والتقارير',
+        'upload_file': 'رفع الملف',
+        'create_audit_session': 'فتح جلسة التدقيق',
+        'save_document': 'حفظ المستند',
+        'ai_extraction': 'الاستخراج الذكي',
+        'normalization': 'توحيد البيانات',
+        'validation': 'التحقق المحاسبي',
+        'compliance_engine': 'فحص الامتثال',
+        'risk_score': 'احتساب المخاطر',
+        'findings': 'تجميع المخالفات',
+        'ai_executive_summary': 'الملخص التنفيذي',
+        'publish_to_dashboard': 'النشر إلى اللوحة',
+    }
+    processing_journey = []
+    if latest_session:
+        workflow_service = get_invoice_audit_workflow_service()
+        for stage_key in workflow_service.get_stage_sequence_for_session(latest_session):
+            payload = (latest_session.stages_json or {}).get(stage_key, {})
+            status = payload.get('status', 'pending') if isinstance(payload, dict) else 'pending'
+            processing_journey.append({
+                'title': stage_titles.get(stage_key, prettify_label(stage_key)),
+                'status': status,
+                'status_label': arabic_status_label(status),
+                'tone': tone_for_status(status),
+                'details': summarize_stage_payload(payload),
+                'timestamp_display': display_timestamp(payload.get('at') if isinstance(payload, dict) else None),
+            })
+    else:
+        processing_journey = [
+            {'title': 'رفع الملف', 'status': 'completed', 'status_label': 'مكتمل', 'tone': 'success', 'details': document.file_name, 'timestamp_display': display_timestamp(document.uploaded_at)},
+            {'title': 'نتيجة OCR', 'status': 'completed' if evidence else 'pending', 'status_label': 'مكتمل' if evidence else 'قيد التنفيذ', 'tone': 'success' if evidence else 'warning', 'details': result_card['engine_label'] if evidence else None, 'timestamp_display': display_timestamp(getattr(evidence, 'extracted_at', None))},
+            {'title': 'التحليل المالي', 'status': 'completed' if extracted else 'pending', 'status_label': 'مكتمل' if extracted else 'قيد التنفيذ', 'tone': 'success' if extracted else 'warning', 'details': result_card['recommendation_label'] if extracted else None, 'timestamp_display': display_timestamp(getattr(extracted, 'audit_completed_at', None) if extracted else None)},
+        ]
+
+    timeline_rows = []
+    if audit_report and isinstance(audit_report.audit_trail_json, list):
+        for entry in audit_report.audit_trail_json:
+            if not isinstance(entry, dict):
+                continue
+            status = entry.get('status', 'success' if entry.get('success', True) else 'failed')
+            timeline_rows.append({
+                'title': first_value(entry.get('title'), entry.get('event'), 'Audit Event'),
+                'description': first_value(entry.get('description'), entry.get('message')),
+                'status_label': arabic_status_label(status),
+                'tone': tone_for_status(status),
+                'timestamp_display': display_timestamp(entry.get('timestamp')),
+            })
+    elif extracted:
+        for trail in AuditTrail.objects.filter(extracted_data=extracted).order_by('event_time')[:12]:
+            status = 'success' if trail.success else trail.severity
+            timeline_rows.append({
+                'title': trail.title,
+                'description': trail.description or trail.result_summary,
+                'status_label': arabic_status_label(status),
+                'tone': tone_for_status(status),
+                'timestamp_display': display_timestamp(trail.event_time),
+            })
+    else:
+        timeline_rows = [
+            {
+                'title': 'تم إنشاء المستند',
+                'description': document.file_name,
+                'status_label': 'مكتمل',
+                'tone': 'success',
+                'timestamp_display': display_timestamp(document.uploaded_at),
+            }
+        ]
 
     context = {
         'document': document,
@@ -911,10 +1720,148 @@ def pipeline_result_view(request, document_id):
         'extracted': extracted,
         'audit_report': audit_report,
         'report_presentation': report_presentation,
+        'invoice_record': invoice_record,
+        'latest_session': latest_session,
         'pipeline_steps': pipeline_steps,
+        'result_card': result_card,
+        'invoice_states': invoice_states,
+        'line_items': line_items,
+        'validation_rows': validation_rows,
+        'compliance_rows': compliance_rows,
+        'audit_checklist_rows': audit_checklist_rows,
+        'duplicate_rows': duplicate_rows,
+        'anomaly_rows': anomaly_rows,
+        'risk_factors': risk_factors,
+        'recommended_actions': recommended_actions,
+        'processing_journey': processing_journey,
+        'timeline_rows': timeline_rows,
+        'audit_findings': audit_findings,
+        'executive_summary': executive_summary,
+        'findings_summary': findings_summary,
+        'pdf_download_url': reverse('pipeline_result_pdf', kwargs={'document_id': document.id}) if extracted else None,
+        'manual_review_required': document.status == 'pending_review' or getattr(audit_report, 'ai_review_required', False),
+        'now': timezone.now(),
+        'ui_language': ui_language,
+        'is_arabic': ui_language == 'ar',
+        'html_lang': ui_language,
+        'direction': 'rtl' if ui_language == 'ar' else 'ltr',
+        **build_shell_context(organization),
     }
 
     return render(request, 'documents/pipeline_result.html', context)
+
+
+@login_required
+def download_invoice_audit_pdf_view(request, document_id):
+    user = request.user
+    organization = user.organization
+    ui_language = get_interface_language(request)
+
+    document = get_object_or_404(Document, id=document_id, organization=organization)
+    try:
+        extracted = document.extracted_data
+    except Exception:
+        extracted = None
+    try:
+        audit_report = document.audit_report
+    except Exception:
+        audit_report = None
+
+    if extracted is None:
+        messages.error(request, _localized_value(ui_language, 'لا توجد بيانات مستخرجة لهذا المستند.', 'No extracted data is available for this document.'))
+        return redirect('pipeline_result', document_id=document_id)
+
+    validation_results = getattr(audit_report, 'validation_results_json', None) or {}
+    compliance_checks = getattr(audit_report, 'compliance_checks_json', None) or getattr(extracted, 'compliance_checks', None) or []
+    checklist_rows = []
+
+    if isinstance(validation_results, dict):
+        for key, result in validation_results.items():
+            if not isinstance(result, dict):
+                continue
+            status = str(result.get('status') or 'pending')
+            tone = 'success' if status in {'pass', 'completed', 'approved'} else 'warning' if status in {'warning', 'pending'} else 'danger'
+            checklist_rows.append({
+                'group': _localized_value(ui_language, 'التحقق', 'Validation'),
+                'title': _localize_checklist_title(str(key).replace('_', ' ').title(), ui_language),
+                'done_label': _localized_value(ui_language, 'تم', 'Yes') if tone == 'success' else _localized_value(ui_language, 'لا', 'No'),
+                'status_label': status,
+                'message': _localize_checklist_message('; '.join(result.get('issues') or []), ui_language) or '-',
+            })
+
+    if isinstance(compliance_checks, list):
+        for item in compliance_checks:
+            if not isinstance(item, dict):
+                continue
+            status = str(item.get('status') or item.get('severity') or 'pending')
+            tone = 'success' if status in {'pass', 'completed', 'approved'} else 'warning' if status in {'warning', 'pending'} else 'danger'
+            checklist_rows.append({
+                'group': _localized_value(ui_language, 'الامتثال', 'Compliance'),
+                'title': _localize_checklist_title(item.get('title') or item.get('rule_key') or item.get('check') or 'Compliance check', ui_language),
+                'done_label': _localized_value(ui_language, 'تم', 'Yes') if tone == 'success' else _localized_value(ui_language, 'لا', 'No'),
+                'status_label': status,
+                'message': _localize_checklist_message(item.get('message') or item.get('description') or '-', ui_language),
+            })
+
+    line_items = extracted.items_json or []
+    normalized_items = []
+    for index, item in enumerate(line_items, start=1):
+        if not isinstance(item, dict):
+            continue
+        normalized_items.append({
+            'line_number': item.get('line_number') or index,
+            'description': item.get('description') or item.get('product') or item.get('name') or f'Line {index}',
+            'quantity': item.get('quantity') or item.get('qty') or 1,
+            'unit_price': item.get('unit_price') or item.get('price') or '-',
+            'total': item.get('total') or item.get('line_total') or item.get('amount') or '-',
+        })
+
+    executive_summary = (
+        getattr(audit_report, 'ai_summary_ar', None) if ui_language == 'ar' else getattr(audit_report, 'ai_summary', None)
+    ) or (
+        getattr(audit_report, 'ai_summary', None) if ui_language != 'ar' else getattr(audit_report, 'ai_summary_ar', None)
+    ) or ''
+    findings_summary = (
+        getattr(audit_report, 'ai_findings_ar', None) if ui_language == 'ar' else getattr(audit_report, 'ai_findings', None)
+    ) or (
+        getattr(audit_report, 'ai_findings', None) if ui_language != 'ar' else getattr(audit_report, 'ai_findings_ar', None)
+    ) or ''
+
+    recommendation_reason = (
+        getattr(audit_report, 'recommendation_reason_ar', None) if ui_language == 'ar' else getattr(audit_report, 'recommendation_reason', None)
+    ) or getattr(audit_report, 'recommendation_reason', None) or getattr(audit_report, 'recommendation_reason_ar', None) or ''
+    recommended_actions = [recommendation_reason] if recommendation_reason else []
+
+    payload = {
+        'language': ui_language,
+        'title': _localized_value(ui_language, 'تقرير تدقيق الفاتورة', 'Invoice Audit Report'),
+        'subtitle': document.file_name,
+        'overview_heading': _localized_value(ui_language, 'ملخص المستند', 'Document Overview'),
+        'overview_rows': [
+            {'label': _localized_value(ui_language, 'رقم الفاتورة', 'Invoice Number'), 'value': extracted.invoice_number or '-'},
+            {'label': _localized_value(ui_language, 'المورد', 'Vendor'), 'value': extracted.vendor_name or '-'},
+            {'label': _localized_value(ui_language, 'العميل', 'Customer'), 'value': extracted.customer_name or organization.name},
+            {'label': _localized_value(ui_language, 'الإجمالي', 'Total Amount'), 'value': f"{extracted.total_amount or 0} {extracted.currency or 'SAR'}"},
+            {'label': _localized_value(ui_language, 'مستوى المخاطر', 'Risk Level'), 'value': getattr(audit_report, 'risk_level', None) or extracted.risk_level or '-'},
+            {'label': _localized_value(ui_language, 'حالة المستند', 'Document Status'), 'value': document.status},
+        ],
+        'checklist_heading': _localized_value(ui_language, 'قائمة التحقق', 'Audit Checklist'),
+        'checklist_rows': checklist_rows,
+        'items_heading': _localized_value(ui_language, 'بنود الفاتورة', 'Line Items'),
+        'line_items': normalized_items,
+        'summary_heading': _localized_value(ui_language, 'الملخص التنفيذي', 'Executive Summary'),
+        'executive_summary': executive_summary,
+        'findings_heading': _localized_value(ui_language, 'تفسير الذكاء الاصطناعي', 'AI Findings'),
+        'findings_summary': findings_summary,
+        'actions_heading': _localized_value(ui_language, 'الإجراءات المقترحة', 'Recommended Actions'),
+        'recommended_actions': recommended_actions,
+    }
+    invoice_audit_pdf_service = get_invoice_audit_pdf_service()
+    pdf_bytes = invoice_audit_pdf_service.generate_report(payload)
+
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="invoice_audit_{document.id}.pdf"'
+    return response
 
 
 @login_required
@@ -928,6 +1875,8 @@ def pending_review_submit_view(request, document_id):
     SOLID — Single Responsibility: this view only handles the correction POST;
     all business logic stays in the service layer.
     """
+    from datetime import date, datetime
+
     from django.utils import timezone
     from documents.models import ExtractedData
     from decimal import Decimal
@@ -946,6 +1895,15 @@ def pending_review_submit_view(request, document_id):
     # Apply human corrections to extracted fields
     fields_updated = []
 
+    def _iso_date(value):
+        if not value:
+            return None
+        if isinstance(value, datetime):
+            return value.date().isoformat()
+        if isinstance(value, date):
+            return value.isoformat()
+        return str(value)
+
     def _patch(field, cast=str):
         """DRY helper: update a field only if a non-empty value was submitted."""
         val = request.POST.get(field, '').strip()
@@ -958,7 +1916,9 @@ def pending_review_submit_view(request, document_id):
 
     _patch('invoice_number')
     _patch('vendor_name')
+    _patch('vendor_tax_id')
     _patch('customer_name')
+    _patch('customer_tax_id')
     _patch('currency')
     _patch('total_amount', cast=Decimal)
     _patch('tax_amount',   cast=Decimal)
@@ -978,11 +1938,55 @@ def pending_review_submit_view(request, document_id):
     extracted.reviewed_by = user
     extracted.reviewed_at = timezone.now()
     extracted.extraction_status = 'extracted'   # promote out of pending_review
-    extracted.save()
+    update_fields = ['review_notes', 'reviewed_by', 'reviewed_at', 'extraction_status']
+
+    if document.document_type == 'invoice':
+        raw_payload = {
+            'invoice_number': extracted.invoice_number,
+            'issue_date': _iso_date(getattr(extracted, 'invoice_date', None)),
+            'due_date': _iso_date(getattr(extracted, 'due_date', None)),
+            'vendor_name': extracted.vendor_name,
+            'vendor_tax_id': extracted.vendor_tax_id,
+            'customer_name': extracted.customer_name or organization.name,
+            'customer_tax_id': extracted.customer_tax_id or organization.vat_number,
+            'vendor': {
+                'name': extracted.vendor_name,
+                'tax_id': extracted.vendor_tax_id,
+            },
+            'customer': {
+                'name': extracted.customer_name or organization.name,
+                'tax_id': extracted.customer_tax_id or organization.vat_number,
+            },
+            'currency': extracted.currency or organization.currency or 'SAR',
+            'subtotal': str(extracted.subtotal_amount) if extracted.subtotal_amount is not None else None,
+            'tax_amount': str(extracted.tax_amount) if extracted.tax_amount is not None else None,
+            'total_amount': str(extracted.total_amount) if extracted.total_amount is not None else None,
+            'items': extracted.items_json or [],
+        }
+        extracted.raw_json = raw_payload
+        update_fields.append('raw_json')
+        extracted.save(update_fields=update_fields)
+        workflow_service = get_invoice_audit_workflow_service()
+        workflow_result = workflow_service.resume_after_reviewer_correction(
+            document=document,
+            actor=user,
+            raw_payload=raw_payload,
+            review_notes=extracted.review_notes,
+        )
+        document = workflow_result.document
 
     # Promote document status
-    document.status = 'completed'
-    document.save(update_fields=['status'])
+    if document.document_type != 'invoice':
+        extracted.save(update_fields=update_fields)
+        document.status = 'completed'
+        document.save(update_fields=['status'])
+
+    if document.status == 'pending_review':
+        messages.warning(request, 'تم حفظ التصحيحات، لكن المستند ما زال يحتاج مراجعة إضافية قبل الاعتماد.')
+        return redirect('pipeline_result', document_id=document_id)
+
+    messages.success(request, f'تم حفظ التصحيحات البشرية ({len(fields_updated)} حقل). أُعيد تصنيف المستند.')
+    return redirect('pipeline_result', document_id=document_id)
 
     messages.success(request, f'تم حفظ التصحيحات البشرية ({len(fields_updated)} حقل). أُعيد تصنيف المستند.')
     return redirect('pipeline_result', document_id=document_id)
