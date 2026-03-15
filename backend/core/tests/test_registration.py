@@ -138,3 +138,15 @@ class RegisterViewTests(TestCase):
         self.assertIsNotNone(legacy_user.organization)
         self.assertEqual(legacy_user.organization.created_by, legacy_user)
         self.assertEqual(membership.role, 'owner')
+
+    def test_legacy_accounts_register_url_redirects_to_register(self):
+        response = self.client.get('/accounts/register/')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, self.register_url)
+
+    def test_legacy_accounts_login_url_redirects_to_login(self):
+        response = self.client.get('/accounts/login/')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, self.login_url)

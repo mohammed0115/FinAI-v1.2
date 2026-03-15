@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from FinAI.health_urls import health_check, ready_check
 from django.http import JsonResponse
+from django.views.generic import RedirectView
 
 # Debug endpoint
 def debug_auth(request):
@@ -18,6 +19,11 @@ def debug_auth(request):
 urlpatterns = [
     # Debug endpoint  
     path('debug-auth/', debug_auth, name='debug_auth'),
+
+    # Legacy auth routes kept for stale templates and cached landing pages
+    path('accounts/login/', RedirectView.as_view(pattern_name='login', permanent=False)),
+    path('accounts/register/', RedirectView.as_view(pattern_name='register', permanent=False)),
+    path('accounts/logout/', RedirectView.as_view(pattern_name='logout', permanent=False)),
     
     # Health check endpoints (for Kubernetes)
     path('health', health_check, name='health_check'),
